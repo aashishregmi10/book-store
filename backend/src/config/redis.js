@@ -26,14 +26,19 @@ function initRedis() {
     reconnectOnError: () => true,
   });
 
+  let warnedDown = false;
   client.on('ready', () => {
     available = true;
+    warnedDown = false;
     logger.info('Redis connected.');
   });
   client.on('error', (err) => {
     available = false;
-    // Log once-ish; ioredis retries on its own.
-    logger.warn({ err: err.message }, 'Redis error — degrading to Mongo.');
+    // Warn once per outage so dev consoles aren't spammed by retries.
+    if (!warnedDown) {
+      warnedDown = true;
+      logger.warn({ err: err.code || err.message }, 'Redis unavailable — caching off, falling through to Mongo.');
+    }
   });
   client.on('end', () => {
     available = false;

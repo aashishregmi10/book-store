@@ -4,6 +4,7 @@ const express = require('express');
 const helmet = require('helmet');
 const compression = require('compression');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 
@@ -30,6 +31,7 @@ app.use(
 );
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false, limit: '1mb' }));
+app.use(cookieParser());
 app.use(sanitizeRequest);
 
 // ── Request id + scoped logger ───────────────────────────
@@ -47,6 +49,7 @@ app.use(
     max: Number(process.env.RATE_LIMIT_MAX) || 100,
     standardHeaders: true,
     legacyHeaders: false,
+    skip: () => process.env.NODE_ENV === 'test',
     message: { message: 'Too many requests, please try again later.', errors: [{ code: 'RATE_LIMITED' }] },
   })
 );
@@ -55,13 +58,13 @@ app.use(
 app.get('/api/health', (_req, res) => ok(res, { status: 'ok', uptime: process.uptime() }, 'Healthy'));
 
 // ── Feature routes (mounted as they are built) ───────────
-// app.use('/api/auth', require('./routes/auth.route'));
-// app.use('/api/books', require('./routes/books.route'));
-// app.use('/api/genres', require('./routes/genres.route'));
-// app.use('/api/cart', require('./routes/cart.route'));
-// app.use('/api/wishlist', require('./routes/wishlist.route'));
-// app.use('/api/addresses', require('./routes/addresses.route'));
-// app.use('/api/orders', require('./routes/orders.route'));
+app.use('/api/auth', require('./routes/auth.route'));
+app.use('/api/books', require('./routes/books.route'));
+app.use('/api/genres', require('./routes/genres.route'));
+app.use('/api/cart', require('./routes/cart.route'));
+app.use('/api/wishlist', require('./routes/wishlist.route'));
+app.use('/api/addresses', require('./routes/addresses.route'));
+app.use('/api/orders', require('./routes/orders.route'));
 // app.use('/api/coupons', require('./routes/coupons.route'));
 // app.use('/api/inventory', require('./routes/inventory.route'));
 // app.use('/api/reviews', require('./routes/reviews.route'));

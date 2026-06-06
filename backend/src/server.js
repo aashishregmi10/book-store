@@ -50,6 +50,15 @@ async function shutdown(signal) {
   setTimeout(() => process.exit(1), 10000).unref();
 }
 
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    logger.error(`Port ${PORT} is already in use — kill the existing process and restart.`);
+  } else {
+    logger.error({ err: err.message }, 'Server error');
+  }
+  process.exit(1);
+});
+
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('unhandledRejection', (reason) => logger.error({ reason }, 'Unhandled promise rejection'));

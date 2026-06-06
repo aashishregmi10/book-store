@@ -1,0 +1,5 @@
+[00:30:07] [33mWARN[39m: [36mMongoDB disconnected.[39m
+[00:30:07] [31mERROR[39m: [36mInitial MongoDB connection failed — API up, DB-backed routes will error until fixed.[39m
+    err: "querySrv ECONNREFUSED _mongodb._tcp.pageturn-nepal.eph8b5n.mongodb.net"
+[00:30:07] [31mERROR[39m: [36mMongoDB error[39m
+    err: "querySrv ECONNREFUSED _mongodb._tcp.pageturn-nepal.eph8b5n.mongodb.net"

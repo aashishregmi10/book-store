@@ -79,13 +79,13 @@ const orderSchema = new mongoose.Schema(
 );
 
 // Generate PT-YYYYMMDD-XXXXX from an atomic per-day counter (collision-free).
-orderSchema.pre('validate', async function genOrderNumber(next) {
-  if (this.orderNumber) return next();
+// Async hook: Mongoose 9 resolves via the returned promise — no `next`.
+orderSchema.pre('validate', async function genOrderNumber() {
+  if (this.orderNumber) return;
   const now = new Date();
   const ymd = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
   const seq = await nextSequence(`order-${ymd}`);
   this.orderNumber = `PT-${ymd}-${String(seq).padStart(5, '0')}`;
-  next();
 });
 
 orderSchema.statics.PAYMENT_METHODS = PAYMENT_METHODS;

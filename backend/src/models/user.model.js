@@ -72,14 +72,14 @@ const userSchema = new mongoose.Schema(
 );
 
 // ── Hash password on change ──────────────────────────────
-userSchema.pre('save', async function hashPassword(next) {
-  if (!this.isModified('password')) return next();
+// Async hook: Mongoose 9 resolves via the returned promise — no `next`.
+userSchema.pre('save', async function hashPassword() {
+  if (!this.isModified('password')) return;
   this.password = await bcrypt.hash(this.password, 12);
-  next();
 });
 
 // ── Auto referral code + tier from points ────────────────
-userSchema.pre('save', function deriveFields(next) {
+userSchema.pre('save', function deriveFields() {
   if (!this.referralCode) {
     const base = (this.fullName || 'USER').replace(/[^a-zA-Z]/g, '').substring(0, 4).toUpperCase() || 'USER';
     this.referralCode = `${base}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
@@ -88,7 +88,6 @@ userSchema.pre('save', function deriveFields(next) {
   else if (this.points >= 1500) this.tier = 'Gold';
   else if (this.points >= 500) this.tier = 'Silver';
   else this.tier = 'Bronze';
-  next();
 });
 
 userSchema.methods.comparePassword = function comparePassword(candidate) {

@@ -71,13 +71,12 @@ bookSchema.index({ title: 'text', author: 'text', description: 'text', tags: 'te
 
 // Derive stockStatus from stock on every save (Master Guide §8.3 / Admin Supplement §2).
 // 'discontinued' is set explicitly by admin and preserved.
-bookSchema.pre('save', function deriveStockStatus(next) {
+bookSchema.pre('save', function deriveStockStatus() {
   if (this.stockStatus !== 'discontinued') {
     if (this.stock === 0) this.stockStatus = 'out-of-stock';
     else if (this.stock <= 3) this.stockStatus = 'low-stock';
     else this.stockStatus = 'in-stock';
   }
-  next();
 });
 
 bookSchema.statics.STOCK_STATUS = STOCK_STATUS;
