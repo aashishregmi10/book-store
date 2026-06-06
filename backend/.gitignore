@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Environment — real secrets live here, never commit
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+
+# Test / coverage
+coverage/
+
+# Uploads (local dev)
+uploads/tmp/
