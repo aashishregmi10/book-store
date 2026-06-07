@@ -49,7 +49,8 @@ app.use(
     max: Number(process.env.RATE_LIMIT_MAX) || 100,
     standardHeaders: true,
     legacyHeaders: false,
-    skip: () => process.env.NODE_ENV === 'test',
+    // Only rate-limit in production; dev hot-reload + SSR fan-out trips low limits instantly.
+    skip: () => process.env.NODE_ENV !== 'production',
     message: { message: 'Too many requests, please try again later.', errors: [{ code: 'RATE_LIMITED' }] },
   })
 );
@@ -69,8 +70,8 @@ app.use('/api/orders', require('./routes/orders.route'));
 // app.use('/api/inventory', require('./routes/inventory.route'));
 // app.use('/api/reviews', require('./routes/reviews.route'));
 // app.use('/api/notifications', require('./routes/notifications.route'));
-// app.use('/api/upload', require('./routes/upload.route'));
-// app.use('/api/admin', require('./routes/admin.route'));
+app.use('/api/upload', require('./routes/upload.route'));
+app.use('/api/admin', require('./routes/admin.route'));
 
 // ── 404 + central error handler (must be last) ───────────
 app.use(notFound);

@@ -31,7 +31,9 @@ function errorHandler(err, req, res, _next) {
   if (status >= 500) {
     logger.error({ err: err.message, stack: err.stack, path: req.originalUrl }, 'Unhandled error');
   }
-  return fail(res, err.message || 'Internal server error', status, err.errors || []);
+  // Surface an ApiError's `code` into the errors array for consistent client handling.
+  const errors = err.errors && err.errors.length ? err.errors : err.code ? [{ code: err.code }] : [];
+  return fail(res, err.message || 'Internal server error', status, errors);
 }
 
 module.exports = { notFound, errorHandler };

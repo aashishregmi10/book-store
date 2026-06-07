@@ -59,7 +59,7 @@ const makeLimiter = (windowMs, max, code) =>
     max,
     standardHeaders: true,
     legacyHeaders: false,
-    skip: () => process.env.NODE_ENV === 'test',
+    skip: () => process.env.NODE_ENV !== 'production',
     message: { message: 'Too many requests, please try again later.', errors: [{ code }] },
   });
 
