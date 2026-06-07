@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+/*
+  PageTurn Nepal — editorial design system.
+  Cool pale-blue field + a confident royal-blue accent. Tailwind 4 is
+  CSS-first: tokens in @theme generate utilities (bg-bg, text-accent,
+  border-border, font-display, …), so changing them here recolours the
+  whole storefront AND the admin in one place.
+*/
+
+@theme {
+  --color-bg: #e8f1fb;        /* pale blue page background */
+  --color-surface: #ffffff;   /* cards / raised slips */
+  --color-text: #15233b;      /* deep navy — body + headings */
+  --color-accent: #1c5fa6;    /* royal blue — CTAs, links, active states */
+  --color-accent-hover: #164d86;
+  --color-muted: #6b7c92;     /* slate blue-grey — captions, placeholders */
+  --color-border: #cfe0f1;    /* pale blue hairline dividers, card edges */
+  --color-sale: #c0392b;      /* restrained brick red for sale/urgency */
+
+  --font-display: var(--font-cormorant), Georgia, "Times New Roman", serif;
+  --font-body: var(--font-source-serif), Georgia, serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    background-color: var(--color-bg);
+    /* Soft top-light wash (no dotted texture). */
+    background-image: linear-gradient(180deg, color-mix(in srgb, #ffffff 55%, transparent), transparent 42%);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-feature-settings: "liga" 1, "calt" 1;
+    text-rendering: optimizeLegibility;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+  }
+  /* Prices, ISBN, data → monospace */
+  .font-data {
+    font-family: var(--font-mono);
+    font-feature-settings: "tnum" 1;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+  }
+}
+
+@layer components {
+  /* Small-caps author label used on book cards */
+  .label-smallcaps {
+    font-variant: small-caps;
+    letter-spacing: 0.06em;
+    color: var(--color-muted);
+  }
+}

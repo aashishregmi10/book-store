@@ -1,0 +1,141 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { ShoppingBag } from "lucide-react";
+import { useCart, selectSubtotal } from "@/lib/stores/cart";
+import { npr } from "@/lib/format";
+
+const FREE_DELIVERY = 1500;
+const DELIVERY_FEE = 120;
+const POINTS_RATE = 0.05;
+const COUNT_WORDS = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"];
+
+export default function CartPage() {
+  const items = useCart((s) => s.items);
+  const setQty = useCart((s) => s.setQty);
+  const remove = useCart((s) => s.remove);
+  const subtotal = useCart(selectSubtotal);
+  const [promo, setPromo] = useState("");
+
+  if (items.length === 0) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-24 text-center sm:px-6">
+        <span className="mx-auto grid size-16 place-items-center rounded-full bg-accent/10">
+          <ShoppingBag className="size-7 text-accent" />
+        </span>
+        <h1 className="mt-5 font-display text-3xl text-text">Your cart is empty</h1>
+        <p className="mt-2 font-body text-muted">Nothing here yet — let&apos;s fix that.</p>
+        <Link href="/books" className="mt-6 inline-block rounded-full bg-accent px-6 py-3 font-data text-sm uppercase tracking-wide text-white hover:bg-accent-hover">
+          Browse the shelves
+        </Link>
+      </div>
+    );
+  }
+
+  const delivery = subtotal >= FREE_DELIVERY ? 0 : DELIVERY_FEE;
+  const total = subtotal + delivery;
+  const toFree = Math.max(0, FREE_DELIVERY - subtotal);
+  const points = Math.round(subtotal * POINTS_RATE);
+  const word = COUNT_WORDS[items.length] ?? String(items.length);
+  const heading = `${word} good ${items.length === 1 ? "choice" : "choices"}.`;
+  const checkoutHref = promo.trim() ? `/checkout?promo=${encodeURIComponent(promo.trim())}` : "/checkout";
+
+  return (
+    <div className="mx-auto max-w-[1600px] px-6 pb-24 pt-12 sm:px-8 lg:px-16 xl:px-24">
+      <p className="label-smallcaps font-data text-xs">Your cart</p>
+      <h1 className="mt-2 font-display text-5xl text-text md:text-6xl">{heading}</h1>
+
+      <div className="mt-12 grid gap-10 lg:grid-cols-[1.6fr_1fr]">
+        {/* Line items */}
+        <ul className="h-fit divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface">
+          {items.map((i) => (
+            <li key={i.bookId} className="flex gap-5 p-5">
+              <Link href={`/books/${i.slug}`} className="relative h-28 w-20 shrink-0 overflow-hidden rounded-lg border border-border bg-bg">
+                <Image src={i.coverImage} alt={`${i.title} cover`} fill sizes="80px" className="object-cover" />
+              </Link>
+
+              <div className="flex min-w-0 flex-1 flex-col">
+                <Link href={`/books/${i.slug}`} className="font-display text-lg leading-snug text-text hover:text-accent">
+                  {i.title}
+                </Link>
+                <span className="font-body text-sm text-muted">{i.author}</span>
+
+                <div className="mt-auto flex items-center gap-3 pt-3">
+                  <button
+                    onClick={() => setQty(i.bookId, i.quantity - 1)}
+                    aria-label="Decrease quantity"
+                    className="grid size-7 place-items-center rounded-full border border-border text-text transition-colors hover:border-accent hover:text-accent"
+                  >
+                    −
+                  </button>
+                  <span className="w-6 text-center font-data text-sm">{i.quantity}</span>
+                  <button
+                    onClick={() => setQty(i.bookId, i.quantity + 1)}
+                    aria-label="Increase quantity"
+                    className="grid size-7 place-items-center rounded-full border border-border text-text transition-colors hover:border-accent hover:text-accent"
+                  >
+                    +
+                  </button>
+                  <button onClick={() => remove(i.bookId)} className="ml-auto font-body text-xs text-muted hover:text-sale">
+                    Remove
+                  </button>
+                </div>
+              </div>
+
+              <div className="text-right">
+                <div className="font-data text-lg font-semibold text-accent">{npr(i.price * i.quantity)}</div>
+                {i.quantity > 1 && <div className="font-data text-xs text-muted">{npr(i.price)} each</div>}
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        {/* Order summary */}
+        <aside className="h-fit rounded-2xl border border-border bg-surface p-6 lg:sticky lg:top-24">
+          <h2 className="font-display text-xl text-text">Order summary</h2>
+          <dl className="mt-6 space-y-3 font-body text-sm">
+            <Row label="Subtotal" value={npr(subtotal)} />
+            <Row label="Delivery (Kathmandu, same-day)" value={delivery === 0 ? "Free" : npr(delivery)} />
+            <Row label="Reading points earned" value={`+${points} pts`} muted />
+          </dl>
+
+          <div className="my-5 h-px bg-border" />
+
+          <div className="flex items-baseline justify-between">
+            <span className="font-display text-base text-text">Total</span>
+            <span className="font-data text-2xl font-semibold text-accent">{npr(total)}</span>
+          </div>
+
+          <input
+            value={promo}
+            onChange={(e) => setPromo(e.target.value)}
+            placeholder="Promo code"
+            className="mt-6 w-full rounded-md border border-border bg-bg px-3 py-2.5 font-body text-sm text-text outline-none placeholder:text-muted focus:border-accent"
+          />
+
+          <Link
+            href={checkoutHref}
+            className="mt-4 block rounded-full bg-accent px-6 py-3.5 text-center font-data text-sm font-medium text-white transition-colors hover:bg-accent-hover"
+          >
+            Checkout — eSewa · Khalti · COD
+          </Link>
+
+          <p className="mt-4 text-center font-body text-xs text-muted">
+            {toFree > 0 ? `Add ${npr(toFree)} more for free delivery.` : "You've unlocked free delivery."}
+          </p>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function Row({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
+  return (
+    <div className="flex justify-between gap-4">
+      <dt className="text-muted">{label}</dt>
+      <dd className={`font-data ${muted ? "text-accent" : "text-text"}`}>{value}</dd>
+    </div>
+  );
+}

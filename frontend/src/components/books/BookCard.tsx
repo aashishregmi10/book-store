@@ -1,0 +1,90 @@
+import Link from "next/link";
+import Image from "next/image";
+import type { BookCardData } from "@/lib/types";
+import { npr, discountPct } from "@/lib/format";
+import { WishlistButton } from "./WishlistButton";
+import { AddToCartButton } from "./AddToCartButton";
+
+/**
+ * Simple, cover-forward book card: cover + title + author + price, with a
+ * wishlist heart (overlay) and an Add to cart button. Hovering shows the
+ * full title via the native tooltip.
+ */
+export function BookCard({ book }: { book: BookCardData }) {
+  const off = discountPct(book.price, book.comparePrice);
+  const soldOut = book.stockStatus === "out-of-stock" || book.stockStatus === "discontinued";
+
+  return (
+    <article className="group flex flex-col" title={book.title}>
+      <div className="relative">
+        <Link href={`/books/${book.slug}`} title={book.title} className="block">
+          <div className="relative aspect-[2/3] overflow-hidden rounded-lg border border-border bg-bg">
+            <Image
+              src={book.coverImage.secureUrl}
+              alt={`${book.title} by ${book.author} — book cover`}
+              fill
+              sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 200px"
+              className="object-cover transition duration-500 group-hover:scale-[1.03]"
+            />
+            {book.stockStatus === "low-stock" && !soldOut && (
+              <span className="absolute inset-x-0 bottom-0 bg-text/75 px-2 py-1 text-center font-data text-[11px] text-white">
+                Only a few left
+              </span>
+            )}
+            {soldOut && (
+              <span className="absolute inset-x-0 bottom-0 bg-text/80 px-2 py-1 text-center font-data text-[11px] text-white">
+                Out of stock
+              </span>
+            )}
+          </div>
+        </Link>
+
+        {book.isBestseller && <Badge>Bestseller</Badge>}
+        {book.isNewArrival && !book.isBestseller && <Badge>New</Badge>}
+
+        <div className="absolute right-2 top-2">
+          <WishlistButton bookId={book._id} />
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-1 flex-col">
+        <Link href={`/books/${book.slug}`} title={book.title}>
+          <h3 className="line-clamp-2 font-display text-lg leading-snug text-text transition-colors group-hover:text-accent">
+            {book.title}
+          </h3>
+        </Link>
+        <p className="mt-0.5 font-body text-sm text-muted">{book.author}</p>
+
+        <div className="mt-1.5 flex items-baseline gap-2">
+          <span className="font-data text-[15px] font-semibold text-accent">{npr(book.price)}</span>
+          {off > 0 && book.comparePrice && (
+            <span className="font-data text-xs text-muted line-through">{npr(book.comparePrice)}</span>
+          )}
+        </div>
+
+        <AddToCartButton
+          book={{
+            bookId: book._id,
+            slug: book.slug,
+            title: book.title,
+            author: book.author,
+            coverImage: book.coverImage.secureUrl,
+            price: book.price,
+          }}
+          disabled={soldOut}
+          full
+          size="sm"
+          className="mt-3"
+        />
+      </div>
+    </article>
+  );
+}
+
+function Badge({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="absolute left-2 top-2 rounded-full bg-accent px-2.5 py-1 font-data text-[10px] font-semibold uppercase tracking-wide text-white">
+      {children}
+    </span>
+  );
+}
