@@ -2,9 +2,20 @@
 
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 const PROVINCES = ['Koshi', 'Madhesh', 'Bagmati', 'Gandaki', 'Lumbini', 'Karnali', 'Sudurpashchim'];
 const TIERS = ['Bronze', 'Silver', 'Gold', 'Platinum'];
+
+// Referral codes: brand-prefixed, cryptographically random, no name leak.
+// Alphabet excludes ambiguous chars (0/O/1/I/L) so codes are easy to read aloud.
+// PT + 8 chars over a 31-symbol set ≈ 8.5×10^11 combinations — not guessable.
+const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+function generateReferralCode(len = 8) {
+  let s = '';
+  for (let i = 0; i < len; i += 1) s += CODE_ALPHABET[crypto.randomInt(CODE_ALPHABET.length)];
+  return `PT${s}`;
+}
 
 const addressSchema = new mongoose.Schema(
   {
@@ -79,10 +90,15 @@ userSchema.pre('save', async function hashPassword() {
 });
 
 // ── Auto referral code + tier from points ────────────────
-userSchema.pre('save', function deriveFields() {
+userSchema.pre('save', async function deriveFields() {
   if (!this.referralCode) {
-    const base = (this.fullName || 'USER').replace(/[^a-zA-Z]/g, '').substring(0, 4).toUpperCase() || 'USER';
-    this.referralCode = `${base}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    // Generate until unique (collisions are astronomically unlikely, but the
+    // unique index would otherwise reject the save — so guard against it).
+    let code;
+    do {
+      code = generateReferralCode();
+    } while (await this.constructor.exists({ referralCode: code }));
+    this.referralCode = code;
   }
   if (this.points >= 5000) this.tier = 'Platinum';
   else if (this.points >= 1500) this.tier = 'Gold';

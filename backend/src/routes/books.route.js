@@ -43,14 +43,46 @@ router.get(
       const sort = SORTS[req.query.sort] || SORTS.newest;
 
       const filter = { isActive: true };
-      if (req.query.genre) filter.genre = String(req.query.genre).toLowerCase();
+      const and = [];
+      const csv = (v) => String(v).split(',').map((s) => s.trim()).filter(Boolean);
+
+      // Genre — single or comma-separated multi-select.
+      if (req.query.genre) {
+        const genres = csv(req.query.genre).map((g) => g.toLowerCase());
+        if (genres.length === 1) filter.genre = genres[0];
+        else if (genres.length > 1) filter.genre = { $in: genres };
+      }
       if (req.query.condition) filter.condition = req.query.condition;
+
+      // Form / format.
+      if (req.query.format) {
+        const formats = csv(req.query.format);
+        if (formats.length) filter['specifications.format'] = { $in: formats };
+      }
+
+      // Language — "Others" means anything that isn't Nepali/English.
+      if (req.query.language) {
+        const langs = csv(req.query.language);
+        const named = langs.filter((l) => l !== 'Others');
+        const langOr = [];
+        if (named.length) langOr.push({ 'specifications.language': { $in: named } });
+        if (langs.includes('Others')) langOr.push({ 'specifications.language': { $nin: ['Nepali', 'English'] } });
+        if (langOr.length) and.push({ $or: langOr });
+      }
+
+      // Publication year — publishedDate is free text; match any selected year.
+      if (req.query.year) {
+        const years = csv(req.query.year).filter((y) => /^\d{4}$/.test(y));
+        if (years.length) filter['specifications.publishedDate'] = new RegExp(years.join('|'));
+      }
+
       if (req.query.minPrice || req.query.maxPrice) {
         filter.price = {};
         if (req.query.minPrice) filter.price.$gte = req.query.minPrice;
         if (req.query.maxPrice) filter.price.$lte = req.query.maxPrice;
       }
       if (req.query.search) filter.$text = { $search: String(req.query.search) };
+      if (and.length) filter.$and = and;
 
       const [items, total] = await Promise.all([
         Book.find(filter).select(LIST_FIELDS).sort(sort).skip((page - 1) * limit).limit(limit).lean(),
@@ -120,14 +152,35 @@ router.get('/featured/books', async (_req, res, next) => {
   try {
     const data = await withCache('featured_books', 600, async () => {
       const base = { isActive: true };
+      // Up to 20 per rail — the homepage rails scroll horizontally.
       const [featured, bestsellers, newArrivals] = await Promise.all([
-        Book.find({ ...base, isFeatured: true }).select(LIST_FIELDS).limit(8).lean(),
-        Book.find({ ...base, isBestseller: true }).select(LIST_FIELDS).sort({ soldCount: -1 }).limit(8).lean(),
-        Book.find({ ...base, isNewArrival: true }).select(LIST_FIELDS).sort({ createdAt: -1 }).limit(8).lean(),
+        Book.find({ ...base, isFeatured: true }).select(LIST_FIELDS).limit(20).lean(),
+        Book.find({ ...base, isBestseller: true }).select(LIST_FIELDS).sort({ soldCount: -1 }).limit(20).lean(),
+        Book.find({ ...base, isNewArrival: true }).select(LIST_FIELDS).sort({ createdAt: -1 }).limit(20).lean(),
       ]);
       return { featured, bestsellers, newArrivals };
     });
     return ok(res, data, 'Featured');
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ── GET /api/books/sitemap — lean list of all active books for the sitemap ──
+router.get('/sitemap', async (_req, res, next) => {
+  try {
+    const data = await withCache('books_sitemap', 3600, () =>
+      Book.find({ isActive: true })
+        .select('slug updatedAt coverImage genre')
+        .sort({ updatedAt: -1 })
+        .limit(50000)
+        .lean()
+    );
+    return ok(
+      res,
+      data.map((b) => ({ slug: b.slug, updatedAt: b.updatedAt, image: b.coverImage?.secureUrl, genre: b.genre })),
+      'Sitemap'
+    );
   } catch (err) {
     return next(err);
   }

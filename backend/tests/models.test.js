@@ -40,7 +40,7 @@ describe('User model', () => {
 });
 
 describe('Book model', () => {
-  const base = { title: 'Atomic Habits', author: 'James Clear', genre: 'self-help', price: 899, coverImage: 'x.jpg', description: 'A book about habits and systems.' };
+  const base = { title: 'Atomic Habits', author: 'James Clear', genre: 'self-help', price: 899, coverImage: { publicId: 'seed/x.jpg', secureUrl: 'x.jpg', name: '' }, description: 'A book about habits and systems.' };
 
   it.each([
     [0, 'out-of-stock'],

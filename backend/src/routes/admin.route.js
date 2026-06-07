@@ -5,6 +5,7 @@ const { body, param, query } = require('express-validator');
 const { stringify } = require('csv-stringify/sync');
 
 const Book = require('../models/book.model');
+const Genre = require('../models/genre.model');
 const Order = require('../models/order.model');
 const User = require('../models/user.model');
 const Review = require('../models/review.model');
@@ -109,7 +110,12 @@ const bookRules = [
   body('genre').trim().notEmpty(),
   body('price').toInt().isInt({ min: 0 }),
   body('stock').optional().toInt().isInt({ min: 0 }),
-  body('coverImage').trim().notEmpty(),
+  // Cover is the image subdocument: { publicId, secureUrl, name }.
+  body('coverImage.secureUrl').trim().notEmpty().withMessage('A cover image is required'),
+  body('coverImage.publicId').trim().notEmpty(),
+  body('images').optional().isArray({ max: 10 }).withMessage('Up to 10 gallery images'),
+  body('images.*.secureUrl').optional().trim().notEmpty(),
+  body('images.*.publicId').optional().trim().notEmpty(),
   body('description').trim().isLength({ min: 10 }),
 ];
 
@@ -147,6 +153,73 @@ router.delete('/books/:id', [param('id').isMongoId()], validate, async (req, res
     const book = await Book.findByIdAndDelete(req.params.id);
     if (book) await invalidateCatalogCaches(book.slug);
     return ok(res, null, 'Book deleted');
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ══ GENRES ═══════════════════════════════════════════════
+// Admin-curated genre list. The book form's genre dropdown reads the public
+// GET /api/genres; these endpoints let an admin statically manage that list.
+router.get('/genres', async (_req, res, next) => {
+  try {
+    const genres = await Genre.find().sort({ name: 1 }).lean();
+    const counts = await Book.aggregate([{ $group: { _id: '$genre', n: { $sum: 1 } } }]);
+    const byGenre = new Map(counts.map((c) => [c._id, c.n]));
+    return ok(res, genres.map((g) => ({ ...g, bookCount: byGenre.get(g.slug) || 0 })), 'Genres');
+  } catch (err) {
+    return next(err);
+  }
+});
+
+const genreRules = [
+  body('name').trim().notEmpty().withMessage('Genre name is required'),
+  body('description').optional().trim(),
+  body('color').optional().trim(),
+  body('metaTitle').optional().trim().isLength({ max: 70 }),
+  body('metaDesc').optional().trim().isLength({ max: 160 }),
+];
+
+router.post('/genres', genreRules, validate, async (req, res, next) => {
+  try {
+    const slug = req.body.slug ? slugify(req.body.slug) : slugify(req.body.name);
+    if (!slug) return fail(res, 'Genre name must contain letters or numbers', 400, [{ field: 'name', code: 'INVALID' }]);
+    if (await Genre.exists({ slug })) {
+      return fail(res, 'A genre with that name already exists', 409, [{ field: 'name', code: 'DUPLICATE' }]);
+    }
+    const genre = await Genre.create({ ...req.body, slug });
+    await cacheDel('genres_list');
+    return created(res, genre, 'Genre created');
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.put('/genres/:slug', [param('slug').trim().notEmpty()], validate, async (req, res, next) => {
+  try {
+    const genre = await Genre.findOne({ slug: req.params.slug });
+    if (!genre) return fail(res, 'Genre not found', 404, [{ code: 'NOT_FOUND' }]);
+    const fields = ['name', 'description', 'curatorNote', 'icon', 'color', 'metaTitle', 'metaDesc', 'isActive'];
+    for (const f of fields) if (f in req.body) genre[f] = req.body[f];
+    await genre.save();
+    await cacheDel('genres_list');
+    return ok(res, genre, 'Genre updated');
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.delete('/genres/:id', [param('id').isMongoId()], validate, async (req, res, next) => {
+  try {
+    const genre = await Genre.findById(req.params.id);
+    if (!genre) return fail(res, 'Genre not found', 404, [{ code: 'NOT_FOUND' }]);
+    const inUse = await Book.countDocuments({ genre: genre.slug });
+    if (inUse > 0) {
+      return fail(res, `${inUse} book${inUse > 1 ? 's' : ''} still shelved under this genre — reassign them first.`, 409, [{ code: 'GENRE_IN_USE' }]);
+    }
+    await genre.deleteOne();
+    await cacheDel('genres_list');
+    return ok(res, null, 'Genre deleted');
   } catch (err) {
     return next(err);
   }
@@ -313,13 +386,8 @@ router.get('/reviews', async (req, res, next) => {
   }
 });
 
-async function recalcBookRating(bookId) {
-  const stats = await Review.aggregate([
-    { $match: { book: bookId, isApproved: true } },
-    { $group: { _id: null, avg: { $avg: '$rating' }, count: { $sum: 1 } } },
-  ]);
-  await Book.findByIdAndUpdate(bookId, { avgRating: stats[0]?.avg || 0, reviewCount: stats[0]?.count || 0 });
-}
+// Recompute avgRating + reviewCount from approved reviews (see Review model).
+const recalcBookRating = (bookId) => Review.calculateAverageRating(bookId);
 
 router.put('/reviews/:id/approve', [param('id').isMongoId()], validate, async (req, res, next) => {
   try {
@@ -375,6 +443,40 @@ router.get('/analytics/cart-only', async (req, res, next) => {
     const books = await Book.find({ _id: { $in: cartOnly.map((c) => c.bookId) } }).select('title author coverImage stock price').lean();
     const byId = new Map(books.map((b) => [String(b._id), b]));
     return ok(res, cartOnly.map((c) => ({ book: byId.get(String(c.bookId)), userCount: c.userCount })).filter((r) => r.book), 'Cart-only');
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ══ WISHLISTS (who saved what) ═══════════════════════════
+// Per-user view so an admin can see which customers saved which titles and act
+// on it (restock, promo, outreach).
+router.get('/wishlists', async (req, res, next) => {
+  try {
+    const filter = { isAdmin: false, wishlist: { $exists: true, $ne: [] } };
+    if (req.query.search) {
+      filter.$or = [
+        { fullName: new RegExp(String(req.query.search), 'i') },
+        { email: new RegExp(String(req.query.search), 'i') },
+      ];
+    }
+    const users = await User.find(filter)
+      .select('fullName email wishlist')
+      .populate({ path: 'wishlist', select: 'title slug price stockStatus genre' })
+      .limit(200)
+      .lean();
+
+    const data = users
+      .map((u) => {
+        const items = (u.wishlist || []).filter(Boolean).map((b) => ({
+          _id: b._id, title: b.title, slug: b.slug, price: b.price, stockStatus: b.stockStatus, genre: b.genre,
+        }));
+        return { _id: u._id, fullName: u.fullName, email: u.email, count: items.length, items };
+      })
+      .filter((u) => u.count > 0)
+      .sort((a, b) => b.count - a.count);
+
+    return ok(res, data, 'Wishlists');
   } catch (err) {
     return next(err);
   }

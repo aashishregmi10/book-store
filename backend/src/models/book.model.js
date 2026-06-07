@@ -1,6 +1,7 @@
 'use strict';
 
 const mongoose = require('mongoose');
+const imageSchema = require('./image.schema');
 
 const STOCK_STATUS = ['in-stock', 'low-stock', 'out-of-stock', 'discontinued'];
 
@@ -30,9 +31,10 @@ const bookSchema = new mongoose.Schema(
     reorderQuantity: { type: Number, default: 20, min: 0 },
     supplier: { type: String },
 
-    coverImage: { type: String, required: true },
-    coverImagePublicId: { type: String },
-    images: [{ type: String }],
+    // Primary cover + gallery, stored as Cloudinary image subdocuments
+    // ({ publicId, secureUrl, name }). The frontend enforces gallery min/max.
+    coverImage: { type: imageSchema, required: true },
+    images: { type: [imageSchema], default: [] },
 
     description: { type: String, required: true },
     shortDescription: { type: String, maxlength: 160 },

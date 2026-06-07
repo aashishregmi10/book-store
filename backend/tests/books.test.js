@@ -15,7 +15,7 @@ const book = (over) => ({
   genre: over.genre,
   price: over.price,
   stock: over.stock ?? 10,
-  coverImage: 'cover.jpg',
+  coverImage: { publicId: 'seed/cover.jpg', secureUrl: 'cover.jpg', name: '' },
   description: 'A sufficiently long description for validation purposes.',
   ...over,
 });

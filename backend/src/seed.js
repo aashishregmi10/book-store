@@ -45,7 +45,9 @@ async function seed() {
   await Book.create(
     BOOKS.map((b) => ({
       ...b,
-      coverImage: cover(b.isbn),
+      // Seed covers come from Open Library (no Cloudinary asset) — synthesise a
+      // publicId so the required image subdocument validates.
+      coverImage: { publicId: `seed/${b.isbn}`, secureUrl: cover(b.isbn), name: b.title },
       condition: 'new',
       description: `${b.title} by ${b.author}. ${GENRES.find((g) => g.slug === b.genre)?.name} — in stock now at PageTurn Nepal with cash-on-delivery across all seven provinces.`,
       isActive: true,

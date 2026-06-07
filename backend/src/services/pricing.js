@@ -5,8 +5,8 @@ const Coupon = require('../models/coupon.model');
 const Order = require('../models/order.model');
 
 // Tunable commerce rules (Nepal store).
-const DELIVERY_FEES = { standard: 150, express: 300, 'same-day': 500 };
-const FREE_DELIVERY_THRESHOLD = 2000; // NPR — free delivery at/above this subtotal
+const DELIVERY_FEES = { standard: 120, express: 300, 'same-day': 500 };
+const FREE_DELIVERY_THRESHOLD = 1500; // NPR — free delivery at/above this subtotal
 const POINTS_EARN_RATE = 0.05; // earn 5% of subtotal as points
 const POINTS_REDEEM_VALUE = 1; // 1 point == NPR 1 at checkout
 
@@ -88,7 +88,7 @@ async function priceCart({ items = [], deliveryMethod = 'standard', couponCode, 
       genre: b.genre,
       title: b.title,
       author: b.author,
-      coverImage: b.coverImage,
+      coverImage: b.coverImage?.secureUrl || '', // order/cart snapshot is a plain URL
       condition: b.condition,
       price: b.price,
       quantity: qty,

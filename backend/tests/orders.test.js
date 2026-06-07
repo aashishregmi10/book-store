@@ -25,8 +25,8 @@ beforeAll(async () => {
 afterAll(async () => db.closeDatabase());
 
 beforeEach(async () => {
-  bookA = await Book.create({ slug: 'a', title: 'Book A', author: 'Auth', genre: 'fiction', price: 899, stock: 10, coverImage: 'a.jpg', description: 'Long enough description.' });
-  bookB = await Book.create({ slug: 'b', title: 'Book B', author: 'Auth', genre: 'fiction', price: 500, stock: 1, coverImage: 'b.jpg', description: 'Long enough description.' });
+  bookA = await Book.create({ slug: 'a', title: 'Book A', author: 'Auth', genre: 'fiction', price: 899, stock: 10, coverImage: { publicId: 'seed/a.jpg', secureUrl: 'a.jpg', name: '' }, description: 'Long enough description.' });
+  bookB = await Book.create({ slug: 'b', title: 'Book B', author: 'Auth', genre: 'fiction', price: 500, stock: 1, coverImage: { publicId: 'seed/b.jpg', secureUrl: 'b.jpg', name: '' }, description: 'Long enough description.' });
 });
 afterEach(async () => db.clearDatabase());
 
@@ -42,7 +42,7 @@ describe('POST /api/orders (COD)', () => {
     const { order } = res.body.data;
     expect(order.orderNumber).toMatch(/^PT-\d{8}-\d{5}$/);
     expect(order.subtotal).toBe(2298);
-    expect(order.deliveryFee).toBe(0); // free over NPR 2000
+    expect(order.deliveryFee).toBe(0); // free over NPR 1500
     expect(order.total).toBe(2298);
     expect(order.pointsEarned).toBe(Math.floor(2298 * 0.05));
     expect(order.paymentMethod).toBe('cod');
@@ -99,9 +99,9 @@ describe('POST /api/orders (COD)', () => {
 
     expect(res.status).toBe(201);
     const { order } = res.body.data;
-    expect(order.deliveryFee).toBe(150); // 899 < 2000
+    expect(order.deliveryFee).toBe(120); // 899 < 1500
     expect(order.pointsUsed).toBe(100);
-    expect(order.total).toBe(899 + 150 - 100);
+    expect(order.total).toBe(899 + 120 - 100);
     const user = await User.findById(userId);
     expect(user.points).toBe(500 - 100 + Math.floor(899 * 0.05));
   });
@@ -118,7 +118,7 @@ describe('POST /api/orders (COD)', () => {
     const { order } = res.body.data;
     expect(order.couponCode).toBe('SAVE10');
     expect(order.couponDiscount).toBe(Math.floor(899 * 0.1));
-    expect(order.total).toBe(899 + 150 - Math.floor(899 * 0.1));
+    expect(order.total).toBe(899 + 120 - Math.floor(899 * 0.1));
     const coupon = await Coupon.findOne({ code: 'SAVE10' });
     expect(coupon.usageCount).toBe(1);
   });

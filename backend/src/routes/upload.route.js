@@ -37,9 +37,18 @@ router.post('/', authenticate, requireAdmin, (req, res, next) => {
     try {
       const folder = FOLDERS[req.query.folder] || FOLDERS.books;
       const result = await uploadBuffer(req.file.buffer, { folder });
+      // Shape matches the reusable `image` subdocument (publicId/secureUrl/name)
+      // so the client can persist the whole object. `url` kept for compatibility.
       return ok(
         res,
-        { url: result.secure_url, publicId: result.public_id, width: result.width, height: result.height },
+        {
+          publicId: result.public_id,
+          secureUrl: result.secure_url,
+          name: req.file.originalname || '',
+          url: result.secure_url,
+          width: result.width,
+          height: result.height,
+        },
         'Image uploaded'
       );
     } catch (e) {

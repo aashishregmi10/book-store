@@ -23,7 +23,7 @@ afterAll(async () => db.closeDatabase());
 
 beforeEach(async () => {
   token = await authHeader();
-  book = await Book.create({ slug: 'wl', title: 'Wish Book', author: 'A', genre: 'fiction', price: 600, stock: 5, coverImage: 'c.jpg', description: 'Long enough description.' });
+  book = await Book.create({ slug: 'wl', title: 'Wish Book', author: 'A', genre: 'fiction', price: 600, stock: 5, coverImage: { publicId: 'seed/c.jpg', secureUrl: 'c.jpg', name: '' }, description: 'Long enough description.' });
 });
 afterEach(async () => db.clearDatabase());
 

@@ -30,7 +30,7 @@ beforeEach(async () => {
   const reg = await request(app).post('/api/auth/register').send({ email: 'user@test.com', password: 'supersecret', fullName: 'Normal User' });
   userToken = reg.body.data.accessToken;
   normalUser = await User.findOne({ email: 'user@test.com' });
-  book = await Book.create({ slug: 'admin-book', title: 'Admin Book', author: 'A', genre: 'fiction', price: 500, stock: 10, coverImage: 'c.jpg', description: 'Long enough description.' });
+  book = await Book.create({ slug: 'admin-book', title: 'Admin Book', author: 'A', genre: 'fiction', price: 500, stock: 10, coverImage: { publicId: 'seed/c.jpg', secureUrl: 'c.jpg', name: '' }, description: 'Long enough description.' });
 });
 afterEach(async () => db.clearDatabase());
 
@@ -56,7 +56,7 @@ describe('Admin access control', () => {
 describe('Admin books CRUD', () => {
   it('creates, updates (recomputing stockStatus), and deletes a book', async () => {
     const create = await request(app).post('/api/admin/books').set(auth(adminToken)).send({
-      title: 'Deep Work', author: 'Cal Newport', genre: 'Self Help', price: 750, stock: 4, coverImage: 'x.jpg', description: 'A book about focus and concentration.',
+      title: 'Deep Work', author: 'Cal Newport', genre: 'Self Help', price: 750, stock: 4, coverImage: { publicId: 'seed/x.jpg', secureUrl: 'x.jpg', name: '' }, description: 'A book about focus and concentration.',
     });
     expect(create.status).toBe(201);
     expect(create.body.data.slug).toBe('deep-work');
