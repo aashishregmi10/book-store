@@ -62,6 +62,7 @@ app.get('/api/health', (_req, res) => ok(res, { status: 'ok', uptime: process.up
 app.use('/api/auth', require('./routes/auth.route'));
 app.use('/api/books', require('./routes/books.route'));
 app.use('/api/genres', require('./routes/genres.route'));
+app.use('/api/articles', require('./routes/articles.route'));
 app.use('/api/cart', require('./routes/cart.route'));
 app.use('/api/wishlist', require('./routes/wishlist.route'));
 app.use('/api/addresses', require('./routes/addresses.route'));
@@ -71,6 +72,7 @@ app.use('/api/orders', require('./routes/orders.route'));
 // app.use('/api/reviews', require('./routes/reviews.route'));
 // app.use('/api/notifications', require('./routes/notifications.route'));
 app.use('/api/upload', require('./routes/upload.route'));
+app.use('/api/feed', require('./routes/feed.route'));
 app.use('/api/admin', require('./routes/admin.route'));
 
 // ── 404 + central error handler (must be last) ───────────

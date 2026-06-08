@@ -63,11 +63,41 @@ export interface ReviewData {
   user?: { fullName: string };
 }
 
+export interface ArticleCard {
+  _id: string;
+  slug: string;
+  title: string;
+  excerpt?: string;
+  coverImage?: BookImage;
+  author?: string;
+  category?: string;
+  tags?: string[];
+  publishedAt?: string;
+  readingTime?: number;
+}
+
+export interface ArticleDetail extends ArticleCard {
+  body: string;
+  metaTitle?: string;
+  metaDesc?: string;
+  updatedAt?: string;
+  relatedBooks?: BookCardData[];
+}
+
+export interface QuestionData {
+  _id: string;
+  question: string;
+  answer: string;
+  answeredAt?: string;
+  createdAt?: string;
+}
+
 export interface Genre {
   _id: string;
   slug: string;
   name: string;
   description?: string;
+  curatorNote?: string;
   color?: string;
   icon?: string;
   bookCount?: number;

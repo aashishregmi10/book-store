@@ -6,13 +6,14 @@ import { notFound } from "next/navigation";
 import { Star, Truck, RotateCcw, ShieldCheck } from "lucide-react";
 
 import { apiGetOrNull } from "@/lib/api";
-import type { BookDetail, BookCardData, ReviewData } from "@/lib/types";
+import type { BookDetail, BookCardData, ReviewData, QuestionData } from "@/lib/types";
 import { npr, discountPct } from "@/lib/format";
-import { bookLd, breadcrumbLd } from "@/lib/seo";
+import { bookLd, breadcrumbLd, qaPageLd } from "@/lib/seo";
 import { JsonLd } from "@/components/JsonLd";
 import { BookCard } from "@/components/books/BookCard";
 import { AddToCartButton } from "@/components/books/AddToCartButton";
 import { WishlistButton } from "@/components/books/WishlistButton";
+import { AskQuestion } from "@/components/books/AskQuestion";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ interface BookResponse {
   book: BookDetail;
   related: BookCardData[];
   reviews: ReviewData[];
+  questions: QuestionData[];
 }
 
 // Cached per-request so generateMetadata and the page share one fetch.
@@ -45,7 +47,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       type: "website",
       title: `${book.title} by ${book.author}`,
       description: `${npr(book.price)} · ${book.author}`,
-      images: [{ url: book.coverImage.secureUrl, width: 400, height: 600, alt: `${book.title} cover` }],
+      // og:image is provided by the dynamic opengraph-image.tsx in this segment.
     },
   };
 }
@@ -55,7 +57,7 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
   const data = await getBook(slug);
   if (!data) notFound();
 
-  const { book, related, reviews } = data;
+  const { book, related, reviews, questions } = data;
   const soldOut = book.stockStatus === "out-of-stock" || book.stockStatus === "discontinued";
   const off = discountPct(book.price, book.comparePrice);
 
@@ -73,12 +75,13 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
     <>
       <JsonLd
         data={[
-          bookLd(book),
+          bookLd(book, reviews),
           breadcrumbLd([
             { name: "Home", path: "/" },
             { name: book.genre, path: `/genre/${book.genre}` },
             { name: book.title, path: `/books/${book.slug}` },
           ]),
+          ...(questions.length ? [qaPageLd({ title: book.title, slug: book.slug }, questions)] : []),
         ]}
       />
 
@@ -196,6 +199,24 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
             </ul>
           </section>
         )}
+
+        {/* Questions & answers (QAPage) */}
+        <section className="mt-12 max-w-3xl">
+          <h2 className="font-display text-2xl text-text">Questions &amp; answers</h2>
+          {questions.length > 0 ? (
+            <dl className="mt-4 space-y-5">
+              {questions.map((q) => (
+                <div key={q._id} className="border-b border-border pb-5">
+                  <dt className="font-display text-lg text-text">{q.question}</dt>
+                  <dd className="mt-1 font-body leading-relaxed text-muted">{q.answer}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : (
+            <p className="mt-3 font-body text-muted">No questions yet — be the first to ask about this book.</p>
+          )}
+          <AskQuestion slug={book.slug} />
+        </section>
 
         {/* Same-silo related */}
         {related.length > 0 && (

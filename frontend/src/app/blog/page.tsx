@@ -1,0 +1,69 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import Image from "next/image";
+import { apiGet } from "@/lib/api";
+import type { ArticleCard, Paged } from "@/lib/types";
+
+export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Reading Guides & Articles",
+  description:
+    "Book recommendations, reading guides, and buying advice for readers in Nepal — from the booksellers at PageTurn Nepal.",
+  alternates: { canonical: "/blog" },
+};
+
+export default async function BlogPage() {
+  const data = await apiGet<Paged<ArticleCard>>("/articles", { tags: ["articles"] }).catch(() => null);
+  const articles = data?.items ?? [];
+
+  return (
+    <div className="mx-auto max-w-[1600px] px-6 py-12 sm:px-8 lg:px-16 xl:px-24">
+      <header className="max-w-3xl">
+        <p className="label-smallcaps font-data text-xs">The reading room</p>
+        <h1 className="mt-2 font-display text-4xl text-text sm:text-5xl">Reading guides &amp; articles</h1>
+        <p className="mt-3 font-body text-lg leading-relaxed text-muted">
+          Recommendations, reading lists, and honest buying advice for readers across Nepal — written by the booksellers
+          who pick what we stock.
+        </p>
+      </header>
+
+      {articles.length === 0 ? (
+        <p className="py-20 text-center font-body text-muted">No articles yet — check back soon.</p>
+      ) : (
+        <div className="mt-10 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+          {articles.map((a) => (
+            <article key={a._id} className="group flex flex-col">
+              <Link href={`/blog/${a.slug}`} className="block">
+                <div className="relative aspect-[16/10] overflow-hidden rounded-xl border border-border bg-bg">
+                  {a.coverImage?.secureUrl && (
+                    <Image
+                      src={a.coverImage.secureUrl}
+                      alt={a.title}
+                      fill
+                      sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 30vw"
+                      className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                    />
+                  )}
+                </div>
+              </Link>
+              <div className="mt-3 flex flex-1 flex-col">
+                {a.category && <p className="font-data text-xs uppercase tracking-wide text-accent">{a.category}</p>}
+                <Link href={`/blog/${a.slug}`}>
+                  <h2 className="mt-1 font-display text-xl leading-snug text-text transition-colors group-hover:text-accent">
+                    {a.title}
+                  </h2>
+                </Link>
+                {a.excerpt && <p className="mt-2 font-body text-sm leading-relaxed text-muted">{a.excerpt}</p>}
+                <p className="mt-3 font-data text-xs text-muted">
+                  {a.author || "PageTurn Editors"}
+                  {a.readingTime ? ` · ${a.readingTime} min read` : ""}
+                </p>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

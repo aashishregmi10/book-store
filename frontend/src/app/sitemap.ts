@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { SITE } from "@/lib/seo";
 import { apiGet } from "@/lib/api";
-import type { Genre } from "@/lib/types";
+import type { Genre, ArticleCard, Paged } from "@/lib/types";
 
 // Regenerate hourly; resilient if the API is briefly unreachable.
 export const revalidate = 3600;
@@ -20,11 +20,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/books`, changeFrequency: "daily", priority: 0.9 },
     { url: `${base}/about`, changeFrequency: "monthly", priority: 0.5 },
     { url: `${base}/contact`, changeFrequency: "monthly", priority: 0.4 },
+    { url: `${base}/faq`, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${base}/blog`, changeFrequency: "weekly", priority: 0.6 },
   ];
 
-  const [genres, books] = await Promise.all([
+  const [genres, books, articlesPage] = await Promise.all([
     apiGet<Genre[]>("/genres", { revalidate: 3600 }).catch(() => [] as Genre[]),
     apiGet<BookSitemapEntry[]>("/books/sitemap", { revalidate: 3600 }).catch(() => [] as BookSitemapEntry[]),
+    apiGet<Paged<ArticleCard>>("/articles", { revalidate: 3600, searchParams: { limit: 100 } }).catch(() => null),
   ]);
 
   const genreRoutes: MetadataRoute.Sitemap = genres.map((g) => ({
@@ -41,5 +44,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...(b.image ? { images: [b.image] } : {}),
   }));
 
-  return [...staticRoutes, ...genreRoutes, ...bookRoutes];
+  const articleRoutes: MetadataRoute.Sitemap = (articlesPage?.items ?? []).map((a) => ({
+    url: `${base}/blog/${a.slug}`,
+    lastModified: a.publishedAt ? new Date(a.publishedAt) : undefined,
+    changeFrequency: "monthly",
+    priority: 0.6,
+  }));
+
+  return [...staticRoutes, ...genreRoutes, ...bookRoutes, ...articleRoutes];
 }

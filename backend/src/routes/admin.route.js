@@ -9,6 +9,8 @@ const Genre = require('../models/genre.model');
 const Order = require('../models/order.model');
 const User = require('../models/user.model');
 const Review = require('../models/review.model');
+const Question = require('../models/question.model');
+const Article = require('../models/article.model');
 const Activity = require('../models/activity.model');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
@@ -16,6 +18,7 @@ const { restoreStock } = require('../services/stock');
 const { cacheDel } = require('../config/redis');
 const { ok, created, fail } = require('../utils/apiResponse');
 const email = require('../utils/emailService');
+const { pingIndexNow } = require('../utils/indexnow');
 
 const router = express.Router();
 router.use(authenticate, requireAdmin);
@@ -126,6 +129,7 @@ router.post('/books', bookRules, validate, async (req, res, next) => {
     payload.genre = slugify(payload.genre);
     const book = await Book.create(payload);
     await invalidateCatalogCaches(book.slug);
+    pingIndexNow([`/books/${book.slug}`, '/books', `/genre/${book.genre}`]);
     return created(res, book, 'Book created');
   } catch (err) {
     return next(err);
@@ -142,6 +146,7 @@ router.put('/books/:slug', [param('slug').trim().notEmpty()], validate, async (r
     if (req.body.genre) book.genre = slugify(req.body.genre);
     await book.save(); // triggers stockStatus recompute
     await invalidateCatalogCaches(book.slug);
+    pingIndexNow([`/books/${book.slug}`, '/books', `/genre/${book.genre}`]);
     return ok(res, book, 'Book updated');
   } catch (err) {
     return next(err);
@@ -189,6 +194,7 @@ router.post('/genres', genreRules, validate, async (req, res, next) => {
     }
     const genre = await Genre.create({ ...req.body, slug });
     await cacheDel('genres_list');
+    pingIndexNow([`/genre/${genre.slug}`, '/books']);
     return created(res, genre, 'Genre created');
   } catch (err) {
     return next(err);
@@ -203,6 +209,7 @@ router.put('/genres/:slug', [param('slug').trim().notEmpty()], validate, async (
     for (const f of fields) if (f in req.body) genre[f] = req.body[f];
     await genre.save();
     await cacheDel('genres_list');
+    pingIndexNow([`/genre/${genre.slug}`, '/books']);
     return ok(res, genre, 'Genre updated');
   } catch (err) {
     return next(err);
@@ -220,6 +227,85 @@ router.delete('/genres/:id', [param('id').isMongoId()], validate, async (req, re
     await genre.deleteOne();
     await cacheDel('genres_list');
     return ok(res, null, 'Genre deleted');
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ══ ARTICLES (content hub) ═══════════════════════════════
+const readingTime = (body = '') => Math.max(1, Math.round(String(body).split(/\s+/).filter(Boolean).length / 200));
+
+async function invalidateArticleCaches(slug) {
+  await Promise.all([slug ? cacheDel(`article:${slug}`) : Promise.resolve(), cacheDel('articles_list:*')]);
+}
+
+router.get('/articles', async (_req, res, next) => {
+  try {
+    const articles = await Article.find().select('-body').sort({ updatedAt: -1 }).limit(200).lean();
+    return ok(res, articles, 'Articles');
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.get('/articles/:slug', [param('slug').trim().notEmpty()], validate, async (req, res, next) => {
+  try {
+    const article = await Article.findOne({ slug: req.params.slug }).populate('relatedBooks', 'title slug').lean();
+    if (!article) return fail(res, 'Article not found', 404, [{ code: 'NOT_FOUND' }]);
+    return ok(res, article, 'Article');
+  } catch (err) {
+    return next(err);
+  }
+});
+
+const articleRules = [
+  body('title').trim().notEmpty(),
+  body('body').trim().isLength({ min: 20 }),
+  body('excerpt').optional().trim().isLength({ max: 300 }),
+  body('status').optional().isIn(['draft', 'published']),
+];
+
+router.post('/articles', articleRules, validate, async (req, res, next) => {
+  try {
+    const payload = { ...req.body };
+    payload.slug = slugify(payload.slug || payload.title);
+    if (!payload.slug) return fail(res, 'Title must contain letters or numbers', 400, [{ field: 'title', code: 'INVALID' }]);
+    if (await Article.exists({ slug: payload.slug })) {
+      return fail(res, 'An article with that slug already exists', 409, [{ field: 'slug', code: 'DUPLICATE' }]);
+    }
+    payload.readingTime = readingTime(payload.body);
+    if (payload.status === 'published' && !payload.publishedAt) payload.publishedAt = new Date();
+    const article = await Article.create(payload);
+    await invalidateArticleCaches(article.slug);
+    if (article.status === 'published') pingIndexNow([`/blog/${article.slug}`, '/blog']);
+    return created(res, article, 'Article created');
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.put('/articles/:slug', [param('slug').trim().notEmpty()], validate, async (req, res, next) => {
+  try {
+    const article = await Article.findOne({ slug: req.params.slug });
+    if (!article) return fail(res, 'Article not found', 404, [{ code: 'NOT_FOUND' }]);
+    const fields = ['title', 'excerpt', 'body', 'coverImage', 'author', 'category', 'tags', 'status', 'metaTitle', 'metaDesc', 'relatedBooks'];
+    for (const f of fields) if (f in req.body) article[f] = req.body[f];
+    if ('body' in req.body) article.readingTime = readingTime(article.body);
+    if (article.status === 'published' && !article.publishedAt) article.publishedAt = new Date();
+    await article.save();
+    await invalidateArticleCaches(article.slug);
+    if (article.status === 'published') pingIndexNow([`/blog/${article.slug}`, '/blog']);
+    return ok(res, article, 'Article updated');
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.delete('/articles/:id', [param('id').isMongoId()], validate, async (req, res, next) => {
+  try {
+    const article = await Article.findByIdAndDelete(req.params.id);
+    if (article) await invalidateArticleCaches(article.slug);
+    return ok(res, null, 'Article deleted');
   } catch (err) {
     return next(err);
   }
@@ -405,6 +491,55 @@ router.put('/reviews/:id/reject', [param('id').isMongoId()], validate, async (re
     const review = await Review.findByIdAndDelete(req.params.id);
     if (review) await recalcBookRating(review.book);
     return ok(res, null, 'Review rejected');
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ══ QUESTIONS (customer Q&A → QAPage) ════════════════════
+router.get('/questions', async (req, res, next) => {
+  try {
+    const status = req.query.status || 'pending';
+    const filter = status === 'all' ? {} : { isAnswered: status === 'answered' };
+    const questions = await Question.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .populate('book', 'title slug')
+      .populate('user', 'fullName')
+      .lean();
+    return ok(res, questions, 'Questions');
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.put(
+  '/questions/:id/answer',
+  [param('id').isMongoId(), body('answer').trim().isLength({ min: 2, max: 2000 })],
+  validate,
+  async (req, res, next) => {
+    try {
+      const q = await Question.findByIdAndUpdate(
+        req.params.id,
+        { answer: req.body.answer, answeredBy: req.userId, answeredAt: new Date(), isAnswered: true },
+        { returnDocument: 'after' }
+      ).populate('book', 'slug');
+      if (!q) return fail(res, 'Question not found', 404, [{ code: 'NOT_FOUND' }]);
+      if (q.book?.slug) {
+        await invalidateCatalogCaches(q.book.slug);
+        pingIndexNow([`/books/${q.book.slug}`]);
+      }
+      return ok(res, null, 'Answer published');
+    } catch (err) {
+      return next(err);
+    }
+  }
+);
+
+router.delete('/questions/:id', [param('id').isMongoId()], validate, async (req, res, next) => {
+  try {
+    await Question.findByIdAndDelete(req.params.id);
+    return ok(res, null, 'Question deleted');
   } catch (err) {
     return next(err);
   }

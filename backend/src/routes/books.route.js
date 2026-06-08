@@ -1,15 +1,17 @@
 'use strict';
 
 const express = require('express');
-const { query, param } = require('express-validator');
+const { query, param, body } = require('express-validator');
 
 const Book = require('../models/book.model');
 const Genre = require('../models/genre.model');
 const Review = require('../models/review.model');
+const Question = require('../models/question.model');
 const { validate } = require('../middleware/validate');
+const { authenticate } = require('../middleware/auth');
 const { withCache } = require('../utils/cache');
 const { cacheDel } = require('../config/redis');
-const { ok, fail } = require('../utils/apiResponse');
+const { ok, created, fail } = require('../utils/apiResponse');
 
 const router = express.Router();
 
@@ -215,17 +217,43 @@ router.get('/:slug', [param('slug').trim().notEmpty()], validate, async (req, re
       return books;
     })();
 
-    const reviews = await Review.find({ book: book._id, isApproved: true })
-      .populate('user', 'fullName')
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .lean();
+    const [reviews, questions] = await Promise.all([
+      Review.find({ book: book._id, isApproved: true })
+        .populate('user', 'fullName')
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .lean(),
+      // Answered Q&A powers a visible section + QAPage schema (AEO).
+      Question.find({ book: book._id, isAnswered: true, isActive: true })
+        .select('question answer answeredAt createdAt')
+        .sort({ answeredAt: -1 })
+        .limit(10)
+        .lean(),
+    ]);
 
-    return ok(res, { book, related, reviews }, 'Book');
+    return ok(res, { book, related, reviews, questions }, 'Book');
   } catch (err) {
     return next(err);
   }
 });
+
+// ── POST /api/books/:slug/questions — ask a question (auth) ──
+router.post(
+  '/:slug/questions',
+  authenticate,
+  [param('slug').trim().notEmpty(), body('question').trim().isLength({ min: 5, max: 500 })],
+  validate,
+  async (req, res, next) => {
+    try {
+      const book = await Book.findOne({ slug: String(req.params.slug).toLowerCase(), isActive: true }).select('_id');
+      if (!book) return fail(res, 'Book not found', 404, [{ code: 'NOT_FOUND' }]);
+      await Question.create({ book: book._id, user: req.userId, question: req.body.question });
+      return created(res, null, "Thanks — we'll answer your question soon.");
+    } catch (err) {
+      return next(err);
+    }
+  }
+);
 
 // Exposed so admin mutations can invalidate the read caches.
 router.invalidateBookCaches = async (slug) => {

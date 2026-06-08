@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, BookText, Tags, Package, Users, Star, Heart, Store, LogOut } from "lucide-react";
+import { LayoutDashboard, BookText, Tags, Newspaper, Package, Users, Star, Heart, MessageCircleQuestion, Store, LogOut } from "lucide-react";
 import { useAuth } from "@/lib/stores/auth";
 import { clientApi } from "@/lib/client-api";
 
@@ -11,9 +11,11 @@ const NAV = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
   { href: "/admin/books", label: "Books", icon: BookText },
   { href: "/admin/genres", label: "Genres", icon: Tags },
+  { href: "/admin/articles", label: "Articles", icon: Newspaper },
   { href: "/admin/orders", label: "Orders", icon: Package },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/reviews", label: "Reviews", icon: Star },
+  { href: "/admin/questions", label: "Q&A", icon: MessageCircleQuestion },
   { href: "/admin/wishlists", label: "Wishlists", icon: Heart },
 ];
 

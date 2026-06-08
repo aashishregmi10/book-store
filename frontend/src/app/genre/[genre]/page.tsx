@@ -54,14 +54,23 @@ export default async function GenrePage({
 
   const { genre, items, total } = data;
 
+  const g = genre.name.toLowerCase();
   const faqs = [
     {
-      q: `How long does delivery take for ${genre.name.toLowerCase()} books in Nepal?`,
+      q: `How long does delivery take for ${g} books in Nepal?`,
       a: "We deliver within Kathmandu Valley in 1–2 days and to the rest of Nepal in 3–5 business days, with cash on delivery available everywhere.",
     },
     {
-      q: `Can I pay cash on delivery for ${genre.name.toLowerCase()} books?`,
+      q: `Can I pay cash on delivery for ${g} books?`,
       a: "Yes. Cash on delivery is available across all seven provinces — you pay when your order arrives.",
+    },
+    {
+      q: `How much does delivery cost for ${g} books?`,
+      a: "Delivery is free on orders over NPR 1,500; below that a flat NPR 120 applies anywhere in Nepal.",
+    },
+    {
+      q: `Are these ${g} books new?`,
+      a: "Almost all titles are brand new. Any used copy is clearly labelled 'Used' on its product page.",
     },
   ];
 
@@ -88,6 +97,12 @@ export default async function GenrePage({
           {genre.description ||
             `PageTurn Nepal stocks the top-rated ${genre.name.toLowerCase()} titles available across Nepal, with NPR pricing and cash on delivery to all seven provinces.`}
         </p>
+
+        {genre.curatorNote && (
+          <p className="mt-4 max-w-3xl border-l-2 border-accent pl-4 font-body italic leading-relaxed text-text">
+            {genre.curatorNote}
+          </p>
+        )}
 
         <div className="mt-6 flex items-center justify-between border-b border-border pb-3">
           <p className="font-data text-xs uppercase tracking-wide text-muted">{total} books</p>

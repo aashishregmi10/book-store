@@ -9,6 +9,7 @@ import { AccountMenu } from "./AccountMenu";
 
 const NAV = [
   { to: "/books", label: "Catalogue" },
+  { to: "/blog", label: "Articles" },
   { to: "/about", label: "Our Story" },
   { to: "/contact", label: "Contact" },
   { to: "/account", label: "Rewards" },

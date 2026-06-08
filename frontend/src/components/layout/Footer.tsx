@@ -21,7 +21,7 @@ export function Footer() {
           <ul className="mt-4 space-y-2 font-body text-sm text-muted">
             <li><Link href="/books" className="hover:text-accent">Catalogue</Link></li>
             <li><Link href="/genre/nepali-literature" className="hover:text-accent">Nepali literature</Link></li>
-            <li><Link href="/books" className="hover:text-accent">Memoir</Link></li>
+            <li><Link href="/blog" className="hover:text-accent">Reading guides</Link></li>
             <li><Link href="/account" className="hover:text-accent">Mystery box</Link></li>
           </ul>
         </div>
@@ -30,7 +30,8 @@ export function Footer() {
           <div className="font-display text-sm uppercase tracking-[0.2em] text-text">Shop</div>
           <ul className="mt-4 space-y-2 font-body text-sm text-muted">
             <li><Link href="/about" className="hover:text-accent">Our story</Link></li>
-            <li><Link href="/contact" className="hover:text-accent">Visit the shop</Link></li>
+            <li><Link href="/contact" className="hover:text-accent">Contact</Link></li>
+            <li><Link href="/faq" className="hover:text-accent">FAQ</Link></li>
             <li><Link href="/account" className="hover:text-accent">Rewards &amp; tiers</Link></li>
             <li><a href="mailto:hello@pageturn.com.np" className="hover:text-accent">hello@pageturn.com.np</a></li>
           </ul>
