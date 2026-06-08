@@ -62,6 +62,7 @@ async function connectMongo(uri = process.env.MONGODB_URI) {
   await mongoose.connect(uri, {
     serverSelectionTimeoutMS: 10000,
     maxPoolSize: 20,
+    minPoolSize: 5, // keep warm connections so the first request after idle isn't slow
   });
 
   return mongoose.connection;

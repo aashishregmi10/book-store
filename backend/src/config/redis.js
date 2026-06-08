@@ -73,8 +73,14 @@ async function cacheDel(pattern) {
   if (!available || !client) return;
   try {
     if (pattern.includes('*')) {
-      const keys = await client.keys(pattern);
-      if (keys.length) await client.del(keys);
+      // SCAN (cursor-based, non-blocking) instead of KEYS, which is O(N) and
+      // blocks Redis's single thread for every other command on a big keyspace.
+      let cursor = '0';
+      do {
+        const [next, keys] = await client.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+        cursor = next;
+        if (keys.length) await client.del(keys);
+      } while (cursor !== '0');
     } else {
       await client.del(pattern);
     }

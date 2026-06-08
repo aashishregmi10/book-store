@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ShoppingBag } from "lucide-react";
 import { useCart, selectSubtotal } from "@/lib/stores/cart";
+import { clientApi } from "@/lib/client-api";
 import { npr } from "@/lib/format";
 
 const FREE_DELIVERY = 1500;
@@ -18,6 +19,16 @@ export default function CartPage() {
   const remove = useCart((s) => s.remove);
   const subtotal = useCart(selectSubtotal);
   const [promo, setPromo] = useState("");
+
+  // Drop any items whose book was deleted/deactivated server-side.
+  useEffect(() => {
+    const ids = useCart.getState().items.map((i) => i.bookId);
+    if (!ids.length) return;
+    clientApi
+      .get<string[]>(`/books/active?ids=${ids.join(",")}`)
+      .then((valid) => useCart.getState().prune(valid))
+      .catch(() => {});
+  }, []);
 
   if (items.length === 0) {
     return (
@@ -62,31 +73,35 @@ export default function CartPage() {
                 </Link>
                 <span className="font-body text-sm text-muted">{i.author}</span>
 
-                <div className="mt-auto flex items-center gap-3 pt-3">
-                  <button
-                    onClick={() => setQty(i.bookId, i.quantity - 1)}
-                    aria-label="Decrease quantity"
-                    className="grid size-7 place-items-center rounded-full border border-border text-text transition-colors hover:border-accent hover:text-accent"
-                  >
-                    −
-                  </button>
-                  <span className="w-6 text-center font-data text-sm">{i.quantity}</span>
-                  <button
-                    onClick={() => setQty(i.bookId, i.quantity + 1)}
-                    aria-label="Increase quantity"
-                    className="grid size-7 place-items-center rounded-full border border-border text-text transition-colors hover:border-accent hover:text-accent"
-                  >
-                    +
-                  </button>
-                  <button onClick={() => remove(i.bookId)} className="ml-auto font-body text-xs text-muted hover:text-sale">
-                    Remove
-                  </button>
+                <div className="mt-auto flex items-center gap-1 pt-3">
+                  <div className="flex items-center rounded-full border border-border">
+                    <button
+                      onClick={() => setQty(i.bookId, i.quantity - 1)}
+                      aria-label="Decrease quantity"
+                      className="grid size-7 place-items-center text-text transition-colors hover:text-accent"
+                    >
+                      −
+                    </button>
+                    <span className="w-7 text-center font-data text-sm">{i.quantity}</span>
+                    <button
+                      onClick={() => setQty(i.bookId, i.quantity + 1)}
+                      aria-label="Increase quantity"
+                      className="grid size-7 place-items-center text-text transition-colors hover:text-accent"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <div className="text-right">
-                <div className="font-data text-lg font-semibold text-accent">{npr(i.price * i.quantity)}</div>
-                {i.quantity > 1 && <div className="font-data text-xs text-muted">{npr(i.price)} each</div>}
+              <div className="flex shrink-0 flex-col items-end justify-between text-right">
+                <div>
+                  <div className="font-data text-lg font-semibold text-accent">{npr(i.price * i.quantity)}</div>
+                  {i.quantity > 1 && <div className="font-data text-xs text-muted">{npr(i.price)} each</div>}
+                </div>
+                <button onClick={() => remove(i.bookId)} className="font-body text-xs text-muted hover:text-sale">
+                  Remove
+                </button>
               </div>
             </li>
           ))}

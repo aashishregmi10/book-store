@@ -5,13 +5,17 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { clientApi } from "@/lib/client-api";
 import { BookForm } from "../_components/BookForm";
-import { EMPTY_BOOK, type BookFormValues } from "../_components/types";
+import { EMPTY_BOOK, cleanSpecifications, type BookFormValues } from "../_components/types";
 
 export default function NewBook() {
   const router = useRouter();
 
   async function create(values: BookFormValues) {
-    const payload = { ...values, comparePrice: values.comparePrice || undefined };
+    const payload = {
+      ...values,
+      comparePrice: values.comparePrice || undefined,
+      specifications: cleanSpecifications(values.specifications),
+    };
     await clientApi.post("/admin/books", payload);
     router.push("/admin/books");
     router.refresh();

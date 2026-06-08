@@ -10,7 +10,20 @@ const bookSchema = new mongoose.Schema(
     slug: { type: String, required: true, unique: true, index: true, lowercase: true, trim: true },
     title: { type: String, required: true, trim: true },
     author: { type: String, required: true, trim: true },
-    isbn: { type: String, unique: true, sparse: true, trim: true },
+    // ISBN-13 only — Google rejects ISBN-10, and bookLd() emits this as gtin13
+    // (must be 13 digits). The setter strips hyphens/spaces so admins can paste
+    // the human-readable form (978-9-9337-0123-4).
+    isbn: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+      set: (v) => (v ? String(v).replace(/[\s-]/g, '') : v),
+      validate: {
+        validator: (v) => !v || /^\d{13}$/.test(v),
+        message: 'ISBN must be a 13-digit ISBN-13 (got "{VALUE}")',
+      },
+    },
     publicationYear: { type: Number, min: 1800 },
 
     // Silo architecture (SEO Guide §1): lower-kebab genre slug, indexed.
@@ -70,6 +83,16 @@ const bookSchema = new mongoose.Schema(
 
 // Full-text search across the key fields (Master Guide §7.7).
 bookSchema.index({ title: 'text', author: 'text', description: 'text', tags: 'text' });
+
+// Catalogue queries are { isActive: true, … } sorted by one of soldCount /
+// createdAt / price / avgRating. These compound indexes (ESR rule) let Mongo
+// satisfy both the filter and the sort from the index — no in-memory SORT stage.
+bookSchema.index({ isActive: 1, soldCount: -1 });
+bookSchema.index({ isActive: 1, createdAt: -1 });
+bookSchema.index({ isActive: 1, price: 1 });
+bookSchema.index({ isActive: 1, avgRating: -1 });
+// Genre silo page default (popular within a genre).
+bookSchema.index({ isActive: 1, genre: 1, soldCount: -1 });
 
 // Derive stockStatus from stock on every save (Master Guide §8.3 / Admin Supplement §2).
 // 'discontinued' is set explicitly by admin and preserved.

@@ -3,12 +3,20 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ImagePlus } from "lucide-react";
+import { ImagePlus, Sparkles, Loader2 } from "lucide-react";
 import { ImageUpload, GalleryUpload } from "./ImageUpload";
 import { useGenres } from "./useGenres";
-import { FALLBACK_GENRES, MIN_GALLERY_IMAGES, MAX_GALLERY_IMAGES, type BookFormValues } from "./types";
+import {
+  FALLBACK_GENRES,
+  FORMATS,
+  MIN_GALLERY_IMAGES,
+  MAX_GALLERY_IMAGES,
+  type BookFormValues,
+  type BookSpecifications,
+  type IsbnLookup,
+} from "./types";
 import { npr, discountPct } from "@/lib/format";
-import { ClientApiError } from "@/lib/client-api";
+import { clientApi, ClientApiError } from "@/lib/client-api";
 
 export function BookForm({
   initial,
@@ -35,8 +43,47 @@ export function BookForm({
     genreOptions.unshift({ value: form.genre, label: form.genre });
   }
 
+  const [looking, setLooking] = useState(false);
+  const [lookupMsg, setLookupMsg] = useState("");
+
   function set<K extends keyof BookFormValues>(key: K, value: BookFormValues[K]) {
     setForm((f) => ({ ...f, [key]: value }));
+  }
+  function setSpec<K extends keyof BookSpecifications>(key: K, value: BookSpecifications[K]) {
+    setForm((f) => ({ ...f, specifications: { ...f.specifications, [key]: value } }));
+  }
+
+  // Prefill title/author/cover/specs from Open Library by ISBN.
+  async function autofill() {
+    const isbn = form.isbn.trim();
+    if (!isbn) {
+      setLookupMsg("Enter an ISBN first.");
+      return;
+    }
+    setLooking(true);
+    setLookupMsg("");
+    try {
+      const data = await clientApi.get<IsbnLookup>(`/admin/books/lookup?isbn=${encodeURIComponent(isbn)}`);
+      const s = data.specifications || {};
+      setForm((f) => ({
+        ...f,
+        title: data.title || f.title,
+        author: data.author || f.author,
+        coverImage: data.coverImage || f.coverImage,
+        specifications: {
+          ...f.specifications,
+          ...(s.pages ? { pages: s.pages } : {}),
+          ...(s.publisher ? { publisher: s.publisher } : {}),
+          ...(s.publishedDate ? { publishedDate: s.publishedDate } : {}),
+          ...(s.language ? { language: s.language } : {}),
+        },
+      }));
+      setLookupMsg("Filled from Open Library — review the details, then save.");
+    } catch (err) {
+      setLookupMsg(err instanceof ClientApiError ? err.message : "Lookup failed — add details manually.");
+    } finally {
+      setLooking(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -81,6 +128,29 @@ export function BookForm({
           </Section>
 
           <Section title="Catalogue">
+            {/* ISBN + auto-fill from Open Library */}
+            <div>
+              <span className="font-data text-xs uppercase tracking-wide text-muted">ISBN</span>
+              <div className="mt-1 flex gap-2">
+                <input
+                  value={form.isbn}
+                  onChange={(e) => set("isbn", e.target.value)}
+                  placeholder="e.g. 9780385472579"
+                  className="w-full border border-border bg-bg px-3 py-2 font-data text-text outline-none focus:border-accent"
+                />
+                <button
+                  type="button"
+                  onClick={autofill}
+                  disabled={looking}
+                  className="inline-flex shrink-0 items-center gap-2 border border-accent px-3 py-2 font-data text-sm text-accent transition-colors hover:bg-accent/5 disabled:opacity-50"
+                >
+                  {looking ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+                  Auto-fill
+                </button>
+              </div>
+              {lookupMsg && <p className="mt-1 font-body text-xs text-muted">{lookupMsg}</p>}
+            </div>
+
             <Text label="Title" value={form.title} onChange={(v) => set("title", v)} required />
             <Text label="Author" value={form.author} onChange={(v) => set("author", v)} required />
             <div className="grid gap-4 sm:grid-cols-2">
@@ -100,7 +170,16 @@ export function BookForm({
                   { value: "used", label: "Used" },
                 ]}
               />
-              <Text label="ISBN" value={form.isbn} onChange={(v) => set("isbn", v)} mono />
+            </div>
+          </Section>
+
+          <Section title="Details">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Select label="Format" value={form.specifications.format} onChange={(v) => setSpec("format", v)} options={FORMATS.map((f) => ({ value: f, label: f }))} />
+              <Num label="Pages" value={form.specifications.pages} onChange={(v) => setSpec("pages", v)} />
+              <Text label="Language" value={form.specifications.language} onChange={(v) => setSpec("language", v)} />
+              <Text label="Publisher" value={form.specifications.publisher} onChange={(v) => setSpec("publisher", v)} />
+              <Text label="Published year" value={form.specifications.publishedDate} onChange={(v) => setSpec("publishedDate", v)} />
             </div>
           </Section>
 

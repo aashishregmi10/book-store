@@ -60,6 +60,7 @@ router.get('/products.xml', async (_req, res, next) => {
 </rss>`;
     });
     res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
     return res.send(xml);
   } catch (err) {
     return next(err);

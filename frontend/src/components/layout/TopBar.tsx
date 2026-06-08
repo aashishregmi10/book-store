@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useAuthModal } from "@/lib/stores/authModal";
 
 /**
  * Slim utility strip above the main header: a delivery promise on the left,
@@ -6,6 +9,7 @@ import Link from "next/link";
  * "chrome" and lets the pale-blue header below breathe.
  */
 export function TopBar() {
+  const openLogin = useAuthModal((s) => s.openLogin);
   return (
     <div className="bg-text text-bg">
       <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 px-6 py-2 font-data text-xs sm:px-8 lg:px-16 xl:px-24">
@@ -14,9 +18,9 @@ export function TopBar() {
         </p>
 
         <div className="flex shrink-0 items-center gap-3 text-bg/70">
-          <Link href="/login" className="whitespace-nowrap transition-colors hover:text-bg">
+          <button onClick={() => openLogin()} className="whitespace-nowrap transition-colors hover:text-bg">
             Sign in
-          </Link>
+          </button>
           <span className="text-bg/30">·</span>
           <Link href="/account" className="whitespace-nowrap transition-colors hover:text-bg">
             Track order

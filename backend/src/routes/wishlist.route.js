@@ -22,7 +22,8 @@ router.get('/', authenticate, async (req, res, next) => {
       select: WISHLIST_FIELDS,
       match: { isActive: true },
     });
-    return ok(res, user?.wishlist || [], 'Wishlist');
+    // filter(Boolean) drops any refs whose book was deleted/deactivated.
+    return ok(res, (user?.wishlist || []).filter(Boolean), 'Wishlist');
   } catch (err) {
     return next(err);
   }

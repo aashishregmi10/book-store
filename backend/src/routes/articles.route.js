@@ -34,6 +34,7 @@ router.get(
         ]);
         return { items, total, page, pages: Math.ceil(total / limit) };
       });
+      res.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
       return ok(res, data, 'Articles');
     } catch (err) {
       return next(err);
@@ -49,6 +50,7 @@ router.get('/:slug', [param('slug').trim().notEmpty()], validate, async (req, re
       Article.findOne({ slug, status: 'published' }).populate('relatedBooks', BOOK_FIELDS).lean()
     );
     if (!article) return fail(res, 'Article not found', 404, [{ code: 'NOT_FOUND' }]);
+    res.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
     return ok(res, article, 'Article');
   } catch (err) {
     return next(err);

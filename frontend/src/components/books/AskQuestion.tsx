@@ -1,14 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { MessageCircleQuestion, Check } from "lucide-react";
 import { useAuth } from "@/lib/stores/auth";
+import { useAuthModal } from "@/lib/stores/authModal";
 import { clientApi, ClientApiError } from "@/lib/client-api";
 
 export function AskQuestion({ slug }: { slug: string }) {
   const token = useAuth((s) => s.token);
   const hydrated = useAuth((s) => s.hydrated);
+  const openLogin = useAuthModal((s) => s.openLogin);
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState("");
   const [sent, setSent] = useState(false);
@@ -41,7 +42,7 @@ export function AskQuestion({ slug }: { slug: string }) {
   if (hydrated && !token) {
     return (
       <p className="mt-4 font-body text-sm text-muted">
-        <Link href={`/login?next=/books/${slug}`} className="text-accent hover:underline">Sign in</Link> to ask a question about this book.
+        <button onClick={() => openLogin(`/books/${slug}`)} className="text-accent hover:underline">Sign in</button> to ask a question about this book.
       </p>
     );
   }

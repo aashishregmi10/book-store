@@ -78,6 +78,10 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// "My orders" lists a user's orders newest-first — index the exact shape so it
+// uses an IXSCAN instead of a collection scan + in-memory sort.
+orderSchema.index({ user: 1, createdAt: -1 });
+
 // Generate PT-YYYYMMDD-XXXXX from an atomic per-day counter (collision-free).
 // Async hook: Mongoose 9 resolves via the returned promise — no `next`.
 orderSchema.pre('validate', async function genOrderNumber() {

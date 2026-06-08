@@ -19,6 +19,8 @@ const { cacheDel } = require('../config/redis');
 const { ok, created, fail } = require('../utils/apiResponse');
 const email = require('../utils/emailService');
 const { pingIndexNow } = require('../utils/indexnow');
+const { uploadBuffer } = require('../config/cloudinary');
+const { lookupByIsbn } = require('../utils/bookLookup');
 
 const router = express.Router();
 router.use(authenticate, requireAdmin);
@@ -28,6 +30,8 @@ const slugify = (s) => String(s).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-'
 async function invalidateCatalogCaches(slug) {
   await Promise.all([
     slug ? cacheDel(`book:${slug}`) : Promise.resolve(),
+    cacheDel('books_list:*'),
+    cacheDel('books_sitemap'),
     cacheDel('featured_books'),
     cacheDel('filters_metadata'),
     cacheDel('suggestions:*'),
@@ -97,6 +101,36 @@ router.get('/books', async (req, res, next) => {
   }
 });
 
+// ── GET /api/admin/books/lookup?isbn= — Google Books → Open Library fallback ──
+router.get('/books/lookup', [query('isbn').trim().notEmpty()], validate, async (req, res, next) => {
+  try {
+    const isbn = String(req.query.isbn).replace(/[^0-9Xx]/g, '');
+    const meta = await lookupByIsbn(isbn);
+    if (!meta) return fail(res, 'No match found for that ISBN — add the book manually.', 404, [{ code: 'NOT_FOUND' }]);
+
+    // Store the cover in Cloudinary so we own a permanent, fast asset.
+    let coverImage = null;
+    if (meta.coverUrl && typeof fetch === 'function') {
+      try {
+        const img = await fetch(meta.coverUrl);
+        if (img.ok) {
+          const buf = Buffer.from(await img.arrayBuffer());
+          if (buf.length > 1024) {
+            const up = await uploadBuffer(buf, { folder: 'pageturn/books' });
+            coverImage = { publicId: up.public_id, secureUrl: up.secure_url, name: `${meta.title || isbn}.jpg` };
+          }
+        }
+      } catch {
+        /* cover optional — proceed without it */
+      }
+    }
+
+    return ok(res, { title: meta.title, author: meta.author, coverImage, specifications: meta.specifications, source: meta.source }, 'Lookup');
+  } catch (err) {
+    return next(err);
+  }
+});
+
 router.get('/books/:slug', [param('slug').trim().notEmpty()], validate, async (req, res, next) => {
   try {
     const book = await Book.findOne({ slug: req.params.slug }).select('+costPrice').lean();
@@ -156,7 +190,11 @@ router.put('/books/:slug', [param('slug').trim().notEmpty()], validate, async (r
 router.delete('/books/:id', [param('id').isMongoId()], validate, async (req, res, next) => {
   try {
     const book = await Book.findByIdAndDelete(req.params.id);
-    if (book) await invalidateCatalogCaches(book.slug);
+    if (book) {
+      // Remove the dangling reference from every user's wishlist.
+      await User.updateMany({ wishlist: book._id }, { $pull: { wishlist: book._id } });
+      await invalidateCatalogCaches(book.slug);
+    }
     return ok(res, null, 'Book deleted');
   } catch (err) {
     return next(err);

@@ -4,6 +4,8 @@ import { usePathname } from "next/navigation";
 import { TopBar } from "./TopBar";
 import { Header } from "./Header";
 import { Footer } from "./Footer";
+import { AuthModal } from "../auth/AuthModal";
+import { SideDrawers } from "./SideDrawers";
 import { JsonLd } from "../JsonLd";
 import { organizationLd, websiteLd } from "@/lib/seo";
 
@@ -23,6 +25,8 @@ export function ChromeGate({ children }: { children: React.ReactNode }) {
       <Header />
       <main className="flex-1">{children}</main>
       <Footer />
+      <AuthModal />
+      <SideDrawers />
     </>
   );
 }

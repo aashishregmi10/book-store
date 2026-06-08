@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Heart, Share2, ShoppingBag, Bell, Check, Sparkles } from "lucide-react";
 import { useAuth } from "@/lib/stores/auth";
+import { useAuthModal } from "@/lib/stores/authModal";
 import { useCart } from "@/lib/stores/cart";
 import { clientApi } from "@/lib/client-api";
 import type { BookCardData } from "@/lib/types";
@@ -19,6 +20,7 @@ const onSale = (b: BookCardData) => !!b.comparePrice && b.comparePrice > b.price
 export default function WishlistPage() {
   const token = useAuth((s) => s.token);
   const hydrated = useAuth((s) => s.hydrated);
+  const openLogin = useAuthModal((s) => s.openLogin);
   const add = useCart((s) => s.add);
   const [books, setBooks] = useState<BookCardData[] | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
@@ -74,9 +76,9 @@ export default function WishlistPage() {
         </span>
         <h1 className="mt-5 font-display text-3xl text-text">Save books for later</h1>
         <p className="mt-2 font-body text-muted">Sign in to keep a wishlist that follows you across devices.</p>
-        <Link href="/login?next=/wishlist" className="mt-6 inline-block rounded-full bg-accent px-6 py-3 font-data text-sm uppercase tracking-wide text-white hover:bg-accent-hover">
+        <button onClick={() => openLogin("/wishlist")} className="mt-6 inline-block rounded-full bg-accent px-6 py-3 font-data text-sm uppercase tracking-wide text-white hover:bg-accent-hover">
           Sign in
-        </Link>
+        </button>
       </div>
     );
   }

@@ -19,6 +19,7 @@ interface CartState {
   add: (item: Omit<CartItem, "quantity">, qty?: number) => void;
   setQty: (bookId: string, qty: number) => void;
   remove: (bookId: string) => void;
+  prune: (validIds: string[]) => void;
   clear: () => void;
 }
 
@@ -47,6 +48,13 @@ export const useCart = create<CartState>()(
               : state.items.map((i) => (i.bookId === bookId ? { ...i, quantity: qty } : i)),
         })),
       remove: (bookId) => set((state) => ({ items: state.items.filter((i) => i.bookId !== bookId) })),
+      // Keep only items whose book is still purchasable (validated against the API).
+      prune: (validIds) =>
+        set((state) => {
+          const valid = new Set(validIds);
+          const kept = state.items.filter((i) => valid.has(i.bookId));
+          return kept.length === state.items.length ? state : { items: kept };
+        }),
       clear: () => set({ items: [] }),
     }),
     {

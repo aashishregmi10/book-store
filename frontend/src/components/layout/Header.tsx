@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { Search, ShoppingCart, Heart } from "lucide-react";
 import { useCart, selectCount } from "@/lib/stores/cart";
 import { useAuth } from "@/lib/stores/auth";
+import { useAuthModal } from "@/lib/stores/authModal";
+import { useDrawer } from "@/lib/stores/uiDrawer";
 import { AccountMenu } from "./AccountMenu";
 
 const NAV = [
@@ -21,6 +23,9 @@ export function Header() {
   const cartHydrated = useCart((s) => s.hydrated);
   const user = useAuth((s) => s.user);
   const authHydrated = useAuth((s) => s.hydrated);
+  const openLogin = useAuthModal((s) => s.openLogin);
+  const openCart = useDrawer((s) => s.openCart);
+  const openWishlist = useDrawer((s) => s.openWishlist);
 
   const isActive = (to: string) => pathname === to || (to !== "/" && pathname?.startsWith(to));
   const cartCount = cartHydrated ? count : 0;
@@ -74,37 +79,37 @@ export function Header() {
             <Search className="size-5" />
           </Link>
 
-          {/* Wishlist — pill on desktop, icon on mobile */}
-          <Link
-            href="/wishlist"
+          {/* Wishlist — pill on desktop, icon on mobile (opens drawer) */}
+          <button
+            onClick={openWishlist}
             className="hidden items-center gap-1.5 rounded-full border border-border px-3.5 py-1.5 font-data text-sm font-medium text-text transition-colors hover:border-accent md:inline-flex"
           >
             <Heart className="size-4 text-accent" /> Wishlist
-          </Link>
-          <Link href="/wishlist" aria-label="Wishlist" className="p-2 text-text transition-colors hover:text-[#e3534c] md:hidden">
+          </button>
+          <button onClick={openWishlist} aria-label="Wishlist" className="p-2 text-text transition-colors hover:text-[#e3534c] md:hidden">
             <Heart className="size-5" />
-          </Link>
+          </button>
 
-          {/* Cart icon + count badge */}
-          <Link href="/cart" aria-label={`Cart, ${cartCount} items`} className="relative p-2 text-text hover:text-accent">
+          {/* Cart icon + count badge (opens drawer) */}
+          <button onClick={openCart} aria-label={`Cart, ${cartCount} items`} className="relative p-2 text-text hover:text-accent">
             <ShoppingCart className="size-5" />
             {cartCount > 0 && (
               <span className="absolute -right-0.5 -top-0.5 grid min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-semibold leading-4 text-white">
                 {cartCount}
               </span>
             )}
-          </Link>
+          </button>
 
           {/* Auth: account dropdown when signed in, Login button otherwise */}
           {authHydrated && user ? (
             <AccountMenu />
           ) : (
-            <Link
-              href="/login"
+            <button
+              onClick={() => openLogin()}
               className="ml-1 rounded-full bg-accent px-4 py-2 font-data text-sm font-medium text-white transition-colors hover:bg-accent-hover"
             >
               Login
-            </Link>
+            </button>
           )}
         </div>
       </div>

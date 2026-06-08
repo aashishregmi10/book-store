@@ -86,12 +86,20 @@ router.get(
       if (req.query.search) filter.$text = { $search: String(req.query.search) };
       if (and.length) filter.$and = and;
 
-      const [items, total] = await Promise.all([
-        Book.find(filter).select(LIST_FIELDS).sort(sort).skip((page - 1) * limit).limit(limit).lean(),
-        Book.countDocuments(filter),
-      ]);
+      // Cache each distinct query for 60s (busted on admin book mutations via
+      // `books_list:*`). The count runs only on a cache miss.
+      const key = `books_list:${page}:${limit}:${req.query.sort || 'newest'}:${req.query.genre || ''}:${req.query.condition || ''}:${req.query.format || ''}:${req.query.language || ''}:${req.query.year || ''}:${req.query.minPrice || ''}:${req.query.maxPrice || ''}:${req.query.search || ''}`;
+      const data = await withCache(key, 60, async () => {
+        const [items, total] = await Promise.all([
+          Book.find(filter).select(LIST_FIELDS).sort(sort).skip((page - 1) * limit).limit(limit).lean(),
+          Book.countDocuments(filter),
+        ]);
+        return { items, total, page, pages: Math.ceil(total / limit) };
+      });
 
-      return ok(res, { items, total, page, pages: Math.ceil(total / limit) }, 'Books');
+      // Let a CDN/browser serve repeats without hitting the origin.
+      res.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+      return ok(res, data, 'Books');
     } catch (err) {
       return next(err);
     }
@@ -183,6 +191,22 @@ router.get('/sitemap', async (_req, res, next) => {
       data.map((b) => ({ slug: b.slug, updatedAt: b.updatedAt, image: b.coverImage?.secureUrl, genre: b.genre })),
       'Sitemap'
     );
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ── GET /api/books/active?ids=… — which of these books are still purchasable ──
+// Lets the client cart/wishlist prune items whose book was deleted/deactivated.
+router.get('/active', async (req, res, next) => {
+  try {
+    const ids = String(req.query.ids || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => /^[a-f0-9]{24}$/i.test(s));
+    if (!ids.length) return ok(res, [], 'Active');
+    const found = await Book.find({ _id: { $in: ids }, isActive: true }).distinct('_id');
+    return ok(res, found.map(String), 'Active');
   } catch (err) {
     return next(err);
   }

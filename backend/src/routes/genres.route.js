@@ -27,6 +27,7 @@ router.get('/', async (_req, res, next) => {
     const data = await withCache('genres_list', 3600, () =>
       Genre.find({ isActive: true }).select('slug name description color icon bookCount').sort({ name: 1 }).lean()
     );
+    res.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
     return ok(res, data, 'Genres');
   } catch (err) {
     return next(err);
@@ -59,6 +60,7 @@ router.get(
         Book.countDocuments(filter),
       ]);
 
+      res.set('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');
       return ok(res, { genre, items, total, page, pages: Math.ceil(total / limit) }, 'Genre');
     } catch (err) {
       return next(err);
