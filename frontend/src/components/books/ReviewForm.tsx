@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Star, Check, PenLine } from "lucide-react";
+import { Star, Check } from "lucide-react";
 import { useAuth } from "@/lib/stores/auth";
 import { useAuthModal } from "@/lib/stores/authModal";
 import { clientApi, ClientApiError } from "@/lib/client-api";
@@ -26,7 +26,6 @@ export function ReviewForm({ slug }: { slug: string }) {
   const router = useRouter();
 
   const [elig, setElig] = useState<Eligibility | null>(null);
-  const [open, setOpen] = useState(false);
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
   const [title, setTitle] = useState("");
@@ -105,19 +104,10 @@ export function ReviewForm({ slug }: { slug: string }) {
     );
   }
 
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="mt-4 inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 font-data text-sm text-text transition-colors hover:border-accent"
-      >
-        <PenLine className="size-4 text-accent" /> Write a review
-      </button>
-    );
-  }
-
+  // Eligible buyer — show the rating + form straight away.
   return (
     <form onSubmit={submit} className="mt-4 max-w-xl">
+      <p className="label-smallcaps mb-2 text-xs">Rate &amp; review this book</p>
       {error && <p className="mb-2 font-body text-sm text-sale">{error}</p>}
 
       {/* Star picker */}
@@ -168,9 +158,6 @@ export function ReviewForm({ slug }: { slug: string }) {
           className="rounded-full bg-accent px-5 py-2 font-data text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50"
         >
           {loading ? "Posting…" : "Post review"}
-        </button>
-        <button type="button" onClick={() => setOpen(false)} className="font-data text-sm text-muted hover:text-text">
-          Cancel
         </button>
       </div>
     </form>
