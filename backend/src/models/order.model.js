@@ -10,6 +10,8 @@ const ORDER_STATUS = ['placed', 'confirmed', 'processing', 'shipped', 'delivered
 const orderItemSchema = new mongoose.Schema(
   {
     book: { type: mongoose.Schema.Types.ObjectId, ref: 'Book', required: true },
+    variantId: { type: mongoose.Schema.Types.ObjectId }, // which format variant, if any
+    format: { type: String }, // snapshot of the variant format (e.g. 'Hardcover')
     title: { type: String, required: true }, // snapshot at purchase
     author: { type: String, required: true },
     coverImage: { type: String },

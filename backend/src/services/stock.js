@@ -22,8 +22,39 @@ const STATUS_RECALC = {
   },
 };
 
+// Add `delta` to a single variant's stock inside a $map (used by variant restore).
+const adjustVariant = (variantId, delta) => ({
+  $set: {
+    variants: {
+      $map: {
+        input: '$variants',
+        as: 'v',
+        in: {
+          $cond: [
+            { $eq: [{ $toString: '$$v._id' }, String(variantId)] },
+            { $mergeObjects: ['$$v', { stock: { $add: ['$$v.stock', delta] } }] },
+            '$$v',
+          ],
+        },
+      },
+    },
+  },
+});
+
 /** Add stock back (order cancel/refund) and recompute stockStatus atomically. */
-function restoreStock(bookId, qty) {
+function restoreStock(bookId, qty, variantId) {
+  if (variantId) {
+    return Book.updateOne(
+      { _id: bookId, 'variants._id': variantId },
+      [
+        adjustVariant(variantId, qty),
+        { $set: { soldCount: { $max: [{ $subtract: ['$soldCount', qty] }, 0] } } },
+        { $set: { stock: { $sum: '$variants.stock' }, price: { $min: '$variants.price' } } },
+        STATUS_RECALC,
+      ],
+      { updatePipeline: true }
+    );
+  }
   return Book.updateOne(
     { _id: bookId },
     [

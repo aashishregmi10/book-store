@@ -21,6 +21,7 @@ interface OrderItem {
   book?: string;
   title: string;
   author: string;
+  format?: string;
   coverImage?: string;
   price: number;
   quantity: number;
@@ -189,7 +190,10 @@ export default function AdminOrders() {
                                       ) : null}
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                      <p className="truncate font-body text-sm text-text">{it.title}</p>
+                                      <p className="truncate font-body text-sm text-text">
+                                        {it.title}
+                                        {it.format ? <span className="ml-2 font-data text-xs uppercase tracking-wide text-muted">{it.format}</span> : null}
+                                      </p>
                                       <p className="truncate font-body text-xs text-muted">{it.author}</p>
                                     </div>
                                     <div className="text-right">

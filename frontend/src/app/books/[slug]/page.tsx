@@ -12,6 +12,7 @@ import { bookLd, breadcrumbLd, qaPageLd } from "@/lib/seo";
 import { JsonLd } from "@/components/JsonLd";
 import { BookCard } from "@/components/books/BookCard";
 import { AddToCartButton } from "@/components/books/AddToCartButton";
+import { FormatPicker } from "@/components/books/FormatPicker";
 import { WishlistButton } from "@/components/books/WishlistButton";
 import { AskQuestion } from "@/components/books/AskQuestion";
 import { ReviewForm } from "@/components/books/ReviewForm";
@@ -126,30 +127,41 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
               <span className="font-body text-sm text-muted">({book.reviewCount} reviews)</span>
             </div>
 
-            <div className="mt-5 flex items-baseline gap-3">
-              <span className="font-data text-3xl font-semibold text-text">{npr(book.price)}</span>
-              {book.comparePrice && book.comparePrice > book.price && (
-                <span className="font-data text-lg text-muted line-through">{npr(book.comparePrice)}</span>
-              )}
-            </div>
+            {book.variants?.length ? (
+              <>
+                <FormatPicker book={book} />
+                <div className="mt-4">
+                  <WishlistButton bookId={book._id} className="size-12" variant="bordered" />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mt-5 flex items-baseline gap-3">
+                  <span className="font-data text-3xl font-semibold text-text">{npr(book.price)}</span>
+                  {book.comparePrice && book.comparePrice > book.price && (
+                    <span className="font-data text-lg text-muted line-through">{npr(book.comparePrice)}</span>
+                  )}
+                </div>
 
-            <p className="mt-2 font-data text-sm">
-              {soldOut ? (
-                <span className="text-sale">Currently out of stock</span>
-              ) : book.stockStatus === "low-stock" ? (
-                <span className="text-sale">Only a few left — order soon</span>
-              ) : (
-                <span className="text-accent">In stock · ships today from Kathmandu</span>
-              )}
-            </p>
+                <p className="mt-2 font-data text-sm">
+                  {soldOut ? (
+                    <span className="text-sale">Currently out of stock</span>
+                  ) : book.stockStatus === "low-stock" ? (
+                    <span className="text-sale">Only a few left — order soon</span>
+                  ) : (
+                    <span className="text-accent">In stock · ships today from Kathmandu</span>
+                  )}
+                </p>
 
-            <div className="mt-6 flex flex-wrap items-center gap-3">
-              <AddToCartButton
-                book={{ bookId: book._id, slug: book.slug, title: book.title, author: book.author, coverImage: book.coverImage.secureUrl, price: book.price, stock: book.stock }}
-                disabled={soldOut}
-              />
-              <WishlistButton bookId={book._id} className="size-12" variant="bordered" />
-            </div>
+                <div className="mt-6 flex flex-wrap items-center gap-3">
+                  <AddToCartButton
+                    book={{ bookId: book._id, slug: book.slug, title: book.title, author: book.author, coverImage: book.coverImage.secureUrl, price: book.price, stock: book.stock }}
+                    disabled={soldOut}
+                  />
+                  <WishlistButton bookId={book._id} className="size-12" variant="bordered" />
+                </div>
+              </>
+            )}
 
             {/* trust row */}
             <ul className="mt-6 grid gap-2 font-body text-sm text-muted">

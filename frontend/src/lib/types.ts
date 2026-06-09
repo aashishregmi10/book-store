@@ -13,12 +13,22 @@ export interface BookImage {
   name?: string;
 }
 
+// A purchasable edition (Hardcover/Paperback) with its own price + stock.
+export interface BookVariant {
+  _id: string;
+  format: "Paperback" | "Hardcover" | "E-book" | "Audiobook";
+  price: number;
+  comparePrice?: number;
+  stock: number;
+  isbn?: string;
+}
+
 export interface BookCardData {
   _id: string;
   slug: string;
   title: string;
   author: string;
-  price: number;
+  price: number; // single-format price, or the cheapest variant ("from")
   comparePrice?: number;
   coverImage: BookImage;
   avgRating: number;
@@ -28,6 +38,7 @@ export interface BookCardData {
   condition?: "new" | "used";
   isBestseller?: boolean;
   isNewArrival?: boolean;
+  variants?: BookVariant[]; // present (length > 0) when the title has formats
 }
 
 export interface BookDetail extends BookCardData {

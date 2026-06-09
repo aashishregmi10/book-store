@@ -16,7 +16,7 @@ const { ok, created, fail } = require('../utils/apiResponse');
 
 const router = express.Router();
 
-const LIST_FIELDS = 'slug title author price comparePrice coverImage avgRating reviewCount stockStatus genre condition isBestseller isNewArrival';
+const LIST_FIELDS = 'slug title author price comparePrice coverImage avgRating reviewCount stockStatus genre condition isBestseller isNewArrival variants';
 
 const SORTS = {
   popular: { soldCount: -1 },
@@ -210,12 +210,18 @@ router.get('/active', async (req, res, next) => {
       .filter((s) => /^[a-f0-9]{24}$/i.test(s));
     if (!ids.length) return ok(res, [], 'Active');
     const found = await Book.find({ _id: { $in: ids }, isActive: true })
-      .select('stock stockStatus')
+      .select('stock stockStatus variants')
       .lean();
-    const data = found.map((b) => ({
-      _id: String(b._id),
-      stock: b.stockStatus === 'out-of-stock' || b.stockStatus === 'discontinued' ? 0 : b.stock,
-    }));
+    const data = found.map((b) => {
+      const dead = b.stockStatus === 'out-of-stock' || b.stockStatus === 'discontinued';
+      return {
+        _id: String(b._id),
+        stock: dead ? 0 : b.stock,
+        ...(b.variants?.length
+          ? { variants: b.variants.map((v) => ({ variantId: String(v._id), stock: dead ? 0 : v.stock })) }
+          : {}),
+      };
+    });
     return ok(res, data, 'Active');
   } catch (err) {
     return next(err);

@@ -145,8 +145,14 @@ const bookRules = [
   body('title').trim().notEmpty(),
   body('author').trim().notEmpty(),
   body('genre').trim().notEmpty(),
-  body('price').toInt().isInt({ min: 0 }),
+  // price/stock are optional when variants supply them (derived in the model).
+  body('price').optional().toInt().isInt({ min: 0 }),
   body('stock').optional().toInt().isInt({ min: 0 }),
+  body('variants').optional().isArray({ max: 6 }),
+  body('variants.*.format').optional().isIn(['Paperback', 'Hardcover', 'E-book', 'Audiobook']),
+  body('variants.*.price').optional().toInt().isInt({ min: 0 }),
+  body('variants.*.stock').optional().toInt().isInt({ min: 0 }),
+  body('includedTitles').optional().isArray({ max: 50 }),
   // Cover is the image subdocument: { publicId, secureUrl, name }.
   body('coverImage.secureUrl').trim().notEmpty().withMessage('A cover image is required'),
   body('coverImage.publicId').trim().notEmpty(),
@@ -175,7 +181,7 @@ router.put('/books/:slug', [param('slug').trim().notEmpty()], validate, async (r
     const book = await Book.findOne({ slug: req.params.slug });
     if (!book) return fail(res, 'Book not found', 404, [{ code: 'NOT_FOUND' }]);
     // Whitelist updatable fields.
-    const fields = ['title', 'author', 'isbn', 'genre', 'subgenre', 'tags', 'condition', 'price', 'comparePrice', 'costPrice', 'stock', 'stockStatus', 'reorderPoint', 'coverImage', 'images', 'description', 'shortDescription', 'specifications', 'metaTitle', 'metaDescription', 'isBestseller', 'isNewArrival', 'isFeatured', 'isStaffPick', 'staffPickNote', 'isActive'];
+    const fields = ['title', 'author', 'isbn', 'genre', 'subgenre', 'tags', 'condition', 'price', 'comparePrice', 'costPrice', 'stock', 'stockStatus', 'reorderPoint', 'coverImage', 'images', 'description', 'shortDescription', 'specifications', 'variants', 'includedTitles', 'metaTitle', 'metaDescription', 'isBestseller', 'isNewArrival', 'isFeatured', 'isStaffPick', 'staffPickNote', 'isActive'];
     for (const f of fields) if (f in req.body) book[f] = req.body[f];
     if (req.body.genre) book.genre = slugify(req.body.genre);
     await book.save(); // triggers stockStatus recompute
@@ -404,7 +410,7 @@ router.put('/orders/:id/cancel', [param('id').isMongoId()], validate, async (req
     if (['delivered', 'cancelled', 'refunded'].includes(order.status)) {
       return fail(res, `Cannot cancel an order that is ${order.status}`, 400, [{ code: 'NOT_CANCELLABLE' }]);
     }
-    await Promise.all(order.items.map((i) => restoreStock(i.book, i.quantity)));
+    await Promise.all(order.items.map((i) => restoreStock(i.book, i.quantity, i.variantId)));
     if (order.user) {
       const u = await User.findById(order.user);
       if (u) {
@@ -429,7 +435,7 @@ router.put('/orders/:id/refund', [param('id').isMongoId()], validate, async (req
     const order = await Order.findById(req.params.id);
     if (!order) return fail(res, 'Order not found', 404, [{ code: 'NOT_FOUND' }]);
     if (order.paymentStatus === 'refunded') return fail(res, 'Already refunded', 400, [{ code: 'ALREADY_REFUNDED' }]);
-    await Promise.all(order.items.map((i) => restoreStock(i.book, i.quantity)));
+    await Promise.all(order.items.map((i) => restoreStock(i.book, i.quantity, i.variantId)));
     if (order.user && order.pointsEarned > 0) {
       await User.updateOne({ _id: order.user }, {
         $inc: { points: -order.pointsEarned },

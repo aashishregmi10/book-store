@@ -164,3 +164,53 @@ describe('POST /api/cart/validate', () => {
     expect(bad.body.data.issues[0].code).toBe('INSUFFICIENT_STOCK');
   });
 });
+
+describe('Format variants', () => {
+  let multi; // Hardcover 1200/stock 3, Paperback 800/stock 5
+  beforeEach(async () => {
+    multi = await Book.create({
+      slug: 'multi', title: 'Multi Format', author: 'Auth', genre: 'fiction',
+      coverImage: { publicId: 'seed/m.jpg', secureUrl: 'm.jpg', name: '' }, description: 'Long enough description.',
+      variants: [
+        { format: 'Hardcover', price: 1200, stock: 3 },
+        { format: 'Paperback', price: 800, stock: 5 },
+      ],
+    });
+  });
+
+  it('derives top-level price (cheapest) and stock (summed) from variants', () => {
+    expect(multi.price).toBe(800);
+    expect(multi.stock).toBe(8);
+  });
+
+  it('cart/validate prices the chosen variant', async () => {
+    const hc = multi.variants.find((v) => v.format === 'Hardcover');
+    const res = await request(app).post('/api/cart/validate').send({ items: [{ bookId: multi.id, variantId: hc.id, quantity: 1 }] });
+    expect(res.body.data.subtotal).toBe(1200);
+    expect(res.body.data.issues).toHaveLength(0);
+  });
+
+  it('requires a format when the book has variants (FORMAT_REQUIRED)', async () => {
+    const res = await request(app).post('/api/cart/validate').send({ items: [{ bookId: multi.id, quantity: 1 }] });
+    expect(res.body.data.issues[0].code).toBe('FORMAT_REQUIRED');
+  });
+
+  it('orders a variant: decrements only that variant + snapshots its format', async () => {
+    const { token } = await makeUser();
+    const hc = multi.variants.find((v) => v.format === 'Hardcover');
+    const res = await request(app)
+      .post('/api/orders')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ items: [{ bookId: multi.id, variantId: hc.id, quantity: 2 }], deliveryAddress: ADDR });
+
+    expect(res.status).toBe(201);
+    const { order } = res.body.data;
+    expect(order.subtotal).toBe(2400);
+    expect(order.items[0].format).toBe('Hardcover');
+
+    const after = await Book.findById(multi.id);
+    expect(after.variants.find((v) => v.format === 'Hardcover').stock).toBe(1); // 3 - 2
+    expect(after.variants.find((v) => v.format === 'Paperback').stock).toBe(5); // untouched
+    expect(after.stock).toBe(6); // summed
+  });
+});

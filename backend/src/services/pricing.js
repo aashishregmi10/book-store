@@ -65,7 +65,7 @@ async function priceCart({ items = [], deliveryMethod = 'standard', couponCode, 
   const lineItems = [];
   let subtotal = 0;
 
-  for (const { bookId, quantity } of items) {
+  for (const { bookId, variantId, quantity } of items) {
     const b = byId.get(String(bookId));
     const qty = Math.max(1, Number(quantity) || 1);
     if (!b || !b.isActive) {
@@ -76,23 +76,48 @@ async function priceCart({ items = [], deliveryMethod = 'standard', couponCode, 
       issues.push({ bookId, code: 'DISCONTINUED', message: `${b.title} is discontinued` });
       continue;
     }
-    if (b.stock < qty) {
-      issues.push({ bookId, code: 'INSUFFICIENT_STOCK', message: `Only ${b.stock} of ${b.title} left`, available: b.stock });
+
+    // Resolve the priced edition: a specific variant when the book has them,
+    // else the single top-level edition (unchanged behaviour).
+    const hasVariants = Array.isArray(b.variants) && b.variants.length > 0;
+    let unitPrice = b.price;
+    let available = b.stock;
+    let format = b.specifications?.format;
+    let resolvedVariantId;
+
+    if (hasVariants) {
+      const variant = variantId && b.variants.find((v) => String(v._id) === String(variantId));
+      if (!variant) {
+        issues.push({ bookId, code: 'FORMAT_REQUIRED', message: `Choose a format for ${b.title}` });
+        continue;
+      }
+      unitPrice = variant.price;
+      available = variant.stock;
+      format = variant.format;
+      resolvedVariantId = String(variant._id);
+    }
+
+    if (available < qty) {
+      const label = format ? `${b.title} (${format})` : b.title;
+      issues.push({ bookId, variantId: resolvedVariantId, code: 'INSUFFICIENT_STOCK', message: `Only ${available} of ${label} left`, available });
       continue;
     }
-    subtotal += b.price * qty;
+
+    subtotal += unitPrice * qty;
     lineItems.push({
       book: b._id,
       bookId: String(b._id),
+      variantId: resolvedVariantId,
+      format,
       slug: b.slug,
       genre: b.genre,
       title: b.title,
       author: b.author,
       coverImage: b.coverImage?.secureUrl || '', // order/cart snapshot is a plain URL
       condition: b.condition,
-      price: b.price,
+      price: unitPrice,
       quantity: qty,
-      lineTotal: b.price * qty,
+      lineTotal: unitPrice * qty,
     });
   }
 

@@ -20,6 +20,16 @@ export interface BookSpecifications {
 
 export const FORMATS = ["Paperback", "Hardcover", "E-book", "Audiobook"];
 
+// A format variant row in the admin form (Hardcover/Paperback with own price + stock).
+export interface BookVariantInput {
+  _id?: string;
+  format: string;
+  price: number;
+  comparePrice?: number;
+  stock: number;
+  isbn?: string;
+}
+
 // Shape returned by the Open Library ISBN lookup endpoint.
 export interface IsbnLookup {
   title?: string;
@@ -48,6 +58,7 @@ export interface AdminBook {
   isFeatured?: boolean;
   isBestseller?: boolean;
   isNewArrival?: boolean;
+  variants?: BookVariantInput[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -80,6 +91,7 @@ export interface BookFormValues {
   description: string;
   condition: string;
   specifications: BookSpecifications;
+  variants: BookVariantInput[];
   isActive: boolean;
   isFeatured: boolean;
   isBestseller: boolean;
@@ -93,6 +105,20 @@ export const EMPTY_SPECIFICATIONS: BookSpecifications = {
   publisher: "",
   publishedDate: "",
 };
+
+// Keep only fully-filled variant rows; normalise numbers + drop empty comparePrice.
+export function cleanVariants(variants: BookVariantInput[]) {
+  return (variants || [])
+    .filter((v) => v.format && v.price > 0)
+    .map((v) => ({
+      ...(v._id ? { _id: v._id } : {}),
+      format: v.format,
+      price: Number(v.price),
+      ...(v.comparePrice ? { comparePrice: Number(v.comparePrice) } : {}),
+      stock: Number(v.stock) || 0,
+      ...(v.isbn?.trim() ? { isbn: v.isbn.trim() } : {}),
+    }));
+}
 
 // Drop empty/zero fields so they don't trip the model's validators (pages min 1).
 export function cleanSpecifications(s: BookSpecifications) {
@@ -119,6 +145,7 @@ export const EMPTY_BOOK: BookFormValues = {
   description: "",
   condition: "new",
   specifications: { ...EMPTY_SPECIFICATIONS },
+  variants: [],
   isActive: true,
   isFeatured: false,
   isBestseller: false,

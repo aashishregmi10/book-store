@@ -21,53 +21,95 @@ const PROVINCES = User.PROVINCES;
 
 // Decrement stock + bump soldCount + recompute stockStatus atomically.
 // Conditional on stock>=qty so a raced order can't oversell.
-function decrementStock(bookId, qty) {
-  return Book.updateOne(
-    { _id: bookId, stock: { $gte: qty }, stockStatus: { $ne: 'discontinued' } },
-    [
-      { $set: { stock: { $subtract: ['$stock', qty] }, soldCount: { $add: ['$soldCount', qty] } } },
-      {
-        $set: {
-          stockStatus: {
-            $switch: {
-              branches: [
-                { case: { $eq: ['$stock', 0] }, then: 'out-of-stock' },
-                { case: { $lte: ['$stock', 3] }, then: 'low-stock' },
-              ],
-              default: 'in-stock',
-            },
-          },
+// Recompute top-level stock/price from variants, then derive stockStatus.
+const SYNC_FROM_VARIANTS = { $set: { stock: { $sum: '$variants.stock' }, price: { $min: '$variants.price' } } };
+const STATUS_FROM_STOCK = {
+  $set: {
+    stockStatus: {
+      $switch: {
+        branches: [
+          { case: { $eq: ['$stock', 0] }, then: 'out-of-stock' },
+          { case: { $lte: ['$stock', 3] }, then: 'low-stock' },
+        ],
+        default: 'in-stock',
+      },
+    },
+  },
+};
+
+// Adjust a single variant's stock by `delta` (negative to reserve) inside a $map.
+const adjustVariant = (variantId, delta) => ({
+  $set: {
+    variants: {
+      $map: {
+        input: '$variants',
+        as: 'v',
+        in: {
+          $cond: [
+            { $eq: [{ $toString: '$$v._id' }, String(variantId)] },
+            { $mergeObjects: ['$$v', { stock: { $add: ['$$v.stock', delta] } }] },
+            '$$v',
+          ],
         },
       },
-    ],
+    },
+  },
+});
+
+function decrementStock(bookId, qty, variantId) {
+  if (variantId) {
+    return Book.updateOne(
+      { _id: bookId, stockStatus: { $ne: 'discontinued' }, variants: { $elemMatch: { _id: variantId, stock: { $gte: qty } } } },
+      [adjustVariant(variantId, -qty), { $set: { soldCount: { $add: ['$soldCount', qty] } } }, SYNC_FROM_VARIANTS, STATUS_FROM_STOCK],
+      { updatePipeline: true }
+    );
+  }
+  return Book.updateOne(
+    { _id: bookId, stock: { $gte: qty }, stockStatus: { $ne: 'discontinued' } },
+    [{ $set: { stock: { $subtract: ['$stock', qty] }, soldCount: { $add: ['$soldCount', qty] } } }, STATUS_FROM_STOCK],
     { updatePipeline: true }
   );
 }
 
 // Reverse a decrement (compensation on partial failure / cancellation).
-function restoreStock(bookId, qty) {
-  return Book.updateOne({ _id: bookId }, [
-    { $set: { stock: { $add: ['$stock', qty] }, soldCount: { $max: [{ $subtract: ['$soldCount', qty] }, 0] } } },
-    {
-      $set: {
-        stockStatus: {
-          $cond: [
-            { $eq: ['$stockStatus', 'discontinued'] },
-            'discontinued',
-            {
-              $switch: {
-                branches: [
-                  { case: { $eq: ['$stock', 0] }, then: 'out-of-stock' },
-                  { case: { $lte: ['$stock', 3] }, then: 'low-stock' },
-                ],
-                default: 'in-stock',
-              },
-            },
-          ],
+const STATUS_FROM_STOCK_KEEP_DISC = {
+  $set: {
+    stockStatus: {
+      $cond: [
+        { $eq: ['$stockStatus', 'discontinued'] },
+        'discontinued',
+        {
+          $switch: {
+            branches: [
+              { case: { $eq: ['$stock', 0] }, then: 'out-of-stock' },
+              { case: { $lte: ['$stock', 3] }, then: 'low-stock' },
+            ],
+            default: 'in-stock',
+          },
         },
-      },
+      ],
     },
-  ], { updatePipeline: true });
+  },
+};
+
+function restoreStock(bookId, qty, variantId) {
+  if (variantId) {
+    return Book.updateOne(
+      { _id: bookId, 'variants._id': variantId },
+      [
+        adjustVariant(variantId, qty),
+        { $set: { soldCount: { $max: [{ $subtract: ['$soldCount', qty] }, 0] } } },
+        SYNC_FROM_VARIANTS,
+        STATUS_FROM_STOCK_KEEP_DISC,
+      ],
+      { updatePipeline: true }
+    );
+  }
+  return Book.updateOne(
+    { _id: bookId },
+    [{ $set: { stock: { $add: ['$stock', qty] }, soldCount: { $max: [{ $subtract: ['$soldCount', qty] }, 0] } } }, STATUS_FROM_STOCK_KEEP_DISC],
+    { updatePipeline: true }
+  );
 }
 
 // ── POST /api/orders — place order (auth optional → guest checkout) ──
@@ -77,6 +119,7 @@ router.post(
   [
     body('items').isArray({ min: 1 }),
     body('items.*.bookId').isMongoId(),
+    body('items.*.variantId').optional().isMongoId(),
     body('items.*.quantity').optional().toInt().isInt({ min: 1 }),
     body('deliveryMethod').optional().isIn(['standard', 'express', 'same-day']),
     body('paymentMethod').optional().isString(),
@@ -109,10 +152,10 @@ router.post(
 
       // Reserve stock atomically; compensate if any line races out.
       for (const li of priced.lineItems) {
-        const r = await decrementStock(li.book, li.quantity);
+        const r = await decrementStock(li.book, li.quantity, li.variantId);
         if (r.modifiedCount === 1) decremented.push(li);
         else {
-          await Promise.all(decremented.map((d) => restoreStock(d.book, d.quantity)));
+          await Promise.all(decremented.map((d) => restoreStock(d.book, d.quantity, d.variantId)));
           return fail(res, 'Stock changed while checking out — please try again.', 409, [{ bookId: li.bookId, code: 'STOCK_RACE' }]);
         }
       }
@@ -122,6 +165,7 @@ router.post(
         isGuest: !user,
         items: priced.lineItems.map((li) => ({
           book: li.book, title: li.title, author: li.author, coverImage: li.coverImage, condition: li.condition, price: li.price, quantity: li.quantity,
+          ...(li.variantId ? { variantId: li.variantId } : {}), ...(li.format ? { format: li.format } : {}),
         })),
         subtotal: priced.subtotal,
         deliveryFee: priced.deliveryFee,

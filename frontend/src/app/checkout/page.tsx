@@ -41,7 +41,7 @@ export default function CheckoutPage() {
   // Authoritative pricing from the server whenever items / method change.
   useEffect(() => {
     if (items.length === 0) return;
-    const payload = { items: items.map((i) => ({ bookId: i.bookId, quantity: i.quantity })), deliveryMethod: method };
+    const payload = { items: items.map((i) => ({ bookId: i.bookId, variantId: i.variantId, quantity: i.quantity })), deliveryMethod: method };
     clientApi.post<Priced>("/cart/validate", payload).then(setPriced).catch(() => setPriced(null));
   }, [items, method]);
 
@@ -76,7 +76,7 @@ export default function CheckoutPage() {
     setPlacing(true);
     try {
       const data = await clientApi.post<{ order: { orderNumber: string } }>("/orders", {
-        items: items.map((i) => ({ bookId: i.bookId, quantity: i.quantity })),
+        items: items.map((i) => ({ bookId: i.bookId, variantId: i.variantId, quantity: i.quantity })),
         deliveryAddress: addr,
         deliveryMethod: method,
         paymentMethod: "cod",

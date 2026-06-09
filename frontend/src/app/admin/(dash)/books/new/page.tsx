@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { clientApi } from "@/lib/client-api";
 import { BookForm } from "../_components/BookForm";
-import { EMPTY_BOOK, cleanSpecifications, type BookFormValues } from "../_components/types";
+import { EMPTY_BOOK, cleanSpecifications, cleanVariants, type BookFormValues } from "../_components/types";
 
 export default function NewBook() {
   const router = useRouter();
@@ -15,6 +15,7 @@ export default function NewBook() {
       ...values,
       comparePrice: values.comparePrice || undefined,
       specifications: cleanSpecifications(values.specifications),
+      variants: cleanVariants(values.variants),
     };
     await clientApi.post("/admin/books", payload);
     router.push("/admin/books");
