@@ -14,6 +14,7 @@ import { BookCard } from "@/components/books/BookCard";
 import { AddToCartButton } from "@/components/books/AddToCartButton";
 import { WishlistButton } from "@/components/books/WishlistButton";
 import { AskQuestion } from "@/components/books/AskQuestion";
+import { ReviewForm } from "@/components/books/ReviewForm";
 
 export const dynamic = "force-dynamic";
 
@@ -119,7 +120,7 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
 
             <div className="mt-4 flex items-center gap-3">
               <span className="inline-flex items-center gap-1 font-data text-sm text-text">
-                <Star className="size-4 fill-accent text-accent" />
+                <Star className="size-4 fill-star text-star" />
                 {book.avgRating?.toFixed(1) ?? "0.0"}
               </span>
               <span className="font-body text-sm text-muted">({book.reviewCount} reviews)</span>
@@ -179,15 +180,15 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
         </section>
 
         {/* Reviews */}
-        {reviews.length > 0 && (
-          <section className="mt-12 max-w-3xl">
-            <h2 className="font-display text-2xl text-text">Reader reviews</h2>
+        <section className="mt-12 max-w-3xl">
+          <h2 className="font-display text-2xl text-text">Reader reviews</h2>
+          {reviews.length > 0 ? (
             <ul className="mt-4 space-y-5">
               {reviews.map((r) => (
                 <li key={r._id} className="border-b border-border pb-5">
                   <div className="flex items-center gap-2">
                     <span className="inline-flex items-center gap-1 font-data text-sm text-text">
-                      <Star className="size-3.5 fill-accent text-accent" /> {r.rating}.0
+                      <Star className="size-3.5 fill-star text-star" /> {r.rating}.0
                     </span>
                     {r.isVerifiedPurchase && <span className="font-data text-xs uppercase tracking-wide text-accent">Verified</span>}
                   </div>
@@ -197,8 +198,11 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
                 </li>
               ))}
             </ul>
-          </section>
-        )}
+          ) : (
+            <p className="mt-3 font-body text-muted">No reviews yet — be the first to share your thoughts.</p>
+          )}
+          <ReviewForm slug={book.slug} />
+        </section>
 
         {/* Questions & answers (QAPage) */}
         <section className="mt-12 max-w-3xl">
@@ -224,7 +228,7 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
             <h2 className="font-display text-2xl text-text">
               More in {book.genre.replace(/-/g, " ")}
             </h2>
-            <div className="mt-6 grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {related.map((b) => (
                 <BookCard key={b.slug} book={b} />
               ))}

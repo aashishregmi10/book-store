@@ -17,6 +17,8 @@
   --color-muted: #6b7c92;     /* slate blue-grey — captions, placeholders */
   --color-border: #cfe0f1;    /* pale blue hairline dividers, card edges */
   --color-sale: #c0392b;      /* restrained brick red for sale/urgency */
+  --color-star: #ffc400;       /* bright gold-yellow — filled rating stars */
+  --color-star-empty: #dcdcdc; /* soft grey — empty rating stars */
 
   --font-display: var(--font-cormorant), Georgia, "Times New Roman", serif;
   --font-body: var(--font-source-serif), Georgia, serif;

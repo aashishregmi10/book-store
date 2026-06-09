@@ -70,7 +70,7 @@ export default function AdminReviews() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 font-data text-sm text-text"><Star className="size-3.5 fill-accent text-accent" /> {r.rating}.0</span>
+                  <span className="inline-flex items-center gap-1 font-data text-sm text-text"><Star className="size-3.5 fill-star text-star" /> {r.rating}.0</span>
                   {r.isVerifiedPurchase && <span className="font-data text-xs uppercase text-accent">Verified</span>}
                   {r.isApproved && <span className="font-data text-xs uppercase text-muted">Approved</span>}
                 </div>
