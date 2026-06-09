@@ -125,7 +125,7 @@ export function ReviewForm({ slug }: { slug: string }) {
           >
             <Star
               className={`size-8 transition-colors ${
-                (hover || rating) >= n ? "fill-star text-star" : "fill-transparent text-border"
+                (hover || rating) >= n ? "fill-star text-star" : "fill-star-empty text-star-empty"
               }`}
             />
           </button>
