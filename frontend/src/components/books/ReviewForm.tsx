@@ -28,7 +28,6 @@ export function ReviewForm({ slug }: { slug: string }) {
   const [elig, setElig] = useState<Eligibility | null>(null);
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
-  const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -57,7 +56,7 @@ export function ReviewForm({ slug }: { slug: string }) {
     }
     setLoading(true);
     try {
-      await clientApi.post(`/books/${slug}/reviews`, { rating, title: title.trim() || undefined, body });
+      await clientApi.post(`/books/${slug}/reviews`, { rating, body });
       setSent(true);
       router.refresh(); // pull in the newly-published review + updated rating
     } catch (err) {
@@ -104,14 +103,14 @@ export function ReviewForm({ slug }: { slug: string }) {
     );
   }
 
-  // Eligible buyer — show the rating + form straight away.
+  // Eligible buyer — show the rating + form straight away, in its own card so it
+  // reads as distinct from the plain "Ask a question" affordance below.
   return (
-    <form onSubmit={submit} className="mt-4 max-w-xl">
-      <p className="label-smallcaps mb-2 text-xs">Rate &amp; review this book</p>
-      {error && <p className="mb-2 font-body text-sm text-sale">{error}</p>}
+    <form onSubmit={submit} className="mt-5 max-w-xl rounded-lg border border-border bg-surface p-5 shadow-sm">
+      <p className="font-display text-lg text-text">Rate this book</p>
 
       {/* Star picker */}
-      <div className="flex items-center gap-1" role="radiogroup" aria-label="Rating">
+      <div className="mt-2 flex items-center gap-1" role="radiogroup" aria-label="Rating">
         {[1, 2, 3, 4, 5].map((n) => (
           <button
             key={n}
@@ -125,21 +124,16 @@ export function ReviewForm({ slug }: { slug: string }) {
             className="p-0.5"
           >
             <Star
-              className={`size-6 transition-colors ${
-                (hover || rating) >= n ? "fill-accent text-accent" : "text-border"
+              className={`size-8 transition-colors ${
+                (hover || rating) >= n ? "fill-star text-star" : "fill-transparent text-border"
               }`}
             />
           </button>
         ))}
       </div>
 
-      <input
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        maxLength={100}
-        placeholder="Headline (optional) — e.g. A clear, practical read"
-        className="mt-3 w-full rounded-md border border-border bg-bg px-3 py-2 font-body text-sm text-text outline-none placeholder:text-muted focus:border-accent"
-      />
+      {error && <p className="mt-3 font-body text-sm text-sale">{error}</p>}
+
       <textarea
         value={body}
         onChange={(e) => setBody(e.target.value)}
@@ -147,19 +141,16 @@ export function ReviewForm({ slug }: { slug: string }) {
         minLength={10}
         maxLength={2000}
         rows={4}
-        placeholder="What did you think? What stood out, who would you recommend it to?"
-        className="mt-2 w-full resize-y rounded-md border border-border bg-bg px-3 py-2 font-body text-sm text-text outline-none placeholder:text-muted focus:border-accent"
+        className="mt-3 w-full resize-y rounded-md border border-border bg-bg px-3 py-2 font-body text-sm text-text outline-none focus:border-accent"
       />
 
-      <div className="mt-2 flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded-full bg-accent px-5 py-2 font-data text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50"
-        >
-          {loading ? "Posting…" : "Post review"}
-        </button>
-      </div>
+      <button
+        type="submit"
+        disabled={loading}
+        className="mt-3 rounded-md bg-accent px-5 py-2 font-data text-sm font-medium uppercase tracking-wide text-white hover:bg-accent-hover disabled:opacity-50"
+      >
+        {loading ? "Posting…" : "Post review"}
+      </button>
     </form>
   );
 }

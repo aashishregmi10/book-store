@@ -120,7 +120,7 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
 
             <div className="mt-4 flex items-center gap-3">
               <span className="inline-flex items-center gap-1 font-data text-sm text-text">
-                <Star className="size-4 fill-accent text-accent" />
+                <Star className="size-4 fill-star text-star" />
                 {book.avgRating?.toFixed(1) ?? "0.0"}
               </span>
               <span className="font-body text-sm text-muted">({book.reviewCount} reviews)</span>
@@ -188,7 +188,7 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
                 <li key={r._id} className="border-b border-border pb-5">
                   <div className="flex items-center gap-2">
                     <span className="inline-flex items-center gap-1 font-data text-sm text-text">
-                      <Star className="size-3.5 fill-accent text-accent" /> {r.rating}.0
+                      <Star className="size-3.5 fill-star text-star" /> {r.rating}.0
                     </span>
                     {r.isVerifiedPurchase && <span className="font-data text-xs uppercase tracking-wide text-accent">Verified</span>}
                   </div>
