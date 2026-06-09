@@ -33,7 +33,7 @@ export function organizationLd() {
     sameAs: SITE.sameAs,
     areaServed: { "@type": "Country", name: "Nepal" },
     currenciesAccepted: "NPR",
-    paymentAccepted: "Cash on Delivery, eSewa, Khalti",
+    paymentAccepted: "Cash on Delivery",
     knowsAbout: ["Nepali publishing market", "Educational textbooks Nepal", "Book distribution logistics"],
     contactPoint: {
       "@type": "ContactPoint",

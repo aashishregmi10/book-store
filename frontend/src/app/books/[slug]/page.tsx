@@ -144,7 +144,7 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
 
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <AddToCartButton
-                book={{ bookId: book._id, slug: book.slug, title: book.title, author: book.author, coverImage: book.coverImage.secureUrl, price: book.price }}
+                book={{ bookId: book._id, slug: book.slug, title: book.title, author: book.author, coverImage: book.coverImage.secureUrl, price: book.price, stock: book.stock }}
                 disabled={soldOut}
               />
               <WishlistButton bookId={book._id} className="size-12" variant="bordered" />

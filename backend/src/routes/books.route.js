@@ -197,7 +197,10 @@ router.get('/sitemap', async (_req, res, next) => {
 });
 
 // ── GET /api/books/active?ids=… — which of these books are still purchasable ──
-// Lets the client cart/wishlist prune items whose book was deleted/deactivated.
+// Lets the client cart/wishlist drop deleted/deactivated books AND refresh the
+// available stock so quantity steppers can cap at what's actually in stock.
+// Returns [{ _id, stock }] where stock is the purchasable count (0 when the
+// book is out-of-stock or discontinued).
 router.get('/active', async (req, res, next) => {
   try {
     const ids = String(req.query.ids || '')
@@ -205,8 +208,14 @@ router.get('/active', async (req, res, next) => {
       .map((s) => s.trim())
       .filter((s) => /^[a-f0-9]{24}$/i.test(s));
     if (!ids.length) return ok(res, [], 'Active');
-    const found = await Book.find({ _id: { $in: ids }, isActive: true }).distinct('_id');
-    return ok(res, found.map(String), 'Active');
+    const found = await Book.find({ _id: { $in: ids }, isActive: true })
+      .select('stock stockStatus')
+      .lean();
+    const data = found.map((b) => ({
+      _id: String(b._id),
+      stock: b.stockStatus === 'out-of-stock' || b.stockStatus === 'discontinued' ? 0 : b.stock,
+    }));
+    return ok(res, data, 'Active');
   } catch (err) {
     return next(err);
   }

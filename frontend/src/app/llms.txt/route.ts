@@ -36,7 +36,7 @@ same-day delivery inside the Kathmandu Valley and 3–5 day delivery elsewhere.
 ${genreLines || `- [Browse all genres](${SITE.url}/books)`}
 
 ## Buying & delivery
-- Currency: NPR. Payment: Cash on Delivery (eSewa & Khalti coming soon).
+- Currency: NPR. Payment: Cash on Delivery only.
 - Free delivery on orders over NPR 1,500; otherwise a flat NPR 120.
 - Delivery: 1–2 days in Kathmandu Valley, 3–5 days to the rest of Nepal.
 - Returns: 7 days on unread books.

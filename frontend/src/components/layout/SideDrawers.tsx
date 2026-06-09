@@ -29,16 +29,14 @@ function DrawerShell({ title, onClose, children }: { title: string; onClose: () 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
+    return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
   return (
     <div className="fixed inset-0 z-[60]">
-      <div className="absolute inset-0 bg-text/40 backdrop-blur-sm" onClick={onClose} />
+      {/* Transparent click-catcher: closes on outside click without dimming or
+          blurring the page behind it. */}
+      <div className="absolute inset-0" onClick={onClose} />
       <div className="absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-bg shadow-2xl">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <h2 className="font-display text-xl text-text">{title}</h2>
@@ -58,13 +56,13 @@ function CartPanel({ onClose }: { onClose: () => void }) {
   const remove = useCart((s) => s.remove);
   const subtotal = useCart(selectSubtotal);
 
-  // Prune any items whose book was deleted/deactivated server-side.
+  // Refresh stock + drop any items whose book was deleted/deactivated server-side.
   useEffect(() => {
     const ids = useCart.getState().items.map((i) => i.bookId);
     if (!ids.length) return;
     clientApi
-      .get<string[]>(`/books/active?ids=${ids.join(",")}`)
-      .then((valid) => useCart.getState().prune(valid))
+      .get<{ _id: string; stock: number }[]>(`/books/active?ids=${ids.join(",")}`)
+      .then((books) => useCart.getState().reconcile(books.map((b) => ({ bookId: b._id, stock: b.stock }))))
       .catch(() => {});
   }, []);
 
@@ -96,10 +94,23 @@ function CartPanel({ onClose }: { onClose: () => void }) {
                 <div className="flex items-center rounded-full border border-border">
                   <button onClick={() => setQty(i.bookId, i.quantity - 1)} aria-label="Decrease" className="grid size-7 place-items-center text-text hover:text-accent"><Minus className="size-3.5" /></button>
                   <span className="w-6 text-center font-data text-sm">{i.quantity}</span>
-                  <button onClick={() => setQty(i.bookId, i.quantity + 1)} aria-label="Increase" className="grid size-7 place-items-center text-text hover:text-accent"><Plus className="size-3.5" /></button>
+                  <button
+                    onClick={() => setQty(i.bookId, i.quantity + 1)}
+                    disabled={i.stock !== undefined && i.quantity >= i.stock}
+                    aria-label="Increase"
+                    title={i.stock !== undefined && i.quantity >= i.stock ? "No more in stock" : undefined}
+                    className="grid size-7 place-items-center text-text hover:text-accent disabled:cursor-not-allowed disabled:text-muted disabled:opacity-40 disabled:hover:text-muted"
+                  >
+                    <Plus className="size-3.5" />
+                  </button>
                 </div>
                 <span className="font-data text-sm font-semibold text-accent">{npr(i.price * i.quantity)}</span>
               </div>
+              {i.stock !== undefined && i.quantity >= i.stock && (
+                <span className="mt-1 font-data text-xs text-sale">
+                  {i.stock === 0 ? "Out of stock" : `Only ${i.stock} in stock`}
+                </span>
+              )}
             </div>
           </li>
         ))}
