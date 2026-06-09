@@ -76,7 +76,8 @@ describe("Book model", () => {
     const book = await Book.create({
       ...base,
       slug: `b-${stock}`,
-      isbn: `isbn-${stock}`,
+      // Valid, unique 13-digit ISBN-13 (the model now validates this).
+      isbn: String(9780000000000 + stock),
       stock,
     });
     expect(book.stockStatus).toBe(expected);
