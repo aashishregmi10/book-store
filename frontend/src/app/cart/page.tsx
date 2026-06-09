@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ShoppingBag } from "lucide-react";
-import { useCart, selectSubtotal } from "@/lib/stores/cart";
+import { useCart, selectSubtotal, lineKey, type StockInfo } from "@/lib/stores/cart";
 import { clientApi } from "@/lib/client-api";
 import { npr } from "@/lib/format";
 
@@ -25,8 +25,10 @@ export default function CartPage() {
     const ids = useCart.getState().items.map((i) => i.bookId);
     if (!ids.length) return;
     clientApi
-      .get<{ _id: string; stock: number }[]>(`/books/active?ids=${ids.join(",")}`)
-      .then((books) => useCart.getState().reconcile(books.map((b) => ({ bookId: b._id, stock: b.stock }))))
+      .get<{ _id: string; stock: number; variants?: { variantId: string; stock: number }[] }[]>(`/books/active?ids=${ids.join(",")}`)
+      .then((books) =>
+        useCart.getState().reconcile(books.map((b): StockInfo => ({ bookId: b._id, stock: b.stock, variants: b.variants })))
+      )
       .catch(() => {});
   }, []);
 
@@ -62,7 +64,7 @@ export default function CartPage() {
         {/* Line items */}
         <ul className="h-fit divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface">
           {items.map((i) => (
-            <li key={i.bookId} className="flex gap-5 p-5">
+            <li key={lineKey(i)} className="flex gap-5 p-5">
               <Link href={`/books/${i.slug}`} className="relative h-28 w-20 shrink-0 overflow-hidden rounded-lg border border-border bg-bg">
                 <Image src={i.coverImage} alt={`${i.title} cover`} fill sizes="80px" className="object-cover" />
               </Link>
@@ -72,11 +74,12 @@ export default function CartPage() {
                   {i.title}
                 </Link>
                 <span className="font-body text-sm text-muted">{i.author}</span>
+                {i.format && <span className="mt-0.5 font-data text-xs uppercase tracking-wide text-muted">{i.format}</span>}
 
                 <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-3">
                   <div className="flex items-center rounded-full border border-border">
                     <button
-                      onClick={() => setQty(i.bookId, i.quantity - 1)}
+                      onClick={() => setQty(lineKey(i), i.quantity - 1)}
                       aria-label="Decrease quantity"
                       className="grid size-7 place-items-center text-text transition-colors hover:text-accent"
                     >
@@ -84,7 +87,7 @@ export default function CartPage() {
                     </button>
                     <span className="w-7 text-center font-data text-sm">{i.quantity}</span>
                     <button
-                      onClick={() => setQty(i.bookId, i.quantity + 1)}
+                      onClick={() => setQty(lineKey(i), i.quantity + 1)}
                       disabled={i.stock !== undefined && i.quantity >= i.stock}
                       aria-label="Increase quantity"
                       title={i.stock !== undefined && i.quantity >= i.stock ? "No more in stock" : undefined}
@@ -106,7 +109,7 @@ export default function CartPage() {
                   <div className="font-data text-lg font-semibold text-accent">{npr(i.price * i.quantity)}</div>
                   {i.quantity > 1 && <div className="font-data text-xs text-muted">{npr(i.price)} each</div>}
                 </div>
-                <button onClick={() => remove(i.bookId)} className="font-body text-xs text-muted hover:text-sale">
+                <button onClick={() => remove(lineKey(i))} className="font-body text-xs text-muted hover:text-sale">
                   Remove
                 </button>
               </div>

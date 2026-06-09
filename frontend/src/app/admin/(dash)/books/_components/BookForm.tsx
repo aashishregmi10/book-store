@@ -13,8 +13,10 @@ import {
   MAX_GALLERY_IMAGES,
   type BookFormValues,
   type BookSpecifications,
+  type BookVariantInput,
   type IsbnLookup,
 } from "./types";
+import { Trash2, Plus } from "lucide-react";
 import { npr, discountPct } from "@/lib/format";
 import { clientApi, ClientApiError } from "@/lib/client-api";
 
@@ -51,6 +53,20 @@ export function BookForm({
   }
   function setSpec<K extends keyof BookSpecifications>(key: K, value: BookSpecifications[K]) {
     setForm((f) => ({ ...f, specifications: { ...f.specifications, [key]: value } }));
+  }
+
+  // ── Format variants ──
+  const hasVariants = form.variants.length > 0;
+  function addVariant() {
+    const used = new Set(form.variants.map((v) => v.format));
+    const next = FORMATS.find((f) => !used.has(f)) || "Paperback";
+    setForm((f) => ({ ...f, variants: [...f.variants, { format: next, price: 0, stock: 0 }] }));
+  }
+  function updateVariant(i: number, patch: Partial<BookVariantInput>) {
+    setForm((f) => ({ ...f, variants: f.variants.map((v, idx) => (idx === i ? { ...v, ...patch } : v)) }));
+  }
+  function removeVariant(i: number) {
+    setForm((f) => ({ ...f, variants: f.variants.filter((_, idx) => idx !== i) }));
   }
 
   // Prefill title/author/cover/specs from Open Library by ISBN.
@@ -184,16 +200,65 @@ export function BookForm({
           </Section>
 
           <Section title="Pricing & stock">
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Num label="Price" value={form.price} onChange={(v) => set("price", v)} required prefix="₨" />
-              <Num label="Compare at" value={form.comparePrice} onChange={(v) => set("comparePrice", v)} prefix="₨" />
-              <Num label="Stock" value={form.stock} onChange={(v) => set("stock", v)} required />
-            </div>
-            {off > 0 && (
-              <p className="font-data text-xs text-accent">
-                {off}% off — strike-through {npr(form.comparePrice)} shown to readers.
+            {hasVariants ? (
+              <p className="font-body text-sm text-muted">
+                Price &amp; stock are derived from the formats below ({npr(Math.min(...form.variants.map((v) => v.price || 0)))} from,{" "}
+                {form.variants.reduce((n, v) => n + (Number(v.stock) || 0), 0)} in stock total).
               </p>
+            ) : (
+              <>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <Num label="Price" value={form.price} onChange={(v) => set("price", v)} required prefix="₨" />
+                  <Num label="Compare at" value={form.comparePrice} onChange={(v) => set("comparePrice", v)} prefix="₨" />
+                  <Num label="Stock" value={form.stock} onChange={(v) => set("stock", v)} required />
+                </div>
+                {off > 0 && (
+                  <p className="font-data text-xs text-accent">
+                    {off}% off — strike-through {npr(form.comparePrice)} shown to readers.
+                  </p>
+                )}
+              </>
             )}
+          </Section>
+
+          <Section title="Formats (optional)">
+            <p className="font-body text-sm text-muted">
+              Add formats only if this title sells in more than one edition (e.g. Hardcover &amp; Paperback) at
+              different prices. Leave empty for a single-format book.
+            </p>
+            {form.variants.map((v, i) => (
+              <div key={i} className="grid items-end gap-3 sm:grid-cols-[1fr_1fr_1fr_auto]">
+                <label className="block">
+                  <FieldLabel>Format</FieldLabel>
+                  <select
+                    value={v.format}
+                    onChange={(e) => updateVariant(i, { format: e.target.value })}
+                    className="mt-1 w-full border border-border bg-bg px-3 py-2 font-body text-text outline-none focus:border-accent"
+                  >
+                    {FORMATS.map((f) => (
+                      <option key={f} value={f}>{f}</option>
+                    ))}
+                  </select>
+                </label>
+                <Num label="Price" value={v.price} onChange={(val) => updateVariant(i, { price: val })} prefix="₨" />
+                <Num label="Stock" value={v.stock} onChange={(val) => updateVariant(i, { stock: val })} />
+                <button
+                  type="button"
+                  onClick={() => removeVariant(i)}
+                  aria-label="Remove format"
+                  className="mb-1 grid size-9 place-items-center border border-border text-muted hover:border-sale hover:text-sale"
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={addVariant}
+              className="inline-flex items-center gap-2 border border-accent px-3 py-2 font-data text-sm text-accent transition-colors hover:bg-accent/5"
+            >
+              <Plus className="size-4" /> Add format
+            </button>
           </Section>
 
           <Section title="Description">

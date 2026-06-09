@@ -23,6 +23,7 @@ router.post(
   [
     body('items').isArray({ min: 0 }),
     body('items.*.bookId').isMongoId(),
+    body('items.*.variantId').optional().isMongoId(),
     body('items.*.quantity').optional().toInt().isInt({ min: 1 }),
     body('deliveryMethod').optional().isIn(['standard', 'express', 'same-day']),
     body('couponCode').optional().trim(),

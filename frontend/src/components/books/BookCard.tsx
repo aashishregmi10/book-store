@@ -13,6 +13,7 @@ import { AddToCartButton } from "./AddToCartButton";
 export function BookCard({ book }: { book: BookCardData }) {
   const off = discountPct(book.price, book.comparePrice);
   const soldOut = book.stockStatus === "out-of-stock" || book.stockStatus === "discontinued";
+  const multiFormat = (book.variants?.length ?? 0) > 1;
 
   return (
     <article className="group flex flex-col" title={book.title}>
@@ -56,26 +57,37 @@ export function BookCard({ book }: { book: BookCardData }) {
         <p className="mt-0.5 font-body text-sm text-muted">{book.author}</p>
 
         <div className="mt-1.5 flex items-baseline gap-2">
+          {multiFormat && <span className="font-data text-xs text-muted">From</span>}
           <span className="font-data text-[15px] font-semibold text-accent">{npr(book.price)}</span>
-          {off > 0 && book.comparePrice && (
+          {!multiFormat && off > 0 && book.comparePrice && (
             <span className="font-data text-xs text-muted line-through">{npr(book.comparePrice)}</span>
           )}
         </div>
 
-        <AddToCartButton
-          book={{
-            bookId: book._id,
-            slug: book.slug,
-            title: book.title,
-            author: book.author,
-            coverImage: book.coverImage.secureUrl,
-            price: book.price,
-          }}
-          disabled={soldOut}
-          full
-          size="sm"
-          className="mt-3"
-        />
+        {multiFormat ? (
+          // Format must be chosen on the detail page — link instead of inline add.
+          <Link
+            href={`/books/${book.slug}`}
+            className="mt-3 inline-flex w-full items-center justify-center rounded-md border border-border px-3 py-2 font-data text-xs uppercase tracking-wide text-text transition-colors hover:border-accent hover:text-accent"
+          >
+            View options
+          </Link>
+        ) : (
+          <AddToCartButton
+            book={{
+              bookId: book._id,
+              slug: book.slug,
+              title: book.title,
+              author: book.author,
+              coverImage: book.coverImage.secureUrl,
+              price: book.price,
+            }}
+            disabled={soldOut}
+            full
+            size="sm"
+            className="mt-3"
+          />
+        )}
       </div>
     </article>
   );

@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { X, ShoppingBag, Heart, Minus, Plus, Trash2 } from "lucide-react";
 import { useDrawer } from "@/lib/stores/uiDrawer";
-import { useCart, selectSubtotal } from "@/lib/stores/cart";
+import { useCart, selectSubtotal, lineKey, type StockInfo } from "@/lib/stores/cart";
 import { useAuth } from "@/lib/stores/auth";
 import { useAuthModal } from "@/lib/stores/authModal";
 import { clientApi } from "@/lib/client-api";
@@ -61,8 +61,10 @@ function CartPanel({ onClose }: { onClose: () => void }) {
     const ids = useCart.getState().items.map((i) => i.bookId);
     if (!ids.length) return;
     clientApi
-      .get<{ _id: string; stock: number }[]>(`/books/active?ids=${ids.join(",")}`)
-      .then((books) => useCart.getState().reconcile(books.map((b) => ({ bookId: b._id, stock: b.stock }))))
+      .get<{ _id: string; stock: number; variants?: { variantId: string; stock: number }[] }[]>(`/books/active?ids=${ids.join(",")}`)
+      .then((books) =>
+        useCart.getState().reconcile(books.map((b): StockInfo => ({ bookId: b._id, stock: b.stock, variants: b.variants })))
+      )
       .catch(() => {});
   }, []);
 
@@ -76,7 +78,7 @@ function CartPanel({ onClose }: { onClose: () => void }) {
     <>
       <ul className="flex-1 divide-y divide-border overflow-y-auto px-5">
         {items.map((i) => (
-          <li key={i.bookId} className="flex gap-3 py-4">
+          <li key={lineKey(i)} className="flex gap-3 py-4">
             <Link href={`/books/${i.slug}`} onClick={onClose} className="relative h-24 w-16 shrink-0 overflow-hidden rounded-md border border-border bg-surface">
               <Image src={i.coverImage} alt={`${i.title} cover`} fill sizes="64px" className="object-cover" />
             </Link>
@@ -85,17 +87,18 @@ function CartPanel({ onClose }: { onClose: () => void }) {
                 <Link href={`/books/${i.slug}`} onClick={onClose} className="font-display text-sm leading-snug text-text hover:text-accent">
                   {i.title}
                 </Link>
-                <button onClick={() => remove(i.bookId)} aria-label="Remove" className="shrink-0 text-muted hover:text-sale">
+                <button onClick={() => remove(lineKey(i))} aria-label="Remove" className="shrink-0 text-muted hover:text-sale">
                   <Trash2 className="size-4" />
                 </button>
               </div>
               <span className="font-body text-xs text-muted">{i.author}</span>
+              {i.format && <span className="font-data text-[11px] uppercase tracking-wide text-muted">{i.format}</span>}
               <div className="mt-auto flex items-center justify-between pt-2">
                 <div className="flex items-center rounded-full border border-border">
-                  <button onClick={() => setQty(i.bookId, i.quantity - 1)} aria-label="Decrease" className="grid size-7 place-items-center text-text hover:text-accent"><Minus className="size-3.5" /></button>
+                  <button onClick={() => setQty(lineKey(i), i.quantity - 1)} aria-label="Decrease" className="grid size-7 place-items-center text-text hover:text-accent"><Minus className="size-3.5" /></button>
                   <span className="w-6 text-center font-data text-sm">{i.quantity}</span>
                   <button
-                    onClick={() => setQty(i.bookId, i.quantity + 1)}
+                    onClick={() => setQty(lineKey(i), i.quantity + 1)}
                     disabled={i.stock !== undefined && i.quantity >= i.stock}
                     aria-label="Increase"
                     title={i.stock !== undefined && i.quantity >= i.stock ? "No more in stock" : undefined}

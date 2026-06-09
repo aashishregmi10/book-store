@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { clientApi } from "@/lib/client-api";
 import { BookForm } from "../../_components/BookForm";
-import { EMPTY_BOOK, EMPTY_SPECIFICATIONS, cleanSpecifications, type AdminBook, type BookFormValues } from "../../_components/types";
+import { EMPTY_BOOK, EMPTY_SPECIFICATIONS, cleanSpecifications, cleanVariants, type AdminBook, type BookFormValues } from "../../_components/types";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 export default function EditBook() {
@@ -28,6 +28,7 @@ export default function EditBook() {
           coverImage: b.coverImage ?? null,
           images: b.images ?? [],
           specifications: { ...EMPTY_SPECIFICATIONS, ...(b.specifications ?? {}) },
+          variants: b.variants ?? [],
         });
         setStatus("ready");
       })
@@ -42,6 +43,7 @@ export default function EditBook() {
       ...values,
       comparePrice: values.comparePrice || undefined,
       specifications: cleanSpecifications(values.specifications),
+      variants: cleanVariants(values.variants),
     };
     await clientApi.put(`/admin/books/${slug}`, payload);
     router.push(`/admin/books/${slug}`);

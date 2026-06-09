@@ -4,6 +4,17 @@ const mongoose = require('mongoose');
 const imageSchema = require('./image.schema');
 
 const STOCK_STATUS = ['in-stock', 'low-stock', 'out-of-stock', 'discontinued'];
+const FORMATS = ['Paperback', 'Hardcover', 'E-book', 'Audiobook'];
+
+// A purchasable edition of a title (e.g. Hardcover vs Paperback) with its own
+// price + stock. Each variant keeps a stable _id used by the cart/orders.
+const variantSchema = new mongoose.Schema({
+  format: { type: String, enum: FORMATS, required: true },
+  price: { type: Number, required: true, min: 0 }, // NPR, integer rupees
+  comparePrice: { type: Number, min: 0 },
+  stock: { type: Number, required: true, default: 0, min: 0 },
+  isbn: { type: String, trim: true },
+});
 
 const bookSchema = new mongoose.Schema(
   {
@@ -37,6 +48,15 @@ const bookSchema = new mongoose.Schema(
     price: { type: Number, required: true, min: 0 }, // NPR, integer rupees
     comparePrice: { type: Number, min: 0 },
     costPrice: { type: Number, min: 0, select: false }, // admin-only margin data
+
+    // Format variants. Empty = single-format book (top-level price/stock are the
+    // source of truth, exactly as before). When non-empty, top-level price/stock
+    // are DERIVED in pre('save') (min price / summed stock) so every existing
+    // list/sort/filter query and index keeps working unchanged.
+    variants: { type: [variantSchema], default: [] },
+
+    // Optional: titles contained in a box set (display only).
+    includedTitles: { type: [String], default: undefined },
 
     stock: { type: Number, required: true, default: 0, min: 0 },
     stockStatus: { type: String, enum: STOCK_STATUS, default: 'in-stock', index: true },
@@ -94,9 +114,15 @@ bookSchema.index({ isActive: 1, avgRating: -1 });
 // Genre silo page default (popular within a genre).
 bookSchema.index({ isActive: 1, genre: 1, soldCount: -1 });
 
-// Derive stockStatus from stock on every save (Master Guide §8.3 / Admin Supplement §2).
+// Keep top-level price/stock in sync with variants, then derive stockStatus.
+// With variants, top-level price = cheapest variant ("from NPR X") and stock =
+// sum of variant stock — so catalogue queries, sorting and indexes are unchanged.
 // 'discontinued' is set explicitly by admin and preserved.
-bookSchema.pre('save', function deriveStockStatus() {
+bookSchema.pre('validate', function deriveStockAndStatus() {
+  if (Array.isArray(this.variants) && this.variants.length > 0) {
+    this.price = Math.min(...this.variants.map((v) => v.price));
+    this.stock = this.variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+  }
   if (this.stockStatus !== 'discontinued') {
     if (this.stock === 0) this.stockStatus = 'out-of-stock';
     else if (this.stock <= 3) this.stockStatus = 'low-stock';
@@ -105,5 +131,6 @@ bookSchema.pre('save', function deriveStockStatus() {
 });
 
 bookSchema.statics.STOCK_STATUS = STOCK_STATUS;
+bookSchema.statics.FORMATS = FORMATS;
 
 module.exports = mongoose.models.Book || mongoose.model('Book', bookSchema);
