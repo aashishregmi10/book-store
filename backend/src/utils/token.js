@@ -22,10 +22,15 @@ function verify(token) {
 }
 
 // httpOnly cookie options for the refresh token.
+// In production the frontend (Vercel) and API are on different domains, so the
+// refresh cookie is sent cross-site — that requires SameSite=None, which the
+// browser only accepts together with Secure. Locally we keep Strict (same-site,
+// best CSRF posture).
+const isProd = process.env.NODE_ENV === 'production';
 const refreshCookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'strict',
+  secure: isProd,
+  sameSite: isProd ? 'none' : 'strict',
   maxAge: 7 * 24 * 60 * 60 * 1000,
   path: '/api/auth',
 };
