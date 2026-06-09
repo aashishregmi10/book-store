@@ -14,6 +14,7 @@ import { BookCard } from "@/components/books/BookCard";
 import { AddToCartButton } from "@/components/books/AddToCartButton";
 import { WishlistButton } from "@/components/books/WishlistButton";
 import { AskQuestion } from "@/components/books/AskQuestion";
+import { ReviewForm } from "@/components/books/ReviewForm";
 
 export const dynamic = "force-dynamic";
 
@@ -179,9 +180,9 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
         </section>
 
         {/* Reviews */}
-        {reviews.length > 0 && (
-          <section className="mt-12 max-w-3xl">
-            <h2 className="font-display text-2xl text-text">Reader reviews</h2>
+        <section className="mt-12 max-w-3xl">
+          <h2 className="font-display text-2xl text-text">Reader reviews</h2>
+          {reviews.length > 0 ? (
             <ul className="mt-4 space-y-5">
               {reviews.map((r) => (
                 <li key={r._id} className="border-b border-border pb-5">
@@ -197,8 +198,11 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
                 </li>
               ))}
             </ul>
-          </section>
-        )}
+          ) : (
+            <p className="mt-3 font-body text-muted">No reviews yet — be the first to share your thoughts.</p>
+          )}
+          <ReviewForm slug={book.slug} />
+        </section>
 
         {/* Questions & answers (QAPage) */}
         <section className="mt-12 max-w-3xl">

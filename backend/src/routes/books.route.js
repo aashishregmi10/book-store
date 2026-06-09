@@ -7,6 +7,7 @@ const Book = require('../models/book.model');
 const Genre = require('../models/genre.model');
 const Review = require('../models/review.model');
 const Question = require('../models/question.model');
+const Order = require('../models/order.model');
 const { validate } = require('../middleware/validate');
 const { authenticate } = require('../middleware/auth');
 const { withCache } = require('../utils/cache');
@@ -283,6 +284,76 @@ router.post(
       await Question.create({ book: book._id, user: req.userId, question: req.body.question });
       return created(res, null, "Thanks — we'll answer your question soon.");
     } catch (err) {
+      return next(err);
+    }
+  }
+);
+
+// Helper: has this user received (delivered) an order containing this book?
+const hasPurchased = (userId, bookId) =>
+  Order.exists({ user: userId, status: 'delivered', 'items.book': bookId });
+
+// ── GET /api/books/:slug/can-review — eligibility for the review form (auth) ──
+// Lets the storefront show the right state without the user writing a review
+// only to be rejected. Verified-purchasers-only policy.
+router.get('/:slug/can-review', authenticate, [param('slug').trim().notEmpty()], validate, async (req, res, next) => {
+  try {
+    const book = await Book.findOne({ slug: String(req.params.slug).toLowerCase(), isActive: true }).select('_id');
+    if (!book) return fail(res, 'Book not found', 404, [{ code: 'NOT_FOUND' }]);
+    const [purchased, already] = await Promise.all([
+      hasPurchased(req.userId, book._id),
+      Review.exists({ book: book._id, user: req.userId }),
+    ]);
+    return ok(
+      res,
+      { eligible: Boolean(purchased) && !already, purchased: Boolean(purchased), alreadyReviewed: Boolean(already) },
+      'Eligibility'
+    );
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ── POST /api/books/:slug/reviews — write a review (auth, verified buyers) ──
+// Policy: only customers with a delivered order for this book; reviews publish
+// immediately and recompute the book's avgRating/reviewCount.
+router.post(
+  '/:slug/reviews',
+  authenticate,
+  [
+    param('slug').trim().notEmpty(),
+    body('rating').isInt({ min: 1, max: 5 }).toInt(),
+    body('title').optional({ values: 'falsy' }).trim().isLength({ max: 100 }),
+    body('body').trim().isLength({ min: 10, max: 2000 }),
+  ],
+  validate,
+  async (req, res, next) => {
+    try {
+      const book = await Book.findOne({ slug: String(req.params.slug).toLowerCase(), isActive: true }).select('_id');
+      if (!book) return fail(res, 'Book not found', 404, [{ code: 'NOT_FOUND' }]);
+
+      if (!(await hasPurchased(req.userId, book._id))) {
+        return fail(res, 'Only verified buyers can review this book.', 403, [{ code: 'NOT_VERIFIED_BUYER' }]);
+      }
+      if (await Review.exists({ book: book._id, user: req.userId })) {
+        return fail(res, "You've already reviewed this book.", 409, [{ code: 'ALREADY_REVIEWED' }]);
+      }
+
+      await Review.create({
+        book: book._id,
+        user: req.userId,
+        rating: req.body.rating,
+        ...(req.body.title ? { title: req.body.title } : {}),
+        body: req.body.body,
+        isVerifiedPurchase: true,
+        isApproved: true, // publish immediately
+      });
+      await Review.calculateAverageRating(book._id);
+      return created(res, null, 'Thanks for your review!');
+    } catch (err) {
+      if (err && err.code === 11000) {
+        return fail(res, "You've already reviewed this book.", 409, [{ code: 'ALREADY_REVIEWED' }]);
+      }
       return next(err);
     }
   }

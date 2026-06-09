@@ -655,6 +655,30 @@ router.get('/wishlists', async (req, res, next) => {
   }
 });
 
+// One customer's wishlist in full — powers the dedicated detail page.
+router.get('/wishlists/:userId', [param('userId').isMongoId()], validate, async (req, res, next) => {
+  try {
+    const user = await User.findOne({ _id: req.params.userId, isAdmin: false })
+      .select('fullName email phone createdAt wishlist')
+      .populate({ path: 'wishlist', select: 'title slug author price comparePrice stockStatus genre coverImage' })
+      .lean();
+    if (!user) return fail(res, 'Customer not found', 404, [{ code: 'NOT_FOUND' }]);
+
+    const items = (user.wishlist || []).filter(Boolean).map((b) => ({
+      _id: b._id, title: b.title, slug: b.slug, author: b.author, price: b.price,
+      comparePrice: b.comparePrice, stockStatus: b.stockStatus, genre: b.genre,
+      coverImage: b.coverImage?.secureUrl || '',
+    }));
+    return ok(
+      res,
+      { _id: user._id, fullName: user.fullName, email: user.email, phone: user.phone, createdAt: user.createdAt, count: items.length, items },
+      'Wishlist'
+    );
+  } catch (err) {
+    return next(err);
+  }
+});
+
 // ══ CSV EXPORT ═══════════════════════════════════════════
 function sendCsv(res, filename, rows) {
   const csv = stringify(rows, { header: true });
