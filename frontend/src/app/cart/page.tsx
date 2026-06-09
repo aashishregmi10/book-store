@@ -20,13 +20,13 @@ export default function CartPage() {
   const subtotal = useCart(selectSubtotal);
   const [promo, setPromo] = useState("");
 
-  // Drop any items whose book was deleted/deactivated server-side.
+  // Refresh stock + drop any items whose book was deleted/deactivated server-side.
   useEffect(() => {
     const ids = useCart.getState().items.map((i) => i.bookId);
     if (!ids.length) return;
     clientApi
-      .get<string[]>(`/books/active?ids=${ids.join(",")}`)
-      .then((valid) => useCart.getState().prune(valid))
+      .get<{ _id: string; stock: number }[]>(`/books/active?ids=${ids.join(",")}`)
+      .then((books) => useCart.getState().reconcile(books.map((b) => ({ bookId: b._id, stock: b.stock }))))
       .catch(() => {});
   }, []);
 
@@ -73,7 +73,7 @@ export default function CartPage() {
                 </Link>
                 <span className="font-body text-sm text-muted">{i.author}</span>
 
-                <div className="mt-auto flex items-center gap-1 pt-3">
+                <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-3">
                   <div className="flex items-center rounded-full border border-border">
                     <button
                       onClick={() => setQty(i.bookId, i.quantity - 1)}
@@ -85,12 +85,19 @@ export default function CartPage() {
                     <span className="w-7 text-center font-data text-sm">{i.quantity}</span>
                     <button
                       onClick={() => setQty(i.bookId, i.quantity + 1)}
+                      disabled={i.stock !== undefined && i.quantity >= i.stock}
                       aria-label="Increase quantity"
-                      className="grid size-7 place-items-center text-text transition-colors hover:text-accent"
+                      title={i.stock !== undefined && i.quantity >= i.stock ? "No more in stock" : undefined}
+                      className="grid size-7 place-items-center text-text transition-colors hover:text-accent disabled:cursor-not-allowed disabled:text-muted disabled:opacity-40 disabled:hover:text-muted"
                     >
                       +
                     </button>
                   </div>
+                  {i.stock !== undefined && i.quantity >= i.stock && (
+                    <span className="font-data text-xs text-sale">
+                      {i.stock === 0 ? "Out of stock" : `Only ${i.stock} in stock`}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -134,7 +141,7 @@ export default function CartPage() {
             href={checkoutHref}
             className="mt-4 block rounded-full bg-accent px-6 py-3.5 text-center font-data text-sm font-medium text-white transition-colors hover:bg-accent-hover"
           >
-            Checkout — eSewa · Khalti · COD
+            Checkout — Cash on Delivery
           </Link>
 
           <p className="mt-4 text-center font-body text-xs text-muted">

@@ -41,7 +41,7 @@ export function Footer() {
       <div className="border-t border-border/60">
         <div className="mx-auto flex max-w-[1600px] flex-col items-start justify-between gap-2 px-6 py-6 font-body text-xs text-muted sm:px-8 lg:px-16 xl:px-24 md:flex-row md:items-center">
           <span>© {new Date().getFullYear()} PageTurn Nepal Pvt. Ltd.</span>
-          <span>NPR pricing · eSewa · Khalti · COD across all 77 districts</span>
+          <span>NPR pricing · Cash on Delivery across all 77 districts</span>
         </div>
       </div>
     </footer>

@@ -26,7 +26,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "What payment methods do you accept?",
-    a: "Cash on delivery is available nationwide today. Digital payments via eSewa and Khalti are coming soon.",
+    a: "Cash on delivery is our only payment method right now — pay the courier in cash when your books arrive, anywhere in Nepal.",
   },
   {
     q: "How much does delivery cost?",
