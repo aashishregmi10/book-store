@@ -1,7 +1,7 @@
 import { cache } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
+import { BookCover } from "@/components/books/BookCover";
 import { notFound } from "next/navigation";
 import { Star, Truck, RotateCcw, ShieldCheck } from "lucide-react";
 
@@ -109,14 +109,13 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
         <div className="mt-8 grid gap-10 md:grid-cols-[minmax(0,360px)_1fr]">
           {/* Cover */}
           <div className="relative">
-            <div className="relative mx-auto aspect-[2/3] w-full max-w-xs border border-border bg-surface md:mx-0">
-              <Image
+            <div className="relative mx-auto aspect-[2/3] w-full max-w-xs overflow-hidden border border-border bg-surface md:mx-0">
+              <BookCover
                 src={book.coverImage.secureUrl}
                 alt={`${book.title} by ${book.author} — book cover`}
-                fill
+                title={book.title}
                 priority
                 sizes="(max-width: 768px) 80vw, 360px"
-                className="object-cover"
               />
               {off > 0 && <span className="absolute left-0 top-0 bg-sale px-2 py-0.5 font-data text-xs text-white">-{off}%</span>}
             </div>
