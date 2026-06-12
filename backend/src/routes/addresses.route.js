@@ -1,24 +1,25 @@
 'use strict';
 
 const express = require('express');
-const { body, param } = require('express-validator');
 
 const User = require('../models/user.model');
 const { authenticate } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
+const { z, objectId, trimmedString } = require('../utils/zod');
 const { ok, created, fail } = require('../utils/apiResponse');
 
 const router = express.Router();
 router.use(authenticate);
 
-const addressRules = [
-  body('fullName').trim().notEmpty(),
-  body('phone').trim().notEmpty(),
-  body('address1').trim().notEmpty(),
-  body('city').trim().notEmpty(),
-  body('province').isIn(User.PROVINCES),
-  body('label').optional().isIn(['Home', 'Office', 'Other']),
-];
+const addressBody = z.object({
+  fullName: trimmedString(),
+  phone: trimmedString(),
+  address1: trimmedString(),
+  city: trimmedString(),
+  province: z.enum(User.PROVINCES),
+  label: z.enum(['Home', 'Office', 'Other']).optional(),
+});
+const addressParams = z.object({ addressId: objectId() });
 
 // ── GET /api/addresses ───────────────────────────────────
 router.get('/', async (req, res, next) => {
@@ -31,7 +32,7 @@ router.get('/', async (req, res, next) => {
 });
 
 // ── POST /api/addresses ──────────────────────────────────
-router.post('/', addressRules, validate, async (req, res, next) => {
+router.post('/', validate({ body: addressBody }), async (req, res, next) => {
   try {
     const user = await User.findById(req.userId).select('addresses');
     if (!user) return fail(res, 'User not found', 404, [{ code: 'NOT_FOUND' }]);
@@ -47,7 +48,7 @@ router.post('/', addressRules, validate, async (req, res, next) => {
 });
 
 // ── PUT /api/addresses/:addressId ────────────────────────
-router.put('/:addressId', [param('addressId').isMongoId(), ...addressRules.map((r) => r.optional())], validate, async (req, res, next) => {
+router.put('/:addressId', validate({ params: addressParams, body: addressBody.partial() }), async (req, res, next) => {
   try {
     const user = await User.findById(req.userId).select('addresses');
     const addr = user?.addresses.id(req.params.addressId);
@@ -68,7 +69,7 @@ router.put('/:addressId', [param('addressId').isMongoId(), ...addressRules.map((
 });
 
 // ── DELETE /api/addresses/:addressId ─────────────────────
-router.delete('/:addressId', [param('addressId').isMongoId()], validate, async (req, res, next) => {
+router.delete('/:addressId', validate({ params: addressParams }), async (req, res, next) => {
   try {
     const user = await User.findById(req.userId).select('addresses');
     const addr = user?.addresses.id(req.params.addressId);
@@ -86,7 +87,7 @@ router.delete('/:addressId', [param('addressId').isMongoId()], validate, async (
 });
 
 // ── PUT /api/addresses/:addressId/default ────────────────
-router.put('/:addressId/default', [param('addressId').isMongoId()], validate, async (req, res, next) => {
+router.put('/:addressId/default', validate({ params: addressParams }), async (req, res, next) => {
   try {
     const user = await User.findById(req.userId).select('addresses');
     const addr = user?.addresses.id(req.params.addressId);

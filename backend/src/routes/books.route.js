@@ -1,7 +1,6 @@
 'use strict';
 
 const express = require('express');
-const { query, param, body } = require('express-validator');
 
 const Book = require('../models/book.model');
 const Genre = require('../models/genre.model');
@@ -10,6 +9,7 @@ const Question = require('../models/question.model');
 const Order = require('../models/order.model');
 const { validate } = require('../middleware/validate');
 const { authenticate } = require('../middleware/auth');
+const { z, trimmedString, intQuery } = require('../utils/zod');
 const { withCache } = require('../utils/cache');
 const { cacheDel } = require('../config/redis');
 const { ok, created, fail } = require('../utils/apiResponse');
@@ -26,19 +26,29 @@ const SORTS = {
   rating: { avgRating: -1 },
 };
 
+// ── Validation schemas (free-text filters like genre/category pass through) ──
+const booksListQuery = z.object({
+  page: intQuery({ min: 1 }).optional(),
+  limit: intQuery({ min: 1, max: 50 }).optional(),
+  minPrice: intQuery({ min: 0 }).optional(),
+  maxPrice: intQuery({ min: 0 }).optional(),
+  sort: z.enum(Object.keys(SORTS)).optional(),
+});
+const suggestQuery = z.object({ q: trimmedString() });
+const slugParams = z.object({ slug: trimmedString() });
+const questionBody = z.object({ question: z.string().trim().min(5).max(500) });
+const reviewBody = z.object({
+  rating: z.coerce.number().int().min(1).max(5),
+  title: z.string().trim().max(100).optional(),
+  body: z.string().trim().min(10).max(2000),
+});
+
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // ── GET /api/books — list with filters, sort, pagination ──
 router.get(
   '/',
-  [
-    query('page').optional().toInt().isInt({ min: 1 }),
-    query('limit').optional().toInt().isInt({ min: 1, max: 50 }),
-    query('minPrice').optional().toInt().isInt({ min: 0 }),
-    query('maxPrice').optional().toInt().isInt({ min: 0 }),
-    query('sort').optional().isIn(Object.keys(SORTS)),
-  ],
-  validate,
+  validate({ query: booksListQuery }),
   async (req, res, next) => {
     try {
       const page = req.query.page || 1;
@@ -110,7 +120,7 @@ router.get(
 );
 
 // ── GET /api/books/search-suggestions?q= — autocomplete ──
-router.get('/search-suggestions', [query('q').trim().notEmpty()], validate, async (req, res, next) => {
+router.get('/search-suggestions', validate({ query: suggestQuery }), async (req, res, next) => {
   try {
     const q = String(req.query.q).slice(0, 60);
     const key = `suggestions:${q.toLowerCase()}`;
@@ -231,7 +241,7 @@ router.get('/active', async (req, res, next) => {
 });
 
 // ── GET /api/books/:slug — detail + same-silo related + reviews ──
-router.get('/:slug', [param('slug').trim().notEmpty()], validate, async (req, res, next) => {
+router.get('/:slug', validate({ params: slugParams }), async (req, res, next) => {
   try {
     const slug = String(req.params.slug).toLowerCase();
     const book = await Book.findOne({ slug, isActive: true }).lean();
@@ -285,8 +295,7 @@ router.get('/:slug', [param('slug').trim().notEmpty()], validate, async (req, re
 router.post(
   '/:slug/questions',
   authenticate,
-  [param('slug').trim().notEmpty(), body('question').trim().isLength({ min: 5, max: 500 })],
-  validate,
+  validate({ params: slugParams, body: questionBody }),
   async (req, res, next) => {
     try {
       const book = await Book.findOne({ slug: String(req.params.slug).toLowerCase(), isActive: true }).select('_id');
@@ -306,7 +315,7 @@ const hasPurchased = (userId, bookId) =>
 // ── GET /api/books/:slug/can-review — eligibility for the review form (auth) ──
 // Lets the storefront show the right state without the user writing a review
 // only to be rejected. Verified-purchasers-only policy.
-router.get('/:slug/can-review', authenticate, [param('slug').trim().notEmpty()], validate, async (req, res, next) => {
+router.get('/:slug/can-review', authenticate, validate({ params: slugParams }), async (req, res, next) => {
   try {
     const book = await Book.findOne({ slug: String(req.params.slug).toLowerCase(), isActive: true }).select('_id');
     if (!book) return fail(res, 'Book not found', 404, [{ code: 'NOT_FOUND' }]);
@@ -330,13 +339,7 @@ router.get('/:slug/can-review', authenticate, [param('slug').trim().notEmpty()],
 router.post(
   '/:slug/reviews',
   authenticate,
-  [
-    param('slug').trim().notEmpty(),
-    body('rating').isInt({ min: 1, max: 5 }).toInt(),
-    body('title').optional({ values: 'falsy' }).trim().isLength({ max: 100 }),
-    body('body').trim().isLength({ min: 10, max: 2000 }),
-  ],
-  validate,
+  validate({ params: slugParams, body: reviewBody }),
   async (req, res, next) => {
     try {
       const book = await Book.findOne({ slug: String(req.params.slug).toLowerCase(), isActive: true }).select('_id');

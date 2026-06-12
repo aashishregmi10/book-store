@@ -1,15 +1,27 @@
 'use strict';
 
 const express = require('express');
-const { body } = require('express-validator');
 
 const User = require('../models/user.model');
 const { optionalAuth } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
+const { z, objectId } = require('../utils/zod');
 const { priceCart } = require('../services/pricing');
 const { ok } = require('../utils/apiResponse');
 
 const router = express.Router();
+
+const cartItem = z.object({
+  bookId: objectId(),
+  variantId: objectId().optional(),
+  quantity: z.coerce.number().int().min(1).optional(),
+});
+const validateCartBody = z.object({
+  items: z.array(cartItem),
+  deliveryMethod: z.enum(['standard', 'express', 'same-day']).optional(),
+  couponCode: z.string().trim().optional(),
+  pointsUsed: z.coerce.number().int().min(0).optional(),
+});
 
 /**
  * POST /api/cart/validate
@@ -20,16 +32,7 @@ const router = express.Router();
 router.post(
   '/validate',
   optionalAuth,
-  [
-    body('items').isArray({ min: 0 }),
-    body('items.*.bookId').isMongoId(),
-    body('items.*.variantId').optional().isMongoId(),
-    body('items.*.quantity').optional().toInt().isInt({ min: 1 }),
-    body('deliveryMethod').optional().isIn(['standard', 'express', 'same-day']),
-    body('couponCode').optional().trim(),
-    body('pointsUsed').optional().toInt().isInt({ min: 0 }),
-  ],
-  validate,
+  validate({ body: validateCartBody }),
   async (req, res, next) => {
     try {
       const user = req.userId ? await User.findById(req.userId).select('points') : null;
