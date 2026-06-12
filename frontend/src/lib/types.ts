@@ -35,6 +35,7 @@ export interface BookCardData {
   reviewCount: number;
   stockStatus: "in-stock" | "low-stock" | "out-of-stock" | "discontinued";
   genre: string;
+  category?: "manga" | "kids" | "loksewa" | null;
   condition?: "new" | "used";
   isBestseller?: boolean;
   isNewArrival?: boolean;

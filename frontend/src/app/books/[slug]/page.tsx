@@ -1,7 +1,7 @@
 import { cache } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
+import { BookCover } from "@/components/books/BookCover";
 import { notFound } from "next/navigation";
 import { Star, Truck, RotateCcw, ShieldCheck } from "lucide-react";
 
@@ -16,6 +16,9 @@ import { FormatPicker } from "@/components/books/FormatPicker";
 import { WishlistButton } from "@/components/books/WishlistButton";
 import { AskQuestion } from "@/components/books/AskQuestion";
 import { ReviewForm } from "@/components/books/ReviewForm";
+
+// Section labels for breadcrumb + related heading on category books.
+const CATEGORY_LABEL: Record<string, string> = { manga: "Manga", kids: "Kids", loksewa: "Loksewa" };
 
 export const dynamic = "force-dynamic";
 
@@ -80,7 +83,9 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
           bookLd(book, reviews),
           breadcrumbLd([
             { name: "Home", path: "/" },
-            { name: book.genre, path: `/genre/${book.genre}` },
+            book.category
+              ? { name: CATEGORY_LABEL[book.category], path: `/category/${book.category}` }
+              : { name: book.genre, path: `/genre/${book.genre}` },
             { name: book.title, path: `/books/${book.slug}` },
           ]),
           ...(questions.length ? [qaPageLd({ title: book.title, slug: book.slug }, questions)] : []),
@@ -92,7 +97,11 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
         <nav aria-label="Breadcrumb" className="font-data text-xs uppercase tracking-wide text-muted">
           <Link href="/" className="hover:text-accent">Home</Link>
           <span className="px-2">/</span>
-          <Link href={`/genre/${book.genre}`} className="hover:text-accent">{book.genre.replace(/-/g, " ")}</Link>
+          {book.category ? (
+            <Link href={`/category/${book.category}`} className="hover:text-accent">{CATEGORY_LABEL[book.category]}</Link>
+          ) : (
+            <Link href={`/genre/${book.genre}`} className="hover:text-accent">{book.genre.replace(/-/g, " ")}</Link>
+          )}
           <span className="px-2">/</span>
           <span className="text-text">{book.title}</span>
         </nav>
@@ -100,14 +109,13 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
         <div className="mt-8 grid gap-10 md:grid-cols-[minmax(0,360px)_1fr]">
           {/* Cover */}
           <div className="relative">
-            <div className="relative mx-auto aspect-[2/3] w-full max-w-xs border border-border bg-surface md:mx-0">
-              <Image
+            <div className="relative mx-auto aspect-[2/3] w-full max-w-xs overflow-hidden border border-border bg-surface md:mx-0">
+              <BookCover
                 src={book.coverImage.secureUrl}
                 alt={`${book.title} by ${book.author} — book cover`}
-                fill
+                title={book.title}
                 priority
                 sizes="(max-width: 768px) 80vw, 360px"
-                className="object-cover"
               />
               {off > 0 && <span className="absolute left-0 top-0 bg-sale px-2 py-0.5 font-data text-xs text-white">-{off}%</span>}
             </div>
@@ -238,7 +246,7 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
         {related.length > 0 && (
           <section className="mt-14">
             <h2 className="font-display text-2xl text-text">
-              More in {book.genre.replace(/-/g, " ")}
+              More in {book.category ? CATEGORY_LABEL[book.category] : book.genre.replace(/-/g, " ")}
             </h2>
             <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {related.map((b) => (
