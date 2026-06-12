@@ -1,18 +1,21 @@
 'use strict';
 
 const express = require('express');
-const { body, param } = require('express-validator');
 
 const User = require('../models/user.model');
 const Book = require('../models/book.model');
 const Activity = require('../models/activity.model');
 const { authenticate, optionalAuth } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
+const { z, objectId } = require('../utils/zod');
 const { ok, fail } = require('../utils/apiResponse');
 
 const router = express.Router();
 
 const WISHLIST_FIELDS = 'slug title author price comparePrice coverImage avgRating reviewCount stockStatus genre';
+
+const addWishlistBody = z.object({ bookId: objectId(), source: z.string().optional() });
+const bookIdParams = z.object({ bookId: objectId() });
 
 // ── GET /api/wishlist — current user's saved books ───────
 router.get('/', authenticate, async (req, res, next) => {
@@ -30,7 +33,7 @@ router.get('/', authenticate, async (req, res, next) => {
 });
 
 // ── POST /api/wishlist — add (idempotent via $addToSet) ──
-router.post('/', authenticate, [body('bookId').isMongoId(), body('source').optional().isString()], validate, async (req, res, next) => {
+router.post('/', authenticate, validate({ body: addWishlistBody }), async (req, res, next) => {
   try {
     const exists = await Book.exists({ _id: req.body.bookId, isActive: true });
     if (!exists) return fail(res, 'Book not found', 404, [{ code: 'NOT_FOUND' }]);
@@ -49,7 +52,7 @@ router.post('/', authenticate, [body('bookId').isMongoId(), body('source').optio
 });
 
 // ── DELETE /api/wishlist/:bookId ─────────────────────────
-router.delete('/:bookId', authenticate, [param('bookId').isMongoId()], validate, async (req, res, next) => {
+router.delete('/:bookId', authenticate, validate({ params: bookIdParams }), async (req, res, next) => {
   try {
     await User.updateOne({ _id: req.userId }, { $pull: { wishlist: req.params.bookId } });
     return ok(res, { removed: true }, 'Removed from wishlist');
@@ -59,7 +62,7 @@ router.delete('/:bookId', authenticate, [param('bookId').isMongoId()], validate,
 });
 
 // ── GET /api/wishlist/check/:bookId — heart state ────────
-router.get('/check/:bookId', optionalAuth, [param('bookId').isMongoId()], validate, async (req, res, next) => {
+router.get('/check/:bookId', optionalAuth, validate({ params: bookIdParams }), async (req, res, next) => {
   try {
     if (!req.userId) return ok(res, { isWishlisted: false }, 'Guest');
     const user = await User.findById(req.userId).select('wishlist');

@@ -1,10 +1,10 @@
 'use strict';
 
 const express = require('express');
-const { param, query } = require('express-validator');
 
 const Article = require('../models/article.model');
 const { validate } = require('../middleware/validate');
+const { z, trimmedString, intQuery } = require('../utils/zod');
 const { withCache } = require('../utils/cache');
 const { ok, fail } = require('../utils/apiResponse');
 
@@ -13,11 +13,13 @@ const router = express.Router();
 const LIST = 'slug title excerpt coverImage author category tags publishedAt readingTime';
 const BOOK_FIELDS = 'slug title author price comparePrice coverImage avgRating reviewCount stockStatus genre condition isBestseller isNewArrival';
 
+const pageQuery = z.object({ page: intQuery({ min: 1 }).optional(), limit: intQuery({ min: 1, max: 50 }).optional() });
+const slugParams = z.object({ slug: trimmedString() });
+
 // ── GET /api/articles — published list (blog index) ──
 router.get(
   '/',
-  [query('page').optional().toInt().isInt({ min: 1 }), query('limit').optional().toInt().isInt({ min: 1, max: 50 })],
-  validate,
+  validate({ query: pageQuery }),
   async (req, res, next) => {
     try {
       const page = req.query.page || 1;
@@ -43,7 +45,7 @@ router.get(
 );
 
 // ── GET /api/articles/:slug — published article + related books ──
-router.get('/:slug', [param('slug').trim().notEmpty()], validate, async (req, res, next) => {
+router.get('/:slug', validate({ params: slugParams }), async (req, res, next) => {
   try {
     const slug = String(req.params.slug).toLowerCase();
     const article = await withCache(`article:${slug}`, 600, () =>

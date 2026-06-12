@@ -1,7 +1,6 @@
 'use strict';
 
 const express = require('express');
-const { body, param, query } = require('express-validator');
 const { stringify } = require('csv-stringify/sync');
 
 const Book = require('../models/book.model');
@@ -14,6 +13,7 @@ const Article = require('../models/article.model');
 const Activity = require('../models/activity.model');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
+const { z, objectId, trimmedString } = require('../utils/zod');
 const { restoreStock } = require('../services/stock');
 const { cacheDel } = require('../config/redis');
 const { ok, created, fail } = require('../utils/apiResponse');
@@ -24,6 +24,56 @@ const { lookupByIsbn } = require('../utils/bookLookup');
 
 const router = express.Router();
 router.use(authenticate, requireAdmin);
+
+// ── Shared validation schemas (loose: only listed fields are checked, the rest
+// pass through unchanged — matching the previous express-validator behaviour). ──
+const idParams = z.object({ id: objectId() });
+const slugParams = z.object({ slug: trimmedString() });
+const userIdParams = z.object({ userId: objectId() });
+const looseImage = z.object({ secureUrl: trimmedString(), publicId: trimmedString() }).catchall(z.unknown());
+const bookBody = z
+  .object({
+    title: trimmedString(),
+    author: trimmedString(),
+    genre: z.string().trim().optional(),
+    category: z.string().trim().optional().refine((v) => !v || ['manga', 'kids', 'loksewa'].includes(v), 'Invalid section'),
+    price: z.coerce.number().int().min(0).optional(),
+    stock: z.coerce.number().int().min(0).optional(),
+    variants: z
+      .array(
+        z.object({
+          format: z.enum(['Paperback', 'Hardcover', 'E-book', 'Audiobook']).optional(),
+          price: z.coerce.number().int().min(0).optional(),
+          stock: z.coerce.number().int().min(0).optional(),
+        }).catchall(z.unknown())
+      )
+      .max(6)
+      .optional(),
+    includedTitles: z.array(z.unknown()).max(50).optional(),
+    coverImage: z.object({ secureUrl: z.string().trim().min(1, 'A cover image is required'), publicId: trimmedString() }).catchall(z.unknown()),
+    images: z.array(looseImage).max(10).optional(),
+    description: z.string().trim().min(10),
+  })
+  .catchall(z.unknown());
+const genreBody = z
+  .object({
+    name: z.string().trim().min(1, 'Genre name is required'),
+    description: z.string().trim().optional(),
+    color: z.string().trim().optional(),
+    metaTitle: z.string().trim().max(70).optional(),
+    metaDesc: z.string().trim().max(160).optional(),
+  })
+  .catchall(z.unknown());
+const articleBody = z
+  .object({
+    title: trimmedString(),
+    body: z.string().trim().min(20),
+    excerpt: z.string().trim().max(300).optional(),
+    status: z.enum(['draft', 'published']).optional(),
+  })
+  .catchall(z.unknown());
+const answerBody = z.object({ answer: z.string().trim().min(2).max(2000) }).catchall(z.unknown());
+const isbnQuery = z.object({ isbn: trimmedString() });
 
 const slugify = (s) => String(s).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
@@ -102,7 +152,7 @@ router.get('/books', async (req, res, next) => {
 });
 
 // ── GET /api/admin/books/lookup?isbn= — Google Books → Open Library fallback ──
-router.get('/books/lookup', [query('isbn').trim().notEmpty()], validate, async (req, res, next) => {
+router.get('/books/lookup', validate({ query: isbnQuery }), async (req, res, next) => {
   try {
     const isbn = String(req.query.isbn).replace(/[^0-9Xx]/g, '');
     const meta = await lookupByIsbn(isbn);
@@ -131,7 +181,7 @@ router.get('/books/lookup', [query('isbn').trim().notEmpty()], validate, async (
   }
 });
 
-router.get('/books/:slug', [param('slug').trim().notEmpty()], validate, async (req, res, next) => {
+router.get('/books/:slug', validate({ params: slugParams }), async (req, res, next) => {
   try {
     const book = await Book.findOne({ slug: req.params.slug }).select('+costPrice').lean();
     if (!book) return fail(res, 'Book not found', 404, [{ code: 'NOT_FOUND' }]);
@@ -141,30 +191,7 @@ router.get('/books/:slug', [param('slug').trim().notEmpty()], validate, async (r
   }
 });
 
-const bookRules = [
-  body('title').trim().notEmpty(),
-  body('author').trim().notEmpty(),
-  // Genre is optional when a section (category) is set — see the per-route guard.
-  body('genre').optional({ values: 'falsy' }).trim(),
-  body('category').optional({ values: 'falsy' }).isIn(['manga', 'kids', 'loksewa']),
-  // price/stock are optional when variants supply them (derived in the model).
-  body('price').optional().toInt().isInt({ min: 0 }),
-  body('stock').optional().toInt().isInt({ min: 0 }),
-  body('variants').optional().isArray({ max: 6 }),
-  body('variants.*.format').optional().isIn(['Paperback', 'Hardcover', 'E-book', 'Audiobook']),
-  body('variants.*.price').optional().toInt().isInt({ min: 0 }),
-  body('variants.*.stock').optional().toInt().isInt({ min: 0 }),
-  body('includedTitles').optional().isArray({ max: 50 }),
-  // Cover is the image subdocument: { publicId, secureUrl, name }.
-  body('coverImage.secureUrl').trim().notEmpty().withMessage('A cover image is required'),
-  body('coverImage.publicId').trim().notEmpty(),
-  body('images').optional().isArray({ max: 10 }).withMessage('Up to 10 gallery images'),
-  body('images.*.secureUrl').optional().trim().notEmpty(),
-  body('images.*.publicId').optional().trim().notEmpty(),
-  body('description').trim().isLength({ min: 10 }),
-];
-
-router.post('/books', bookRules, validate, async (req, res, next) => {
+router.post('/books', validate({ body: bookBody }), async (req, res, next) => {
   try {
     const payload = { ...req.body };
     payload.slug = payload.slug ? slugify(payload.slug) : slugify(payload.title);
@@ -182,7 +209,7 @@ router.post('/books', bookRules, validate, async (req, res, next) => {
   }
 });
 
-router.put('/books/:slug', [param('slug').trim().notEmpty()], validate, async (req, res, next) => {
+router.put('/books/:slug', validate({ params: slugParams }), async (req, res, next) => {
   try {
     const book = await Book.findOne({ slug: req.params.slug });
     if (!book) return fail(res, 'Book not found', 404, [{ code: 'NOT_FOUND' }]);
@@ -203,7 +230,7 @@ router.put('/books/:slug', [param('slug').trim().notEmpty()], validate, async (r
   }
 });
 
-router.delete('/books/:id', [param('id').isMongoId()], validate, async (req, res, next) => {
+router.delete('/books/:id', validate({ params: idParams }), async (req, res, next) => {
   try {
     const book = await Book.findByIdAndDelete(req.params.id);
     if (book) {
@@ -231,15 +258,7 @@ router.get('/genres', async (_req, res, next) => {
   }
 });
 
-const genreRules = [
-  body('name').trim().notEmpty().withMessage('Genre name is required'),
-  body('description').optional().trim(),
-  body('color').optional().trim(),
-  body('metaTitle').optional().trim().isLength({ max: 70 }),
-  body('metaDesc').optional().trim().isLength({ max: 160 }),
-];
-
-router.post('/genres', genreRules, validate, async (req, res, next) => {
+router.post('/genres', validate({ body: genreBody }), async (req, res, next) => {
   try {
     const slug = req.body.slug ? slugify(req.body.slug) : slugify(req.body.name);
     if (!slug) return fail(res, 'Genre name must contain letters or numbers', 400, [{ field: 'name', code: 'INVALID' }]);
@@ -255,7 +274,7 @@ router.post('/genres', genreRules, validate, async (req, res, next) => {
   }
 });
 
-router.put('/genres/:slug', [param('slug').trim().notEmpty()], validate, async (req, res, next) => {
+router.put('/genres/:slug', validate({ params: slugParams }), async (req, res, next) => {
   try {
     const genre = await Genre.findOne({ slug: req.params.slug });
     if (!genre) return fail(res, 'Genre not found', 404, [{ code: 'NOT_FOUND' }]);
@@ -270,7 +289,7 @@ router.put('/genres/:slug', [param('slug').trim().notEmpty()], validate, async (
   }
 });
 
-router.delete('/genres/:id', [param('id').isMongoId()], validate, async (req, res, next) => {
+router.delete('/genres/:id', validate({ params: idParams }), async (req, res, next) => {
   try {
     const genre = await Genre.findById(req.params.id);
     if (!genre) return fail(res, 'Genre not found', 404, [{ code: 'NOT_FOUND' }]);
@@ -302,7 +321,7 @@ router.get('/articles', async (_req, res, next) => {
   }
 });
 
-router.get('/articles/:slug', [param('slug').trim().notEmpty()], validate, async (req, res, next) => {
+router.get('/articles/:slug', validate({ params: slugParams }), async (req, res, next) => {
   try {
     const article = await Article.findOne({ slug: req.params.slug }).populate('relatedBooks', 'title slug').lean();
     if (!article) return fail(res, 'Article not found', 404, [{ code: 'NOT_FOUND' }]);
@@ -312,14 +331,7 @@ router.get('/articles/:slug', [param('slug').trim().notEmpty()], validate, async
   }
 });
 
-const articleRules = [
-  body('title').trim().notEmpty(),
-  body('body').trim().isLength({ min: 20 }),
-  body('excerpt').optional().trim().isLength({ max: 300 }),
-  body('status').optional().isIn(['draft', 'published']),
-];
-
-router.post('/articles', articleRules, validate, async (req, res, next) => {
+router.post('/articles', validate({ body: articleBody }), async (req, res, next) => {
   try {
     const payload = { ...req.body };
     payload.slug = slugify(payload.slug || payload.title);
@@ -338,7 +350,7 @@ router.post('/articles', articleRules, validate, async (req, res, next) => {
   }
 });
 
-router.put('/articles/:slug', [param('slug').trim().notEmpty()], validate, async (req, res, next) => {
+router.put('/articles/:slug', validate({ params: slugParams }), async (req, res, next) => {
   try {
     const article = await Article.findOne({ slug: req.params.slug });
     if (!article) return fail(res, 'Article not found', 404, [{ code: 'NOT_FOUND' }]);
@@ -355,7 +367,7 @@ router.put('/articles/:slug', [param('slug').trim().notEmpty()], validate, async
   }
 });
 
-router.delete('/articles/:id', [param('id').isMongoId()], validate, async (req, res, next) => {
+router.delete('/articles/:id', validate({ params: idParams }), async (req, res, next) => {
   try {
     const article = await Article.findByIdAndDelete(req.params.id);
     if (article) await invalidateArticleCaches(article.slug);
@@ -378,7 +390,7 @@ router.get('/orders', async (req, res, next) => {
   }
 });
 
-router.get('/orders/:id', [param('id').isMongoId()], validate, async (req, res, next) => {
+router.get('/orders/:id', validate({ params: idParams }), async (req, res, next) => {
   try {
     const order = await Order.findById(req.params.id).populate('user', 'fullName email phone').lean();
     if (!order) return fail(res, 'Order not found', 404, [{ code: 'NOT_FOUND' }]);
@@ -390,7 +402,7 @@ router.get('/orders/:id', [param('id').isMongoId()], validate, async (req, res, 
 
 const STATUS_FLOW = ['placed', 'confirmed', 'processing', 'shipped', 'delivered'];
 
-router.put('/orders/:id/status', [param('id').isMongoId(), body('status').isIn(STATUS_FLOW)], validate, async (req, res, next) => {
+router.put('/orders/:id/status', validate({ params: idParams, body: z.object({ status: z.enum(STATUS_FLOW) }).catchall(z.unknown()) }), async (req, res, next) => {
   try {
     const order = await Order.findById(req.params.id);
     if (!order) return fail(res, 'Order not found', 404, [{ code: 'NOT_FOUND' }]);
@@ -413,7 +425,7 @@ router.put('/orders/:id/status', [param('id').isMongoId(), body('status').isIn(S
   }
 });
 
-router.put('/orders/:id/cancel', [param('id').isMongoId()], validate, async (req, res, next) => {
+router.put('/orders/:id/cancel', validate({ params: idParams }), async (req, res, next) => {
   try {
     const order = await Order.findById(req.params.id);
     if (!order) return fail(res, 'Order not found', 404, [{ code: 'NOT_FOUND' }]);
@@ -440,7 +452,7 @@ router.put('/orders/:id/cancel', [param('id').isMongoId()], validate, async (req
   }
 });
 
-router.put('/orders/:id/refund', [param('id').isMongoId()], validate, async (req, res, next) => {
+router.put('/orders/:id/refund', validate({ params: idParams }), async (req, res, next) => {
   try {
     const order = await Order.findById(req.params.id);
     if (!order) return fail(res, 'Order not found', 404, [{ code: 'NOT_FOUND' }]);
@@ -489,7 +501,7 @@ router.get('/users', async (req, res, next) => {
   }
 });
 
-router.put('/users/:id/ban', [param('id').isMongoId()], validate, async (req, res, next) => {
+router.put('/users/:id/ban', validate({ params: idParams }), async (req, res, next) => {
   try {
     const target = await User.findById(req.params.id);
     if (!target) return fail(res, 'User not found', 404, [{ code: 'NOT_FOUND' }]);
@@ -504,7 +516,7 @@ router.put('/users/:id/ban', [param('id').isMongoId()], validate, async (req, re
   }
 });
 
-router.put('/users/:id/unban', [param('id').isMongoId()], validate, async (req, res, next) => {
+router.put('/users/:id/unban', validate({ params: idParams }), async (req, res, next) => {
   try {
     await User.findByIdAndUpdate(req.params.id, { isBanned: false, banReason: null, bannedAt: null });
     return ok(res, { isBanned: false }, 'User unbanned');
@@ -529,7 +541,7 @@ router.get('/reviews', async (req, res, next) => {
 // Recompute avgRating + reviewCount from approved reviews (see Review model).
 const recalcBookRating = (bookId) => Review.calculateAverageRating(bookId);
 
-router.put('/reviews/:id/approve', [param('id').isMongoId()], validate, async (req, res, next) => {
+router.put('/reviews/:id/approve', validate({ params: idParams }), async (req, res, next) => {
   try {
     const review = await Review.findByIdAndUpdate(req.params.id, { isApproved: true }, { returnDocument: 'after' });
     if (!review) return fail(res, 'Review not found', 404, [{ code: 'NOT_FOUND' }]);
@@ -540,7 +552,7 @@ router.put('/reviews/:id/approve', [param('id').isMongoId()], validate, async (r
   }
 });
 
-router.put('/reviews/:id/reject', [param('id').isMongoId()], validate, async (req, res, next) => {
+router.put('/reviews/:id/reject', validate({ params: idParams }), async (req, res, next) => {
   try {
     const review = await Review.findByIdAndDelete(req.params.id);
     if (review) await recalcBookRating(review.book);
@@ -569,8 +581,7 @@ router.get('/questions', async (req, res, next) => {
 
 router.put(
   '/questions/:id/answer',
-  [param('id').isMongoId(), body('answer').trim().isLength({ min: 2, max: 2000 })],
-  validate,
+  validate({ params: idParams, body: answerBody }),
   async (req, res, next) => {
     try {
       const q = await Question.findByIdAndUpdate(
@@ -590,7 +601,7 @@ router.put(
   }
 );
 
-router.delete('/questions/:id', [param('id').isMongoId()], validate, async (req, res, next) => {
+router.delete('/questions/:id', validate({ params: idParams }), async (req, res, next) => {
   try {
     await Question.findByIdAndDelete(req.params.id);
     return ok(res, null, 'Question deleted');
@@ -672,7 +683,7 @@ router.get('/wishlists', async (req, res, next) => {
 });
 
 // One customer's wishlist in full — powers the dedicated detail page.
-router.get('/wishlists/:userId', [param('userId').isMongoId()], validate, async (req, res, next) => {
+router.get('/wishlists/:userId', validate({ params: userIdParams }), async (req, res, next) => {
   try {
     const user = await User.findOne({ _id: req.params.userId, isAdmin: false })
       .select('fullName email phone createdAt wishlist')

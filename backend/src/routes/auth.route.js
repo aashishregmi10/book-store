@@ -2,17 +2,36 @@
 
 const express = require('express');
 const crypto = require('crypto');
-const { body, query } = require('express-validator');
 
 const User = require('../models/user.model');
 const { validate } = require('../middleware/validate');
 const { authenticate, loginLimiter, registerLimiter, forgotPasswordLimiter } = require('../middleware/auth');
 const { generateTokens, verify, refreshCookieOptions } = require('../utils/token');
+const { z, trimmedString, email: emailSchema } = require('../utils/zod');
 const { ok, created, fail, ApiError } = require('../utils/apiResponse');
 const email = require('../utils/emailService');
 const logger = require('../config/logger');
 
 const router = express.Router();
+
+// ── Validation schemas ──
+const registerBody = z.object({
+  email: emailSchema(),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  fullName: z.string().trim().min(1, 'Full name is required'),
+  referralCode: z.string().trim().optional(),
+});
+const credentialsBody = z.object({ email: emailSchema(), password: z.string().min(1) });
+const profileBody = z.object({
+  fullName: z.string().trim().min(1).optional(),
+  phone: z.string().trim().optional(),
+  avatar: z.string().optional(),
+  notificationPreferences: z.record(z.string(), z.unknown()).optional(),
+});
+const changePasswordBody = z.object({ currentPassword: z.string().min(1), newPassword: z.string().min(8) });
+const forgotBody = z.object({ email: emailSchema() });
+const resetQuery = z.object({ token: z.string().min(1) });
+const resetBody = z.object({ token: z.string().min(1), password: z.string().min(8) });
 
 const hashToken = (raw) => crypto.createHash('sha256').update(raw).digest('hex');
 const publicUser = (u) => ({
@@ -29,13 +48,7 @@ const publicUser = (u) => ({
 router.post(
   '/register',
   registerLimiter,
-  [
-    body('email').isEmail().normalizeEmail(),
-    body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
-    body('fullName').trim().notEmpty().withMessage('Full name is required'),
-    body('referralCode').optional().trim(),
-  ],
-  validate,
+  validate({ body: registerBody }),
   async (req, res, next) => {
     try {
       const { email: emailAddr, password, fullName, referralCode } = req.body;
@@ -80,8 +93,7 @@ router.post(
 router.post(
   '/login',
   loginLimiter,
-  [body('email').isEmail().normalizeEmail(), body('password').notEmpty()],
-  validate,
+  validate({ body: credentialsBody }),
   async (req, res, next) => {
     try {
       const user = await User.findOne({ email: req.body.email }).select('+password');
@@ -106,8 +118,7 @@ router.post(
 router.post(
   '/admin/login',
   loginLimiter,
-  [body('email').isEmail().normalizeEmail(), body('password').notEmpty()],
-  validate,
+  validate({ body: credentialsBody }),
   async (req, res, next) => {
     try {
       const user = await User.findOne({ email: req.body.email }).select('+password');
@@ -169,13 +180,7 @@ router.get('/me', authenticate, async (req, res, next) => {
 router.put(
   '/profile',
   authenticate,
-  [
-    body('fullName').optional().trim().notEmpty(),
-    body('phone').optional().trim(),
-    body('avatar').optional().isString(),
-    body('notificationPreferences').optional().isObject(),
-  ],
-  validate,
+  validate({ body: profileBody }),
   async (req, res, next) => {
     try {
       const allowed = ['fullName', 'phone', 'avatar', 'notificationPreferences'];
@@ -194,8 +199,7 @@ router.put(
 router.put(
   '/change-password',
   authenticate,
-  [body('currentPassword').notEmpty(), body('newPassword').isLength({ min: 8 })],
-  validate,
+  validate({ body: changePasswordBody }),
   async (req, res, next) => {
     try {
       const user = await User.findById(req.userId).select('+password');
@@ -215,8 +219,7 @@ router.put(
 router.post(
   '/forgot-password',
   forgotPasswordLimiter,
-  [body('email').isEmail().normalizeEmail()],
-  validate,
+  validate({ body: forgotBody }),
   async (req, res, next) => {
     try {
       const user = await User.findOne({ email: req.body.email });
@@ -238,8 +241,7 @@ router.post(
 // ── VERIFY RESET TOKEN ───────────────────────────────────
 router.get(
   '/verify-reset-token',
-  [query('token').notEmpty()],
-  validate,
+  validate({ query: resetQuery }),
   async (req, res, next) => {
     try {
       const user = await User.findOne({
@@ -257,8 +259,7 @@ router.get(
 // ── RESET PASSWORD ───────────────────────────────────────
 router.post(
   '/reset-password',
-  [body('token').notEmpty(), body('password').isLength({ min: 8 })],
-  validate,
+  validate({ body: resetBody }),
   async (req, res, next) => {
     try {
       const user = await User.findOne({

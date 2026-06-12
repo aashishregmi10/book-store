@@ -1,7 +1,6 @@
 'use strict';
 
 const express = require('express');
-const { body, param } = require('express-validator');
 
 const Order = require('../models/order.model');
 const Book = require('../models/book.model');
@@ -10,6 +9,7 @@ const Coupon = require('../models/coupon.model');
 const Activity = require('../models/activity.model');
 const { authenticate, optionalAuth } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
+const { z, objectId, trimmedString } = require('../utils/zod');
 const { priceCart } = require('../services/pricing');
 const { ok, created, fail } = require('../utils/apiResponse');
 const email = require('../utils/emailService');
@@ -18,6 +18,28 @@ const logger = require('../config/logger');
 const router = express.Router();
 
 const PROVINCES = User.PROVINCES;
+
+const orderItem = z.object({
+  bookId: objectId(),
+  variantId: objectId().optional(),
+  quantity: z.coerce.number().int().min(1).optional(),
+});
+const createOrderBody = z.object({
+  items: z.array(orderItem).min(1),
+  deliveryMethod: z.enum(['standard', 'express', 'same-day']).optional(),
+  paymentMethod: z.string().optional(),
+  pointsUsed: z.coerce.number().int().min(0).optional(),
+  couponCode: z.string().trim().optional(),
+  deliveryAddress: z.object({
+    fullName: trimmedString(),
+    phone: trimmedString(),
+    address1: trimmedString(),
+    address2: z.string().optional(),
+    city: trimmedString(),
+    province: z.enum(PROVINCES),
+  }),
+});
+const orderNumberParams = z.object({ orderNumber: trimmedString() });
 
 // Decrement stock + bump soldCount + recompute stockStatus atomically.
 // Conditional on stock>=qty so a raced order can't oversell.
@@ -116,22 +138,7 @@ function restoreStock(bookId, qty, variantId) {
 router.post(
   '/',
   optionalAuth,
-  [
-    body('items').isArray({ min: 1 }),
-    body('items.*.bookId').isMongoId(),
-    body('items.*.variantId').optional().isMongoId(),
-    body('items.*.quantity').optional().toInt().isInt({ min: 1 }),
-    body('deliveryMethod').optional().isIn(['standard', 'express', 'same-day']),
-    body('paymentMethod').optional().isString(),
-    body('pointsUsed').optional().toInt().isInt({ min: 0 }),
-    body('couponCode').optional().trim(),
-    body('deliveryAddress.fullName').trim().notEmpty(),
-    body('deliveryAddress.phone').trim().notEmpty(),
-    body('deliveryAddress.address1').trim().notEmpty(),
-    body('deliveryAddress.city').trim().notEmpty(),
-    body('deliveryAddress.province').isIn(PROVINCES),
-  ],
-  validate,
+  validate({ body: createOrderBody }),
   async (req, res, next) => {
     const { paymentMethod = 'cod', deliveryAddress, deliveryMethod, couponCode, pointsUsed = 0, customerNote } = req.body;
 
@@ -232,7 +239,7 @@ router.get('/my-orders', authenticate, async (req, res, next) => {
 });
 
 // ── GET /api/orders/:orderNumber (own order) ─────────────
-router.get('/:orderNumber', authenticate, [param('orderNumber').trim().notEmpty()], validate, async (req, res, next) => {
+router.get('/:orderNumber', authenticate, validate({ params: orderNumberParams }), async (req, res, next) => {
   try {
     const order = await Order.findOne({ orderNumber: req.params.orderNumber, user: req.userId }).lean();
     if (!order) return fail(res, 'Order not found', 404, [{ code: 'NOT_FOUND' }]);
@@ -243,7 +250,7 @@ router.get('/:orderNumber', authenticate, [param('orderNumber').trim().notEmpty(
 });
 
 // ── POST /api/orders/:orderNumber/cancel (own, pre-shipment) ──
-router.post('/:orderNumber/cancel', authenticate, [param('orderNumber').trim().notEmpty()], validate, async (req, res, next) => {
+router.post('/:orderNumber/cancel', authenticate, validate({ params: orderNumberParams }), async (req, res, next) => {
   try {
     const order = await Order.findOne({ orderNumber: req.params.orderNumber, user: req.userId });
     if (!order) return fail(res, 'Order not found', 404, [{ code: 'NOT_FOUND' }]);

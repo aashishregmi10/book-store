@@ -1,11 +1,11 @@
 'use strict';
 
 const express = require('express');
-const { param, query } = require('express-validator');
 
 const Genre = require('../models/genre.model');
 const Book = require('../models/book.model');
 const { validate } = require('../middleware/validate');
+const { z, trimmedString, intQuery } = require('../utils/zod');
 const { withCache } = require('../utils/cache');
 const { ok, fail } = require('../utils/apiResponse');
 
@@ -20,6 +20,13 @@ const SORTS = {
   'price-high': { price: -1 },
   rating: { avgRating: -1 },
 };
+
+const genreParams = z.object({ slug: trimmedString() });
+const genreListQuery = z.object({
+  page: intQuery({ min: 1 }).optional(),
+  limit: intQuery({ min: 1, max: 50 }).optional(),
+  sort: z.enum(Object.keys(SORTS)).optional(),
+});
 
 // ── GET /api/genres — all active genres (nav + footer) ──
 router.get('/', async (_req, res, next) => {
@@ -37,13 +44,7 @@ router.get('/', async (_req, res, next) => {
 // ── GET /api/genres/:slug — silo page: genre + its books (SEO) ──
 router.get(
   '/:slug',
-  [
-    param('slug').trim().notEmpty(),
-    query('page').optional().toInt().isInt({ min: 1 }),
-    query('limit').optional().toInt().isInt({ min: 1, max: 50 }),
-    query('sort').optional().isIn(Object.keys(SORTS)),
-  ],
-  validate,
+  validate({ params: genreParams, query: genreListQuery }),
   async (req, res, next) => {
     try {
       const slug = String(req.params.slug).toLowerCase();
