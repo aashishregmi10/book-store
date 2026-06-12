@@ -144,7 +144,8 @@ router.get('/books/:slug', [param('slug').trim().notEmpty()], validate, async (r
 const bookRules = [
   body('title').trim().notEmpty(),
   body('author').trim().notEmpty(),
-  body('genre').trim().notEmpty(),
+  // Genre is optional when a section (category) is set — see the per-route guard.
+  body('genre').optional({ values: 'falsy' }).trim(),
   body('category').optional({ values: 'falsy' }).isIn(['manga', 'kids', 'loksewa']),
   // price/stock are optional when variants supply them (derived in the model).
   body('price').optional().toInt().isInt({ min: 0 }),
@@ -167,11 +168,14 @@ router.post('/books', bookRules, validate, async (req, res, next) => {
   try {
     const payload = { ...req.body };
     payload.slug = payload.slug ? slugify(payload.slug) : slugify(payload.title);
-    payload.genre = slugify(payload.genre);
     payload.category = payload.category || null; // '' → no section
+    payload.genre = payload.genre ? slugify(payload.genre) : undefined;
+    if (!payload.genre && !payload.category) {
+      return fail(res, 'Pick a genre or a section.', 400, [{ field: 'genre', code: 'GENRE_OR_SECTION' }]);
+    }
     const book = await Book.create(payload);
     await invalidateCatalogCaches(book.slug);
-    pingIndexNow([`/books/${book.slug}`, '/books', `/genre/${book.genre}`]);
+    pingIndexNow([`/books/${book.slug}`, '/books', ...(book.genre ? [`/genre/${book.genre}`] : []), ...(book.category ? [`/category/${book.category}`] : [])]);
     return created(res, book, 'Book created');
   } catch (err) {
     return next(err);
@@ -185,11 +189,14 @@ router.put('/books/:slug', [param('slug').trim().notEmpty()], validate, async (r
     // Whitelist updatable fields.
     const fields = ['title', 'author', 'isbn', 'genre', 'category', 'subgenre', 'tags', 'condition', 'price', 'comparePrice', 'costPrice', 'stock', 'stockStatus', 'reorderPoint', 'coverImage', 'images', 'description', 'shortDescription', 'specifications', 'variants', 'includedTitles', 'metaTitle', 'metaDescription', 'isBestseller', 'isNewArrival', 'isFeatured', 'isStaffPick', 'staffPickNote', 'isActive'];
     for (const f of fields) if (f in req.body) book[f] = req.body[f];
-    if (req.body.genre) book.genre = slugify(req.body.genre);
     if ('category' in req.body) book.category = req.body.category || null; // '' → no section
+    if ('genre' in req.body) book.genre = req.body.genre ? slugify(req.body.genre) : undefined;
+    if (!book.genre && !book.category) {
+      return fail(res, 'Pick a genre or a section.', 400, [{ field: 'genre', code: 'GENRE_OR_SECTION' }]);
+    }
     await book.save(); // triggers stockStatus recompute
     await invalidateCatalogCaches(book.slug);
-    pingIndexNow([`/books/${book.slug}`, '/books', `/genre/${book.genre}`]);
+    pingIndexNow([`/books/${book.slug}`, '/books', ...(book.genre ? [`/genre/${book.genre}`] : []), ...(book.category ? [`/category/${book.category}`] : [])]);
     return ok(res, book, 'Book updated');
   } catch (err) {
     return next(err);

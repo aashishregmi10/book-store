@@ -240,7 +240,8 @@ router.get('/:slug', [param('slug').trim().notEmpty()], validate, async (req, re
     // Fire-and-forget view counter (don't block the response).
     Book.updateOne({ _id: book._id }, { $inc: { viewCount: 1 } }).catch(() => {});
 
-    // Related: prefer explicit relatedSlugs (same silo), fall back to genre.
+    // Related: prefer explicit relatedSlugs (same silo); then fill from the same
+    // section (Manga/Kids/Loksewa) when the book has one, else the same genre.
     const related = await (async () => {
       let books = [];
       if (book.relatedSlugs?.length) {
@@ -249,7 +250,8 @@ router.get('/:slug', [param('slug').trim().notEmpty()], validate, async (req, re
       if (books.length < 4) {
         const have = new Set(books.map((b) => b.slug));
         have.add(book.slug);
-        const fill = await Book.find({ genre: book.genre, slug: { $nin: [...have] }, isActive: true })
+        const siblingFilter = book.category ? { category: book.category } : { genre: book.genre };
+        const fill = await Book.find({ ...siblingFilter, slug: { $nin: [...have] }, isActive: true })
           .select(LIST_FIELDS)
           .sort({ soldCount: -1 })
           .limit(4 - books.length)
