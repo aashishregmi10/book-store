@@ -3,6 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactCompiler: true,
   images: {
+    // Skip the optimizer in dev (it's slow and intermittently fails on large
+    // covers); production keeps full AVIF/WebP optimization + edge caching.
+    unoptimized: process.env.NODE_ENV === "development",
     // Auto-serve AVIF/WebP and the right size per device.
     formats: ["image/avif", "image/webp"],
     remotePatterns: [

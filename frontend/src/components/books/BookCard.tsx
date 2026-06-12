@@ -1,9 +1,9 @@
 import Link from "next/link";
-import Image from "next/image";
 import type { BookCardData } from "@/lib/types";
 import { npr, discountPct } from "@/lib/format";
 import { WishlistButton } from "./WishlistButton";
 import { AddToCartButton } from "./AddToCartButton";
+import { BookCover } from "./BookCover";
 
 /**
  * Simple, cover-forward book card: cover + title + author + price, with a
@@ -20,10 +20,10 @@ export function BookCard({ book }: { book: BookCardData }) {
       <div className="relative">
         <Link href={`/books/${book.slug}`} title={book.title} className="block">
           <div className="relative aspect-[2/3] overflow-hidden rounded-lg border border-border bg-bg">
-            <Image
+            <BookCover
               src={book.coverImage.secureUrl}
               alt={`${book.title} by ${book.author} — book cover`}
-              fill
+              title={book.title}
               sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 200px"
               className="object-cover transition duration-500 group-hover:scale-[1.03]"
             />
