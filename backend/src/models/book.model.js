@@ -40,8 +40,15 @@ const bookSchema = new mongoose.Schema(
     },
     publicationYear: { type: Number, min: 1800 },
 
-    // Silo architecture (SEO Guide §1): lower-kebab genre slug, indexed.
-    genre: { type: String, required: true, index: true, lowercase: true, trim: true },
+    // Silo architecture (SEO Guide §1): lower-kebab genre slug, indexed. Required
+    // unless the book lives in a Section (Manga/Kids/Loksewa), which is its silo.
+    genre: {
+      type: String,
+      required: [function requireGenre() { return !this.category; }, 'Either a genre or a section is required'],
+      index: true,
+      lowercase: true,
+      trim: true,
+    },
     // Browse section (Manga / Kids / Loksewa), independent of genre. Optional.
     category: { type: String, enum: [...CATEGORIES, null], default: null, lowercase: true, trim: true, index: true },
     subgenre: { type: String, trim: true },

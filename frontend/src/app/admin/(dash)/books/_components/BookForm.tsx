@@ -39,9 +39,12 @@ export function BookForm({
 
   // Real options come from the admin-curated list; fall back if the API is down
   // or, on edit, keep whatever genre the book already carries even if inactive.
-  const genreOptions = genres.length
-    ? genres.map((g) => ({ value: g.slug, label: g.name }))
-    : FALLBACK_GENRES.map((g) => ({ value: g, label: g }));
+  const genreOptions = [
+    { value: "", label: "— None (section book) —" },
+    ...(genres.length
+      ? genres.map((g) => ({ value: g.slug, label: g.name }))
+      : FALLBACK_GENRES.map((g) => ({ value: g, label: g }))),
+  ];
   if (form.genre && !genreOptions.some((o) => o.value === form.genre)) {
     genreOptions.unshift({ value: form.genre, label: form.genre });
   }
@@ -105,6 +108,10 @@ export function BookForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!form.genre && !form.category) {
+      setError("Pick a Genre or a Section (Manga / Kids / Loksewa).");
+      return;
+    }
     if (!form.coverImage) {
       setError("Please upload a cover image before saving.");
       return;
@@ -176,7 +183,7 @@ export function BookForm({
                 value={form.genre}
                 onChange={(v) => set("genre", v)}
                 options={genreOptions}
-                hint={genres.length ? undefined : "Add genres under Genres →"}
+                hint={genres.length ? "Optional if you pick a Section below." : "Add genres under Genres →"}
               />
               <Select
                 label="Condition"

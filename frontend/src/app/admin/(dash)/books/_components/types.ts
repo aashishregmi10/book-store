@@ -145,7 +145,7 @@ export const EMPTY_BOOK: BookFormValues = {
   slug: "",
   title: "",
   author: "",
-  genre: "fiction",
+  genre: "",
   category: "",
   isbn: "",
   price: 0,

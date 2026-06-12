@@ -83,6 +83,18 @@ describe("Book model", () => {
     expect(book.stockStatus).toBe(expected);
   });
 
+  it("allows a section book (category) with no genre", async () => {
+    const { genre, ...noGenre } = base;
+    const book = await Book.create({ ...noGenre, slug: "manga-1", stock: 4, category: "manga" });
+    expect(book.category).toBe("manga");
+    expect(book.genre).toBeUndefined();
+  });
+
+  it("requires either a genre or a section", async () => {
+    const { genre, ...noGenre } = base;
+    await expect(Book.create({ ...noGenre, slug: "orphan", stock: 4 })).rejects.toThrow(/genre or a section/i);
+  });
+
   it("preserves a discontinued status regardless of stock", async () => {
     const book = await Book.create({
       ...base,
