@@ -24,6 +24,7 @@ export default function EditBook() {
         setInitial({
           ...EMPTY_BOOK,
           ...b,
+          category: b.category ?? "",
           comparePrice: b.comparePrice ?? 0,
           coverImage: b.coverImage ?? null,
           images: b.images ?? [],

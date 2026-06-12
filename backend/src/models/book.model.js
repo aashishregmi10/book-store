@@ -5,6 +5,9 @@ const imageSchema = require('./image.schema');
 
 const STOCK_STATUS = ['in-stock', 'low-stock', 'out-of-stock', 'discontinued'];
 const FORMATS = ['Paperback', 'Hardcover', 'E-book', 'Audiobook'];
+// Top-level browse sections, independent of the literary `genre` silo. A book
+// can be genre='fiction' AND category='kids'. Empty = a general catalogue book.
+const CATEGORIES = ['manga', 'kids', 'loksewa'];
 
 // A purchasable edition of a title (e.g. Hardcover vs Paperback) with its own
 // price + stock. Each variant keeps a stable _id used by the cart/orders.
@@ -39,6 +42,8 @@ const bookSchema = new mongoose.Schema(
 
     // Silo architecture (SEO Guide §1): lower-kebab genre slug, indexed.
     genre: { type: String, required: true, index: true, lowercase: true, trim: true },
+    // Browse section (Manga / Kids / Loksewa), independent of genre. Optional.
+    category: { type: String, enum: [...CATEGORIES, null], default: null, lowercase: true, trim: true, index: true },
     subgenre: { type: String, trim: true },
     tags: [{ type: String, trim: true }],
     relatedSlugs: [{ type: String }], // same-silo only
@@ -113,6 +118,8 @@ bookSchema.index({ isActive: 1, price: 1 });
 bookSchema.index({ isActive: 1, avgRating: -1 });
 // Genre silo page default (popular within a genre).
 bookSchema.index({ isActive: 1, genre: 1, soldCount: -1 });
+// Category section page (newest within a section).
+bookSchema.index({ isActive: 1, category: 1, createdAt: -1 });
 
 // Keep top-level price/stock in sync with variants, then derive stockStatus.
 // With variants, top-level price = cheapest variant ("from NPR X") and stock =
@@ -132,5 +139,6 @@ bookSchema.pre('validate', function deriveStockAndStatus() {
 
 bookSchema.statics.STOCK_STATUS = STOCK_STATUS;
 bookSchema.statics.FORMATS = FORMATS;
+bookSchema.statics.CATEGORIES = CATEGORIES;
 
 module.exports = mongoose.models.Book || mongoose.model('Book', bookSchema);

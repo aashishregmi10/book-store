@@ -56,6 +56,8 @@ router.get(
         else if (genres.length > 1) filter.genre = { $in: genres };
       }
       if (req.query.condition) filter.condition = req.query.condition;
+      // Category section (manga / kids / loksewa).
+      if (req.query.category) filter.category = String(req.query.category).toLowerCase();
 
       // Form / format.
       if (req.query.format) {
@@ -89,7 +91,7 @@ router.get(
 
       // Cache each distinct query for 60s (busted on admin book mutations via
       // `books_list:*`). The count runs only on a cache miss.
-      const key = `books_list:${page}:${limit}:${req.query.sort || 'newest'}:${req.query.genre || ''}:${req.query.condition || ''}:${req.query.format || ''}:${req.query.language || ''}:${req.query.year || ''}:${req.query.minPrice || ''}:${req.query.maxPrice || ''}:${req.query.search || ''}`;
+      const key = `books_list:${page}:${limit}:${req.query.sort || 'newest'}:${req.query.genre || ''}:${req.query.category || ''}:${req.query.condition || ''}:${req.query.format || ''}:${req.query.language || ''}:${req.query.year || ''}:${req.query.minPrice || ''}:${req.query.maxPrice || ''}:${req.query.search || ''}`;
       const data = await withCache(key, 60, async () => {
         const [items, total] = await Promise.all([
           Book.find(filter).select(LIST_FIELDS).sort(sort).skip((page - 1) * limit).limit(limit).lean(),

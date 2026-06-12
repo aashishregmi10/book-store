@@ -145,6 +145,7 @@ const bookRules = [
   body('title').trim().notEmpty(),
   body('author').trim().notEmpty(),
   body('genre').trim().notEmpty(),
+  body('category').optional({ values: 'falsy' }).isIn(['manga', 'kids', 'loksewa']),
   // price/stock are optional when variants supply them (derived in the model).
   body('price').optional().toInt().isInt({ min: 0 }),
   body('stock').optional().toInt().isInt({ min: 0 }),
@@ -167,6 +168,7 @@ router.post('/books', bookRules, validate, async (req, res, next) => {
     const payload = { ...req.body };
     payload.slug = payload.slug ? slugify(payload.slug) : slugify(payload.title);
     payload.genre = slugify(payload.genre);
+    payload.category = payload.category || null; // '' → no section
     const book = await Book.create(payload);
     await invalidateCatalogCaches(book.slug);
     pingIndexNow([`/books/${book.slug}`, '/books', `/genre/${book.genre}`]);
@@ -181,9 +183,10 @@ router.put('/books/:slug', [param('slug').trim().notEmpty()], validate, async (r
     const book = await Book.findOne({ slug: req.params.slug });
     if (!book) return fail(res, 'Book not found', 404, [{ code: 'NOT_FOUND' }]);
     // Whitelist updatable fields.
-    const fields = ['title', 'author', 'isbn', 'genre', 'subgenre', 'tags', 'condition', 'price', 'comparePrice', 'costPrice', 'stock', 'stockStatus', 'reorderPoint', 'coverImage', 'images', 'description', 'shortDescription', 'specifications', 'variants', 'includedTitles', 'metaTitle', 'metaDescription', 'isBestseller', 'isNewArrival', 'isFeatured', 'isStaffPick', 'staffPickNote', 'isActive'];
+    const fields = ['title', 'author', 'isbn', 'genre', 'category', 'subgenre', 'tags', 'condition', 'price', 'comparePrice', 'costPrice', 'stock', 'stockStatus', 'reorderPoint', 'coverImage', 'images', 'description', 'shortDescription', 'specifications', 'variants', 'includedTitles', 'metaTitle', 'metaDescription', 'isBestseller', 'isNewArrival', 'isFeatured', 'isStaffPick', 'staffPickNote', 'isActive'];
     for (const f of fields) if (f in req.body) book[f] = req.body[f];
     if (req.body.genre) book.genre = slugify(req.body.genre);
+    if ('category' in req.body) book.category = req.body.category || null; // '' → no section
     await book.save(); // triggers stockStatus recompute
     await invalidateCatalogCaches(book.slug);
     pingIndexNow([`/books/${book.slug}`, '/books', `/genre/${book.genre}`]);
