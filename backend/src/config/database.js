@@ -54,6 +54,10 @@ async function connectMongo(uri = process.env.MONGODB_URI) {
   if (uri.startsWith('mongodb+srv://')) ensureUsableDnsServers();
 
   mongoose.set('strictQuery', true);
+  // Don't auto-build indexes on boot in production — that can block a large
+  // collection. Indexes are defined in the schemas but built explicitly via
+  // `npm run sync-indexes`. Dev keeps autoIndex on for convenience.
+  mongoose.set('autoIndex', process.env.NODE_ENV !== 'production');
 
   mongoose.connection.on('connected', () => logger.info('MongoDB connected.'));
   mongoose.connection.on('error', (err) => logger.error({ err: err.message }, 'MongoDB error'));

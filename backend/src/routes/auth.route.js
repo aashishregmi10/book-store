@@ -7,7 +7,7 @@ const { body, query } = require('express-validator');
 const User = require('../models/user.model');
 const { validate } = require('../middleware/validate');
 const { authenticate, loginLimiter, registerLimiter, forgotPasswordLimiter } = require('../middleware/auth');
-const { generateTokens, signAccess, verify, refreshCookieOptions } = require('../utils/token');
+const { generateTokens, verify, refreshCookieOptions } = require('../utils/token');
 const { ok, created, fail, ApiError } = require('../utils/apiResponse');
 const email = require('../utils/emailService');
 const logger = require('../config/logger');
@@ -138,7 +138,11 @@ router.post('/refresh', (req, res, next) => {
     if (!token) return fail(res, 'No refresh token', 401, [{ code: 'NO_TOKEN' }]);
     const decoded = verify(token);
     if (decoded.type !== 'refresh') return fail(res, 'Invalid token', 403, [{ code: 'INVALID_TOKEN' }]);
-    return ok(res, { accessToken: signAccess(decoded.userId) }, 'Token refreshed');
+    // Rotate: issue a fresh refresh token alongside the new access token, so a
+    // leaked refresh token has a bounded lifetime instead of living the full 7d.
+    const tokens = generateTokens(decoded.userId);
+    res.cookie('refreshToken', tokens.refreshToken, refreshCookieOptions);
+    return ok(res, { accessToken: tokens.accessToken }, 'Token refreshed');
   } catch (err) {
     return next(err);
   }
