@@ -20,6 +20,14 @@ export interface BookSpecifications {
 
 export const FORMATS = ["Paperback", "Hardcover", "E-book", "Audiobook"];
 
+// Browse sections (separate from genre). "" = no section.
+export const CATEGORY_OPTIONS = [
+  { value: "", label: "None" },
+  { value: "manga", label: "Manga" },
+  { value: "kids", label: "Kids" },
+  { value: "loksewa", label: "Loksewa" },
+];
+
 // A format variant row in the admin form (Hardcover/Paperback with own price + stock).
 export interface BookVariantInput {
   _id?: string;
@@ -44,6 +52,7 @@ export interface AdminBook {
   title: string;
   author: string;
   genre: string;
+  category?: string;
   price: number;
   comparePrice?: number;
   stock: number;
@@ -82,6 +91,7 @@ export interface BookFormValues {
   title: string;
   author: string;
   genre: string;
+  category: string;
   isbn: string;
   price: number;
   comparePrice: number;
@@ -136,6 +146,7 @@ export const EMPTY_BOOK: BookFormValues = {
   title: "",
   author: "",
   genre: "fiction",
+  category: "",
   isbn: "",
   price: 0,
   comparePrice: 0,

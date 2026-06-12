@@ -57,6 +57,20 @@ describe('GET /api/books', () => {
     expect(res.body.data.items.every((b) => b.genre === 'self-help')).toBe(true);
   });
 
+  it('filters by category section (manga / kids / loksewa)', async () => {
+    await Book.create([
+      book({ slug: 'one-piece-1', title: 'One Piece Vol 1', genre: 'fiction', price: 700, category: 'manga' }),
+      book({ slug: 'loksewa-gk', title: 'Loksewa GK', genre: 'self-help', price: 400, category: 'loksewa' }),
+    ]);
+    const manga = await request(app).get('/api/books').query({ category: 'manga' });
+    expect(manga.body.data.total).toBe(1);
+    expect(manga.body.data.items[0].slug).toBe('one-piece-1');
+
+    const loksewa = await request(app).get('/api/books').query({ category: 'loksewa' });
+    expect(loksewa.body.data.total).toBe(1);
+    expect(loksewa.body.data.items[0].slug).toBe('loksewa-gk');
+  });
+
   it('filters by price range and sorts price-low', async () => {
     const res = await request(app).get('/api/books').query({ minPrice: 600, maxPrice: 800, sort: 'price-low' });
     const prices = res.body.data.items.map((b) => b.price);

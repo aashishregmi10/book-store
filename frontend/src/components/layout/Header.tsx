@@ -11,6 +11,9 @@ import { AccountMenu } from "./AccountMenu";
 
 const NAV = [
   { to: "/books", label: "Catalogue" },
+  { to: "/category/manga", label: "Manga" },
+  { to: "/category/kids", label: "Kids" },
+  { to: "/category/loksewa", label: "Loksewa" },
   { to: "/blog", label: "Articles" },
   { to: "/about", label: "Our Story" },
   { to: "/contact", label: "Contact" },
@@ -39,7 +42,7 @@ export function Header() {
         </Link>
 
         {/* Primary nav — beside the logo */}
-        <nav className="hidden items-center gap-7 lg:flex" aria-label="Primary">
+        <nav className="hidden items-center gap-5 lg:flex" aria-label="Primary">
           {NAV.map((n) => (
             <Link
               key={n.to}

@@ -9,6 +9,7 @@ import { useGenres } from "./useGenres";
 import {
   FALLBACK_GENRES,
   FORMATS,
+  CATEGORY_OPTIONS,
   MIN_GALLERY_IMAGES,
   MAX_GALLERY_IMAGES,
   type BookFormValues,
@@ -185,6 +186,13 @@ export function BookForm({
                   { value: "new", label: "New" },
                   { value: "used", label: "Used" },
                 ]}
+              />
+              <Select
+                label="Section (Manga / Kids / Loksewa)"
+                value={form.category}
+                onChange={(v) => set("category", v)}
+                options={CATEGORY_OPTIONS}
+                hint="Optional — shows the book under a top-nav section."
               />
             </div>
           </Section>
