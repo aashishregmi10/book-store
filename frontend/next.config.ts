@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "covers.openlibrary.org" }, // seed/dev book covers
       { protocol: "https", hostname: "res.cloudinary.com" }, // admin-uploaded covers
+      { protocol: "https", hostname: "lh3.googleusercontent.com" }, // Google profile avatars
     ],
   },
 };
