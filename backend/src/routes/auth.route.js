@@ -2,6 +2,7 @@
 
 const express = require('express');
 const crypto = require('crypto');
+const { OAuth2Client } = require('google-auth-library');
 
 const User = require('../models/user.model');
 const { validate } = require('../middleware/validate');
@@ -32,6 +33,10 @@ const changePasswordBody = z.object({ currentPassword: z.string().min(1), newPas
 const forgotBody = z.object({ email: emailSchema() });
 const resetQuery = z.object({ token: z.string().min(1) });
 const resetBody = z.object({ token: z.string().min(1), password: z.string().min(8) });
+const googleBody = z.object({ credential: z.string().min(1) });
+
+// Verifies Google ID tokens (the "credential" from the Sign in with Google button).
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const hashToken = (raw) => crypto.createHash('sha256').update(raw).digest('hex');
 const publicUser = (u) => ({
@@ -88,6 +93,54 @@ router.post(
     }
   }
 );
+
+// ── GOOGLE SIGN-IN ───────────────────────────────────────
+// Frontend sends the ID token (credential) from the Google button; we verify it
+// with Google, then find-or-create the user and issue our own tokens.
+router.post('/google', loginLimiter, validate({ body: googleBody }), async (req, res, next) => {
+  try {
+    if (!process.env.GOOGLE_CLIENT_ID) {
+      return fail(res, 'Google sign-in is not configured', 503, [{ code: 'OAUTH_DISABLED' }]);
+    }
+    let payload;
+    try {
+      const ticket = await googleClient.verifyIdToken({ idToken: req.body.credential, audience: process.env.GOOGLE_CLIENT_ID });
+      payload = ticket.getPayload();
+    } catch {
+      return fail(res, 'Invalid Google sign-in', 401, [{ code: 'INVALID_GOOGLE_TOKEN' }]);
+    }
+    if (!payload?.email || !payload.email_verified) {
+      return fail(res, 'Your Google email is not verified', 401, [{ code: 'EMAIL_UNVERIFIED' }]);
+    }
+
+    const emailAddr = payload.email.toLowerCase();
+    const googleId = payload.sub;
+
+    let user = await User.findOne({ $or: [{ googleId }, { email: emailAddr }] }).select('+password');
+    if (user) {
+      if (user.isBanned) return fail(res, 'Account suspended. Contact support.', 403, [{ code: 'BANNED' }]);
+      if (!user.googleId) user.googleId = googleId; // link an existing email/password account
+    } else {
+      user = new User({
+        email: emailAddr,
+        googleId,
+        fullName: payload.name || emailAddr.split('@')[0],
+        avatar: payload.picture,
+        points: 65,
+        pointsHistory: [{ amount: 65, reason: 'Signup bonus' }],
+      });
+      email.sendWelcomeEmail(user).catch(() => {});
+    }
+    user.lastLogin = new Date();
+    await user.save();
+
+    const tokens = generateTokens(user._id);
+    res.cookie('refreshToken', tokens.refreshToken, refreshCookieOptions);
+    return ok(res, { user: publicUser(user), accessToken: tokens.accessToken }, 'Logged in with Google');
+  } catch (err) {
+    return next(err);
+  }
+});
 
 // ── LOGIN ────────────────────────────────────────────────
 router.post(

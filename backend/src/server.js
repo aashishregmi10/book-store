@@ -2,6 +2,12 @@
 
 require('dotenv').config({ quiet: true });
 
+// New Relic APM — must load before the app modules it instruments. Only in
+// production with a license key, so dev/tests never connect. (Config: newrelic.js)
+if (process.env.NODE_ENV === 'production' && process.env.NEW_RELIC_LICENSE_KEY) {
+  require('newrelic');
+}
+
 const http = require('http');
 const { Server } = require('socket.io');
 

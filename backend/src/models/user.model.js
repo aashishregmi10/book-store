@@ -34,7 +34,10 @@ const addressSchema = new mongoose.Schema(
 const userSchema = new mongoose.Schema(
   {
     email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
-    password: { type: String, required: true, select: false },
+    // Password is required for email/password accounts; Google sign-in users
+    // have no password (they authenticate with Google).
+    password: { type: String, required: [function requirePassword() { return !this.googleId; }, 'Password is required'], select: false },
+    googleId: { type: String, unique: true, sparse: true, index: true }, // set for Google sign-in
     fullName: { type: String, required: true, trim: true },
     avatar: { type: String }, // Cloudinary URL
     avatarPublicId: { type: String },
@@ -107,6 +110,7 @@ userSchema.pre('save', async function deriveFields() {
 });
 
 userSchema.methods.comparePassword = function comparePassword(candidate) {
+  if (!this.password) return Promise.resolve(false); // Google-only account, no password set
   return bcrypt.compare(candidate, this.password);
 };
 
