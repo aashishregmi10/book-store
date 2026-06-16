@@ -73,7 +73,7 @@ async function unwrap<T>(res: Response): Promise<T> {
   return (json as ApiEnvelope<T>).data;
 }
 
-async function request<T>(method: string, path: string, body?: unknown, retry = true): Promise<T> {
+async function request<T>(method: string, path: string, body?: unknown, retry = true, signal?: AbortSignal): Promise<T> {
   const headers = authHeaders(body !== undefined ? { "Content-Type": "application/json" } : undefined);
 
   let res: Response;
@@ -83,8 +83,12 @@ async function request<T>(method: string, path: string, body?: unknown, retry = 
       headers,
       credentials: "include", // send/receive the httpOnly refresh cookie
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal, // lets callers cancel stale/duplicate requests
     });
-  } catch {
+  } catch (err) {
+    // Surface aborts distinctly so callers can ignore them instead of showing
+    // a "can't reach the server" error for an intentional cancellation.
+    if ((err as Error)?.name === "AbortError") throw new ClientApiError("Aborted", 0, [{ code: "ABORTED" }]);
     throw new ClientApiError(`Can't reach the server. Is the API running?`, 0);
   }
 
@@ -92,7 +96,7 @@ async function request<T>(method: string, path: string, body?: unknown, retry = 
     const code = await errorCode(res);
     if (code && REFRESHABLE.has(code)) {
       const token = await refreshAccessToken();
-      if (token) return request<T>(method, path, body, false); // retry once with the fresh token
+      if (token) return request<T>(method, path, body, false, signal); // retry once with the fresh token
       clearAuth(); // refresh failed — session is over
     }
   }
@@ -127,7 +131,7 @@ async function upload<T>(path: string, form: FormData, retry = true): Promise<T>
 }
 
 export const clientApi = {
-  get: <T>(path: string) => request<T>("GET", path),
+  get: <T>(path: string, opts?: { signal?: AbortSignal }) => request<T>("GET", path, undefined, true, opts?.signal),
   post: <T>(path: string, body?: unknown) => request<T>("POST", path, body),
   put: <T>(path: string, body?: unknown) => request<T>("PUT", path, body),
   del: <T>(path: string) => request<T>("DELETE", path),

@@ -1,6 +1,7 @@
 'use strict';
 
 const logger = require('../config/logger');
+const { toIsbn10, toIsbn13 } = require('./isbn');
 
 // Normalise language codes (Google: 2-letter, Open Library: 3-letter) to names.
 const LANG = {
@@ -9,38 +10,19 @@ const LANG = {
 };
 const mapLang = (c) => (c ? LANG[String(c).toLowerCase()] || c : undefined);
 
-async function fromGoogleBooks(isbn) {
-  const r = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbn)}`);
-  if (!r.ok) throw new Error(`Google Books ${r.status}`);
-  const v = (await r.json())?.items?.[0]?.volumeInfo;
-  if (!v) return null;
-  const cover = v.imageLinks?.thumbnail || v.imageLinks?.smallThumbnail;
-  return {
-    source: 'google',
-    title: v.title,
-    author: Array.isArray(v.authors) ? v.authors[0] : undefined,
-    coverUrl: cover ? cover.replace(/^http:/, 'https:').replace(/&edge=curl/, '') : undefined,
-    specifications: {
-      pages: v.pageCount || undefined,
-      publisher: v.publisher || undefined,
-      publishedDate: v.publishedDate ? String(v.publishedDate).slice(0, 4) : undefined,
-      language: mapLang(v.language),
-    },
-  };
-}
+// ── Open Library ─────────────────────────────────────────
+const OL_FIELDS = 'title,author_name,cover_i,publisher,first_publish_year,number_of_pages_median,language,isbn';
 
-async function fromOpenLibrary(isbn) {
-  const url = `https://openlibrary.org/search.json?isbn=${encodeURIComponent(isbn)}&fields=title,author_name,cover_i,publisher,first_publish_year,number_of_pages_median,language&limit=1`;
-  const r = await fetch(url, { headers: { 'User-Agent': 'PageTurnNepal/1.0 (hello@pageturn.com.np)' } });
-  if (!r.ok) throw new Error(`Open Library ${r.status}`);
-  const doc = (await r.json())?.docs?.[0];
-  if (!doc) return null;
+function mapOpenLibraryDoc(doc) {
   const langCode = Array.isArray(doc.language) ? doc.language[0] : undefined;
+  const isbns = Array.isArray(doc.isbn) ? doc.isbn : [];
   return {
     source: 'openlibrary',
     title: doc.title,
     author: Array.isArray(doc.author_name) ? doc.author_name[0] : undefined,
     coverUrl: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : undefined,
+    isbn13: isbns.map(toIsbn13).find(Boolean) || null,
+    isbn10: isbns.map(toIsbn10).find(Boolean) || null,
     specifications: {
       pages: doc.number_of_pages_median || undefined,
       publisher: Array.isArray(doc.publisher) ? doc.publisher[0] : undefined,
@@ -50,21 +32,97 @@ async function fromOpenLibrary(isbn) {
   };
 }
 
-/**
- * Resilient ISBN metadata lookup. Tries Google Books first; on empty result or
- * error, falls back to Open Library. Returns normalised data or null. Never throws.
- */
-async function lookupByIsbn(isbn) {
-  if (typeof fetch !== 'function') return null;
-  for (const [name, fn] of [['google', fromGoogleBooks], ['openlibrary', fromOpenLibrary]]) {
+async function openLibrary(queryString) {
+  const url = `https://openlibrary.org/search.json?${queryString}&fields=${OL_FIELDS}&limit=1`;
+  const r = await fetch(url, { headers: { 'User-Agent': 'PageTurnNepal/1.0 (hello@pageturn.com.np)' } });
+  if (!r.ok) throw new Error(`Open Library ${r.status}`);
+  const doc = (await r.json())?.docs?.[0];
+  return doc ? mapOpenLibraryDoc(doc) : null;
+}
+
+const fromOpenLibraryIsbn = (isbn) => openLibrary(`isbn=${encodeURIComponent(isbn)}`);
+
+function fromOpenLibrarySearch({ title, author, publisher } = {}) {
+  const p = new URLSearchParams();
+  if (title) p.set('title', title);
+  if (author) p.set('author', author);
+  if (publisher) p.set('publisher', publisher);
+  return openLibrary(p.toString());
+}
+
+// ── Google Books ─────────────────────────────────────────
+function mapGoogleVolume(v) {
+  const cover = v.imageLinks?.thumbnail || v.imageLinks?.smallThumbnail;
+  const ids = Array.isArray(v.industryIdentifiers) ? v.industryIdentifiers : [];
+  const pick = (type) => ids.find((x) => x.type === type)?.identifier || null;
+  return {
+    source: 'google',
+    title: v.title,
+    author: Array.isArray(v.authors) ? v.authors[0] : undefined,
+    coverUrl: cover ? cover.replace(/^http:/, 'https:').replace(/&edge=curl/, '') : undefined,
+    isbn13: pick('ISBN_13'),
+    isbn10: pick('ISBN_10'),
+    specifications: {
+      pages: v.pageCount || undefined,
+      publisher: v.publisher || undefined,
+      publishedDate: v.publishedDate ? String(v.publishedDate).slice(0, 4) : undefined,
+      language: mapLang(v.language),
+    },
+  };
+}
+
+async function googleVolumes(q) {
+  const r = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1`);
+  if (!r.ok) throw new Error(`Google Books ${r.status}`);
+  const v = (await r.json())?.items?.[0]?.volumeInfo;
+  return v ? mapGoogleVolume(v) : null;
+}
+
+const fromGoogleIsbn = (isbn) => googleVolumes(`isbn:${encodeURIComponent(isbn)}`);
+
+function fromGoogleSearch({ title, author, publisher } = {}) {
+  const parts = [];
+  if (title) parts.push(`intitle:${encodeURIComponent(title)}`);
+  if (author) parts.push(`inauthor:${encodeURIComponent(author)}`);
+  if (publisher) parts.push(`inpublisher:${encodeURIComponent(publisher)}`);
+  return googleVolumes(parts.join('+'));
+}
+
+// ── Public API ───────────────────────────────────────────
+// Try providers in order; return the first result that has a title. Never throws.
+async function race(providers, arg) {
+  for (const [name, fn] of providers) {
     try {
-      const result = await fn(isbn);
+      const result = await fn(arg);
       if (result && result.title) return result;
     } catch (err) {
-      logger.warn({ err: err.message, provider: name }, 'ISBN lookup provider failed');
+      logger.warn({ err: err.message, provider: name }, 'book lookup provider failed');
     }
   }
   return null;
 }
 
-module.exports = { lookupByIsbn };
+/**
+ * ISBN metadata lookup. Google Books first (richest ISBN coverage), Open Library
+ * fallback. Returns normalised data or null.
+ */
+async function lookupByIsbn(isbn) {
+  if (typeof fetch !== 'function') return null;
+  return race([['google', fromGoogleIsbn], ['openlibrary', fromOpenLibraryIsbn]], isbn);
+}
+
+/**
+ * General lookup by any combination of { isbn, title, author, publisher }.
+ * ISBN (when present) wins and uses the ISBN path above. Otherwise we search by
+ * title/author/publisher — Open Library first (free, strong search), Google
+ * fallback. Returns normalised data or null; never throws.
+ */
+async function lookupBook(query = {}) {
+  if (typeof fetch !== 'function') return null;
+  const { isbn, title, author, publisher } = query;
+  if (isbn) return lookupByIsbn(isbn);
+  if (!title && !author && !publisher) return null;
+  return race([['openlibrary', fromOpenLibrarySearch], ['google', fromGoogleSearch]], query);
+}
+
+module.exports = { lookupByIsbn, lookupBook };

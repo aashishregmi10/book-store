@@ -13,14 +13,15 @@ const Article = require('../models/article.model');
 const Activity = require('../models/activity.model');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
-const { z, objectId, trimmedString } = require('../utils/zod');
+const { z, objectId, trimmedString, intQuery } = require('../utils/zod');
 const { restoreStock } = require('../services/stock');
 const { cacheDel } = require('../config/redis');
 const { ok, created, fail } = require('../utils/apiResponse');
 const email = require('../utils/emailService');
 const { pingIndexNow } = require('../utils/indexnow');
 const { uploadBuffer } = require('../config/cloudinary');
-const { lookupByIsbn } = require('../utils/bookLookup');
+const { lookupBook } = require('../utils/bookLookup');
+const { normalizeIsbns } = require('../utils/isbn');
 
 const router = express.Router();
 router.use(authenticate, requireAdmin);
@@ -73,7 +74,17 @@ const articleBody = z
   })
   .catchall(z.unknown());
 const answerBody = z.object({ answer: z.string().trim().min(2).max(2000) }).catchall(z.unknown());
-const isbnQuery = z.object({ isbn: trimmedString() });
+// Lookup accepts any combination of identifiers; at least one is required.
+const lookupQuery = z
+  .object({
+    isbn: z.string().trim().optional(),
+    title: z.string().trim().optional(),
+    author: z.string().trim().optional(),
+    publisher: z.string().trim().optional(),
+  })
+  .refine((q) => q.isbn || q.title || q.author || q.publisher, {
+    message: 'Provide an ISBN, title, author, or publisher',
+  });
 
 const slugify = (s) => String(s).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
@@ -137,26 +148,57 @@ router.get('/overview', async (req, res, next) => {
 });
 
 // ══ BOOKS ════════════════════════════════════════════════
-router.get('/books', async (req, res, next) => {
+const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const adminBooksQuery = z.object({
+  page: intQuery({ min: 1 }).optional(),
+  limit: intQuery({ min: 1, max: 100 }).optional(),
+  search: z.string().trim().optional(),
+});
+
+// Paginated so the table scales past a few hundred titles. Returns
+// { items, total, page, pages } — the client renders 10 per page.
+router.get('/books', validate({ query: adminBooksQuery }), async (req, res, next) => {
   try {
+    const page = req.query.page || 1;
+    const limit = req.query.limit || 20;
     const filter = {};
-    if (req.query.search) filter.$or = [
-      { title: new RegExp(String(req.query.search), 'i') },
-      { author: new RegExp(String(req.query.search), 'i') },
-    ];
-    const books = await Book.find(filter).select('+costPrice').sort({ createdAt: -1 }).limit(200).lean();
-    return ok(res, books, 'Books');
+    if (req.query.search) {
+      const rx = new RegExp(escapeRegex(req.query.search), 'i'); // escaped: search is user input
+      filter.$or = [{ title: rx }, { author: rx }];
+    }
+    const [items, total] = await Promise.all([
+      Book.find(filter).select('+costPrice').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+      Book.countDocuments(filter),
+    ]);
+    return ok(res, { items, total, page, pages: Math.ceil(total / limit) || 1 }, 'Books');
   } catch (err) {
     return next(err);
   }
 });
 
-// ── GET /api/admin/books/lookup?isbn= — Google Books → Open Library fallback ──
-router.get('/books/lookup', validate({ query: isbnQuery }), async (req, res, next) => {
+// ── GET /api/admin/books/lookup?isbn=&title=&author=&publisher= ──
+// Autofill from Open Library / Google Books. ISBN (if given) takes priority;
+// otherwise searches by title/author/publisher.
+router.get('/books/lookup', validate({ query: lookupQuery }), async (req, res, next) => {
   try {
-    const isbn = String(req.query.isbn).replace(/[^0-9Xx]/g, '');
-    const meta = await lookupByIsbn(isbn);
-    if (!meta) return fail(res, 'No match found for that ISBN — add the book manually.', 404, [{ code: 'NOT_FOUND' }]);
+    const { title, author, publisher } = req.query;
+    let isbn;
+    let isbn10 = null;
+    let isbn13 = null;
+    if (req.query.isbn) {
+      const norm = normalizeIsbns(req.query.isbn);
+      if (!norm.valid) return fail(res, 'That ISBN looks invalid — check the digits.', 400, [{ code: 'INVALID_ISBN' }]);
+      isbn = norm.isbn13 || norm.clean; // providers prefer ISBN-13
+      isbn10 = norm.isbn10;
+      isbn13 = norm.isbn13;
+    }
+
+    const meta = await lookupBook({ isbn, title, author, publisher });
+    if (!meta) return fail(res, 'No match found — add the book manually.', 404, [{ code: 'NOT_FOUND' }]);
+
+    // From a title/author/publisher search the resolved ISBNs come back on the result.
+    isbn13 = isbn13 || meta.isbn13 || null;
+    isbn10 = isbn10 || meta.isbn10 || null;
 
     // Store the cover in Cloudinary so we own a permanent, fast asset.
     let coverImage = null;
@@ -167,7 +209,7 @@ router.get('/books/lookup', validate({ query: isbnQuery }), async (req, res, nex
           const buf = Buffer.from(await img.arrayBuffer());
           if (buf.length > 1024) {
             const up = await uploadBuffer(buf, { folder: 'pageturn/books' });
-            coverImage = { publicId: up.public_id, secureUrl: up.secure_url, name: `${meta.title || isbn}.jpg` };
+            coverImage = { publicId: up.public_id, secureUrl: up.secure_url, name: `${meta.title || isbn13 || 'cover'}.jpg` };
           }
         }
       } catch {
@@ -175,7 +217,11 @@ router.get('/books/lookup', validate({ query: isbnQuery }), async (req, res, nex
       }
     }
 
-    return ok(res, { title: meta.title, author: meta.author, coverImage, specifications: meta.specifications, source: meta.source }, 'Lookup');
+    return ok(
+      res,
+      { title: meta.title, author: meta.author, coverImage, specifications: meta.specifications, source: meta.source, isbn13, isbn10 },
+      'Lookup'
+    );
   } catch (err) {
     return next(err);
   }
