@@ -33,6 +33,9 @@ export default function AdminBooks() {
     // this dedupes React Strict Mode's dev-only double-invoke and prevents
     // search-as-you-type races (a slow earlier response can't clobber a newer one).
     const ctrl = new AbortController();
+    // Intentional: show the spinner immediately when search/page changes. (On the
+    // initial mount loading is already true, so this is a no-op render then.)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
     if (search) params.set("search", search);
@@ -73,12 +76,20 @@ export default function AdminBooks() {
     <div>
       <div className="flex items-center justify-between">
         <h1 className="font-display text-3xl text-text">Books</h1>
-        <Link
-          href="/admin/books/new"
-          className="inline-flex items-center gap-2 bg-accent px-4 py-2 font-data text-sm uppercase tracking-wide text-white hover:bg-accent-hover"
-        >
-          <Plus className="size-4" /> Add book
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/books/import"
+            className="inline-flex items-center gap-2 border border-border px-4 py-2 font-data text-sm uppercase tracking-wide text-text hover:border-accent hover:text-accent"
+          >
+            Import
+          </Link>
+          <Link
+            href="/admin/books/new"
+            className="inline-flex items-center gap-2 bg-accent px-4 py-2 font-data text-sm uppercase tracking-wide text-white hover:bg-accent-hover"
+          >
+            <Plus className="size-4" /> Add book
+          </Link>
+        </div>
       </div>
 
       <input

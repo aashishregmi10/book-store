@@ -362,6 +362,103 @@ router.post('/books/lookup/bulk', validate({ body: bulkLookupBody }), async (req
   }
 });
 
+// ── POST /api/admin/books/bulk-create — create draft books from lookup rows ──
+// Lookup data alone can't satisfy the model (price/genre/description are required
+// and not in the metadata), so this creates each book as a DRAFT (isActive:false)
+// using batch-wide defaults; the admin finishes and publishes from the edit form.
+const bulkCreateBody = z.object({
+  defaults: z.object({
+    genre: z.string().trim().optional(),
+    category: z.string().trim().optional(),
+    price: z.coerce.number().int().min(0),
+    stock: z.coerce.number().int().min(0).optional(),
+  }),
+  books: z
+    .array(
+      z.object({
+        title: trimmedString(),
+        author: z.string().trim().optional(),
+        coverUrl: z.string().trim().optional(),
+        isbn13: z.string().trim().optional(),
+        publisher: z.string().trim().optional(),
+        pages: z.coerce.number().int().optional(),
+        language: z.string().trim().optional(),
+        description: z.string().trim().optional(),
+      })
+    )
+    .min(1),
+});
+
+async function uploadCoverFromUrl(url, name) {
+  if (!url || typeof fetch !== 'function') return null;
+  try {
+    const img = await fetch(url);
+    if (!img.ok) return null;
+    const buf = Buffer.from(await img.arrayBuffer());
+    if (buf.length <= 1024) return null;
+    const up = await uploadBuffer(buf, { folder: 'pageturn/books' });
+    return { publicId: up.public_id, secureUrl: up.secure_url, name: `${name || 'cover'}.jpg` };
+  } catch {
+    return null;
+  }
+}
+
+async function createOneDraft(item, defaults) {
+  try {
+    // coverImage is required by the model — skip rows we can't get a cover for.
+    const coverImage = await uploadCoverFromUrl(item.coverUrl, item.title);
+    if (!coverImage) return { title: item.title, success: false, error: 'no_cover' };
+
+    const description =
+      item.description && item.description.trim().length >= 10
+        ? item.description.trim()
+        : `${item.title}${item.author ? ` by ${item.author}` : ''} — details to be added.`;
+
+    const book = await Book.create({
+      slug: slugify(item.title),
+      title: item.title,
+      author: item.author || 'Unknown',
+      genre: defaults.genre ? slugify(defaults.genre) : undefined,
+      category: defaults.category || null,
+      price: defaults.price,
+      stock: defaults.stock || 0,
+      coverImage,
+      description,
+      isbn: item.isbn13 || undefined,
+      specifications: {
+        pages: item.pages || undefined,
+        publisher: item.publisher || undefined,
+        language: item.language || undefined,
+      },
+      isActive: false, // draft — not live until the admin completes & publishes it
+    });
+    return { title: item.title, success: true, slug: book.slug };
+  } catch (err) {
+    return { title: item.title, success: false, error: err?.code === 11000 ? 'duplicate' : 'create_failed' };
+  }
+}
+
+router.post('/books/bulk-create', validate({ body: bulkCreateBody }), async (req, res, next) => {
+  try {
+    const { defaults, books } = req.body;
+    if (!defaults.genre && !defaults.category) {
+      return fail(res, 'Pick a genre or section for the batch.', 400, [{ code: 'GENRE_OR_SECTION' }]);
+    }
+    if (books.length > BULK_MAX) {
+      return fail(res, `Too many books — max ${BULK_MAX} per batch.`, 400, [{ code: 'BULK_LIMIT_EXCEEDED', max_allowed: BULK_MAX }]);
+    }
+    const results = await mapPool(books, BULK_CONCURRENCY, (item) => createOneDraft(item, defaults));
+    const createdCount = results.filter((r) => r.success).length;
+    return created(
+      res,
+      { total: results.length, created: createdCount, failed: results.length - createdCount, results },
+      'Bulk create'
+    );
+  } catch (err) {
+    return next(err);
+  }
+});
+
 router.get('/books/:slug', validate({ params: slugParams }), async (req, res, next) => {
   try {
     const book = await Book.findOne({ slug: req.params.slug }).select('+costPrice').lean();
