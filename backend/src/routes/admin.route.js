@@ -22,6 +22,8 @@ const { pingIndexNow } = require('../utils/indexnow');
 const { uploadBuffer } = require('../config/cloudinary');
 const { lookupBook } = require('../utils/bookLookup');
 const { normalizeIsbns } = require('../utils/isbn');
+const { detectOrigin, scoreConfidence } = require('../utils/bookOrigin');
+const { randomUUID } = require('crypto');
 
 const router = express.Router();
 router.use(authenticate, requireAdmin);
@@ -217,10 +219,143 @@ router.get('/books/lookup', validate({ query: lookupQuery }), async (req, res, n
       }
     }
 
+    const origin = detectOrigin({
+      isbn13,
+      publisher: meta.specifications?.publisher,
+      author: meta.author,
+      title: meta.title,
+      language: meta.specifications?.language,
+    });
+    const confidence = scoreConfidence({ isbn: req.query.isbn, title, author, publisher }, true);
+
     return ok(
       res,
-      { title: meta.title, author: meta.author, coverImage, specifications: meta.specifications, source: meta.source, isbn13, isbn10 },
+      {
+        title: meta.title,
+        author: meta.author,
+        coverImage,
+        specifications: meta.specifications,
+        source: meta.source,
+        isbn13,
+        isbn10,
+        confidence,
+        ...origin, // origin, market, currency, language, nepaliDetected, signals
+      },
       'Lookup'
+    );
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ── POST /api/admin/books/lookup/bulk — look up many books at once ──
+const BULK_MAX = 20;
+const BULK_CONCURRENCY = 2; // keep within Open Library (~3/s) / Google (~1/s) limits
+const BULK_STAGGER_MS = 500; // space out each worker's calls to avoid 429 bursts
+const bulkLookupBody = z.object({
+  books: z
+    .array(
+      z.object({
+        isbn: z.string().trim().optional(),
+        title: z.string().trim().optional(),
+        author: z.string().trim().optional(),
+        publisher: z.string().trim().optional(),
+      })
+    )
+    .min(1),
+});
+
+// Run fn over items with bounded concurrency, preserving input order.
+async function mapPool(items, limit, fn) {
+  const results = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next;
+      next += 1;
+      results[i] = await fn(items[i], i);
+      if (next < items.length) await new Promise((r) => setTimeout(r, BULK_STAGGER_MS));
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
+
+// One bulk item → a result row. Never throws; failures are reported per-item.
+// Bulk does NOT upload covers to Cloudinary (too heavy for 20×) — it returns the
+// raw coverUrl, and the cover is fetched/stored when the book is actually saved.
+async function lookupOneBulk(item, index) {
+  try {
+    const query = { ...item };
+    if (item.isbn) {
+      const norm = normalizeIsbns(item.isbn);
+      if (!norm.valid) return { input_index: index, success: false, error: 'invalid_isbn', book: null };
+      query.isbn = norm.isbn13 || norm.clean;
+    }
+    if (!query.isbn && !query.title && !query.author && !query.publisher) {
+      return { input_index: index, success: false, error: 'insufficient_data', book: null };
+    }
+
+    const meta = await lookupBook(query);
+    if (!meta) return { input_index: index, success: false, error: 'not_found', book: null };
+
+    const isbn13 = meta.isbn13 || (item.isbn ? normalizeIsbns(item.isbn).isbn13 : null);
+    const isbn10 = meta.isbn10 || (item.isbn ? normalizeIsbns(item.isbn).isbn10 : null);
+    const origin = detectOrigin({
+      isbn13,
+      publisher: meta.specifications?.publisher,
+      author: meta.author,
+      title: meta.title,
+      language: meta.specifications?.language,
+    });
+    return {
+      input_index: index,
+      success: true,
+      source: meta.source,
+      confidence: scoreConfidence(item, true),
+      nepaliDetected: origin.nepaliDetected,
+      book: {
+        title: meta.title,
+        authors: meta.author ? [meta.author] : [],
+        publisher: meta.specifications?.publisher || null,
+        publishedDate: meta.specifications?.publishedDate || null,
+        pageCount: meta.specifications?.pages || null,
+        language: origin.language || meta.specifications?.language || null,
+        isbn13,
+        isbn10,
+        coverUrl: meta.coverUrl || null,
+        origin: origin.origin,
+        market: origin.market,
+        currency: origin.currency,
+        signals: origin.signals,
+      },
+    };
+  } catch {
+    return { input_index: index, success: false, error: 'lookup_failed', book: null };
+  }
+}
+
+router.post('/books/lookup/bulk', validate({ body: bulkLookupBody }), async (req, res, next) => {
+  try {
+    const { books } = req.body;
+    if (books.length > BULK_MAX) {
+      return fail(res, `Too many books — max ${BULK_MAX} per batch.`, 400, [
+        { code: 'BULK_LIMIT_EXCEEDED', max_allowed: BULK_MAX },
+      ]);
+    }
+    const results = await mapPool(books, BULK_CONCURRENCY, lookupOneBulk);
+    const successful = results.filter((r) => r.success).length;
+    return ok(
+      res,
+      {
+        bulk: true,
+        batch_id: randomUUID(),
+        total: results.length,
+        successful,
+        failed: results.length - successful,
+        results,
+      },
+      'Bulk lookup'
     );
   } catch (err) {
     return next(err);

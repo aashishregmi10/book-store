@@ -10,6 +10,18 @@ const LANG = {
 };
 const mapLang = (c) => (c ? LANG[String(c).toLowerCase()] || c : undefined);
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// fetch with a single retry on HTTP 429 (rate limit), per the spec's backoff.
+async function fetchRetry(url, opts) {
+  let r = await fetch(url, opts);
+  if (r.status === 429) {
+    await sleep(1000);
+    r = await fetch(url, opts);
+  }
+  return r;
+}
+
 // ── Open Library ─────────────────────────────────────────
 const OL_FIELDS = 'title,author_name,cover_i,publisher,first_publish_year,number_of_pages_median,language,isbn';
 
@@ -34,7 +46,7 @@ function mapOpenLibraryDoc(doc) {
 
 async function openLibrary(queryString) {
   const url = `https://openlibrary.org/search.json?${queryString}&fields=${OL_FIELDS}&limit=1`;
-  const r = await fetch(url, { headers: { 'User-Agent': 'PageTurnNepal/1.0 (hello@pageturn.com.np)' } });
+  const r = await fetchRetry(url, { headers: { 'User-Agent': 'PageTurnNepal/1.0 (hello@pageturn.com.np)' } });
   if (!r.ok) throw new Error(`Open Library ${r.status}`);
   const doc = (await r.json())?.docs?.[0];
   return doc ? mapOpenLibraryDoc(doc) : null;
@@ -72,7 +84,7 @@ function mapGoogleVolume(v) {
 }
 
 async function googleVolumes(q) {
-  const r = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1`);
+  const r = await fetchRetry(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1`);
   if (!r.ok) throw new Error(`Google Books ${r.status}`);
   const v = (await r.json())?.items?.[0]?.volumeInfo;
   return v ? mapGoogleVolume(v) : null;
