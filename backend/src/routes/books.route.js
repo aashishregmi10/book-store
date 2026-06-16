@@ -35,6 +35,10 @@ const booksListQuery = z.object({
   sort: z.enum(Object.keys(SORTS)).optional(),
 });
 const suggestQuery = z.object({ q: trimmedString() });
+const sitemapQuery = z.object({
+  page: intQuery({ min: 1 }).optional(),
+  limit: intQuery({ min: 1, max: 50000 }).optional(),
+});
 const slugParams = z.object({ slug: trimmedString() });
 const questionBody = z.object({ question: z.string().trim().min(5).max(500) });
 const reviewBody = z.object({
@@ -189,21 +193,81 @@ router.get('/featured/books', async (_req, res, next) => {
   }
 });
 
-// ── GET /api/books/sitemap — lean list of all active books for the sitemap ──
-router.get('/sitemap', async (_req, res, next) => {
+// Books that have been sold out / discontinued for more than this long are
+// dropped from the sitemap (SEO Guide: don't index long-dead listings). There is
+// no soldOutAt field, so updatedAt is the proxy — a restock or any admin edit
+// bumps the book back into the sitemap. Reused by both sitemap endpoints.
+const SITEMAP_PAGE_SIZE = 50000; // Google's hard limit of 50k URLs per sitemap
+const sitemapFilter = () => {
+  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  return {
+    isActive: true,
+    $nor: [{ stockStatus: { $in: ['out-of-stock', 'discontinued'] }, updatedAt: { $lt: cutoff } }],
+  };
+};
+
+// ── GET /api/books/sitemap?page=&limit= — paged indexable books for the sitemap ──
+// Returns { total, items } so the Next sitemap can compute its shard count and
+// page through titles, keeping each shard under the 50k-URL limit. `title` feeds
+// the cover image entry; `image` is the raw Cloudinary URL (the frontend applies
+// the f_auto,q_auto delivery transform).
+router.get('/sitemap', validate({ query: sitemapQuery }), async (req, res, next) => {
   try {
-    const data = await withCache('books_sitemap', 3600, () =>
-      Book.find({ isActive: true })
-        .select('slug updatedAt coverImage genre')
-        .sort({ updatedAt: -1 })
-        .limit(50000)
-        .lean()
-    );
-    return ok(
-      res,
-      data.map((b) => ({ slug: b.slug, updatedAt: b.updatedAt, image: b.coverImage?.secureUrl, genre: b.genre })),
-      'Sitemap'
-    );
+    const page = req.query.page || 1;
+    const limit = req.query.limit || SITEMAP_PAGE_SIZE;
+    const result = await withCache(`books_sitemap:${page}:${limit}`, 3600, async () => {
+      const filter = sitemapFilter();
+      const [items, total] = await Promise.all([
+        Book.find(filter)
+          .select('slug title updatedAt coverImage')
+          .sort({ updatedAt: -1 })
+          .skip((page - 1) * limit)
+          .limit(limit)
+          .lean(),
+        Book.countDocuments(filter),
+      ]);
+      return {
+        total,
+        items: items.map((b) => ({
+          slug: b.slug,
+          title: b.title,
+          updatedAt: b.updatedAt,
+          image: b.coverImage?.secureUrl,
+        })),
+      };
+    });
+    res.set('Cache-Control', 'public, s-maxage=21600, stale-while-revalidate=86400'); // 6h / 24h
+    return ok(res, result, 'Sitemap');
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ── GET /api/books/sitemap/sections — per-section freshness for the sitemap ──
+// One aggregation yields the latest book updatedAt per category (Manga/Kids/
+// Loksewa) and per genre, so those sitemap entries get an accurate <lastmod>.
+// Only sections holding at least one indexable book are returned — empty genres
+// must not appear in the sitemap. Two segments, so /:slug never captures it.
+router.get('/sitemap/sections', async (_req, res, next) => {
+  try {
+    const data = await withCache('books_sitemap_sections', 3600, async () => {
+      const [agg] = await Book.aggregate([
+        { $match: sitemapFilter() },
+        {
+          $facet: {
+            categories: [
+              { $match: { category: { $ne: null } } },
+              { $group: { _id: '$category', lastmod: { $max: '$updatedAt' } } },
+            ],
+            genres: [{ $group: { _id: '$genre', lastmod: { $max: '$updatedAt' } } }],
+          },
+        },
+      ]);
+      const shape = (arr) => arr.filter((x) => x._id).map((x) => ({ slug: x._id, lastmod: x.lastmod }));
+      return { categories: shape(agg.categories), genres: shape(agg.genres) };
+    });
+    res.set('Cache-Control', 'public, s-maxage=43200, stale-while-revalidate=86400'); // 12h / 24h
+    return ok(res, data, 'Sitemap sections');
   } catch (err) {
     return next(err);
   }
