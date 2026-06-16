@@ -84,7 +84,10 @@ function mapGoogleVolume(v) {
 }
 
 async function googleVolumes(q) {
-  const r = await fetchRetry(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1`);
+  // An API key raises the keyless quota (which 429s quickly) — strongly
+  // recommended for bulk lookups. Optional: lookups still work without it.
+  const key = process.env.GOOGLE_BOOKS_API_KEY ? `&key=${process.env.GOOGLE_BOOKS_API_KEY}` : '';
+  const r = await fetchRetry(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1${key}`);
   if (!r.ok) throw new Error(`Google Books ${r.status}`);
   const v = (await r.json())?.items?.[0]?.volumeInfo;
   return v ? mapGoogleVolume(v) : null;
