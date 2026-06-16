@@ -87,6 +87,60 @@ describe('GET /api/auth/me', () => {
   });
 });
 
+describe('Refresh token rotation + reuse detection', () => {
+  // Pull the `refreshToken=...` pair out of a Set-Cookie header for replay.
+  const refreshCookie = (res) => res.headers['set-cookie'][0].split(';')[0];
+
+  it('rotates the refresh token and issues a new access token', async () => {
+    const reg = await request(app).post('/api/auth/register').send(REG);
+    const cookieA = refreshCookie(reg);
+
+    const refreshed = await request(app).post('/api/auth/refresh').set('Cookie', cookieA);
+    expect(refreshed.status).toBe(200);
+    expect(refreshed.body.data.accessToken).toBeTruthy();
+
+    const cookieB = refreshCookie(refreshed);
+    expect(cookieB).not.toBe(cookieA); // the token actually rotated
+  });
+
+  it('revokes the whole family when an already-rotated token is replayed', async () => {
+    const reg = await request(app).post('/api/auth/register').send(REG);
+    const cookieA = refreshCookie(reg);
+
+    // First refresh consumes A and hands back B.
+    const first = await request(app).post('/api/auth/refresh').set('Cookie', cookieA);
+    expect(first.status).toBe(200);
+    const cookieB = refreshCookie(first);
+
+    // Replaying the superseded A is treated as theft → 401 TOKEN_REUSE.
+    const replay = await request(app).post('/api/auth/refresh').set('Cookie', cookieA);
+    expect(replay.status).toBe(401);
+    expect(replay.body.errors[0].code).toBe('TOKEN_REUSE');
+
+    // …and the family is gone, so the "good" token B no longer works either.
+    const afterRevoke = await request(app).post('/api/auth/refresh').set('Cookie', cookieB);
+    expect(afterRevoke.status).toBe(401);
+  });
+
+  it('logout revokes the session server-side so the refresh token is dead', async () => {
+    const reg = await request(app).post('/api/auth/register').send(REG);
+    const cookieA = refreshCookie(reg);
+
+    const out = await request(app).post('/api/auth/logout').set('Cookie', cookieA);
+    expect(out.status).toBe(200);
+
+    const afterLogout = await request(app).post('/api/auth/refresh').set('Cookie', cookieA);
+    expect(afterLogout.status).toBe(401);
+    expect(afterLogout.body.errors[0].code).toBe('SESSION_EXPIRED');
+  });
+
+  it('rejects a request with no refresh cookie (401 NO_TOKEN)', async () => {
+    const res = await request(app).post('/api/auth/refresh');
+    expect(res.status).toBe(401);
+    expect(res.body.errors[0].code).toBe('NO_TOKEN');
+  });
+});
+
 describe('Password reset flow', () => {
   it('forgot → reset → login with new password', async () => {
     await request(app).post('/api/auth/register').send(REG);

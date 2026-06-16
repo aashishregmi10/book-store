@@ -7,7 +7,7 @@ const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/user.model');
 const { validate } = require('../middleware/validate');
 const { authenticate, loginLimiter, registerLimiter, forgotPasswordLimiter } = require('../middleware/auth');
-const { generateTokens, verify, refreshCookieOptions } = require('../utils/token');
+const { generateTokens, verify, refreshCookieOptions, newFamilyId, hashToken, REFRESH_TTL_MS } = require('../utils/token');
 const { z, trimmedString, email: emailSchema } = require('../utils/zod');
 const { ok, created, fail, ApiError } = require('../utils/apiResponse');
 const email = require('../utils/emailService');
@@ -38,7 +38,18 @@ const googleBody = z.object({ credential: z.string().min(1) });
 // Verifies Google ID tokens (the "credential" from the Sign in with Google button).
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-const hashToken = (raw) => crypto.createHash('sha256').update(raw).digest('hex');
+// Starts a new login session: mint an access + refresh pair in a fresh rotation
+// family, persist the refresh hash on the user, and set the refresh cookie.
+// Returns the access token to hand back in the JSON body.
+async function issueSession(res, user) {
+  const familyId = newFamilyId();
+  const { accessToken, refreshToken } = generateTokens(user._id, familyId);
+  user.startRefreshSession(familyId, hashToken(refreshToken), new Date(Date.now() + REFRESH_TTL_MS));
+  await user.save();
+  res.cookie('refreshToken', refreshToken, refreshCookieOptions);
+  return accessToken;
+}
+
 const publicUser = (u) => ({
   id: u._id,
   email: u.email,
@@ -84,10 +95,9 @@ router.post(
         pointsHistory: [{ amount: signupPoints, reason: 'Signup bonus' }],
       });
 
-      const tokens = generateTokens(user._id);
-      res.cookie('refreshToken', tokens.refreshToken, refreshCookieOptions);
+      const accessToken = await issueSession(res, user);
       email.sendWelcomeEmail(user).catch(() => {}); // fire-and-forget
-      return created(res, { user: publicUser(user), accessToken: tokens.accessToken }, 'Account created');
+      return created(res, { user: publicUser(user), accessToken }, 'Account created');
     } catch (err) {
       return next(err);
     }
@@ -116,7 +126,7 @@ router.post('/google', loginLimiter, validate({ body: googleBody }), async (req,
     const emailAddr = payload.email.toLowerCase();
     const googleId = payload.sub;
 
-    let user = await User.findOne({ $or: [{ googleId }, { email: emailAddr }] }).select('+password');
+    let user = await User.findOne({ $or: [{ googleId }, { email: emailAddr }] }).select('+password +refreshTokens');
     if (user) {
       if (user.isBanned) return fail(res, 'Account suspended. Contact support.', 403, [{ code: 'BANNED' }]);
       if (!user.googleId) user.googleId = googleId; // link an existing email/password account
@@ -132,11 +142,8 @@ router.post('/google', loginLimiter, validate({ body: googleBody }), async (req,
       email.sendWelcomeEmail(user).catch(() => {});
     }
     user.lastLogin = new Date();
-    await user.save();
-
-    const tokens = generateTokens(user._id);
-    res.cookie('refreshToken', tokens.refreshToken, refreshCookieOptions);
-    return ok(res, { user: publicUser(user), accessToken: tokens.accessToken }, 'Logged in with Google');
+    const accessToken = await issueSession(res, user); // persists lastLogin + the new session
+    return ok(res, { user: publicUser(user), accessToken }, 'Logged in with Google');
   } catch (err) {
     return next(err);
   }
@@ -149,18 +156,15 @@ router.post(
   validate({ body: credentialsBody }),
   async (req, res, next) => {
     try {
-      const user = await User.findOne({ email: req.body.email }).select('+password');
+      const user = await User.findOne({ email: req.body.email }).select('+password +refreshTokens');
       if (!user || !(await user.comparePassword(req.body.password))) {
         return fail(res, 'Invalid credentials', 401, [{ code: 'INVALID_CREDENTIALS' }]);
       }
       if (user.isBanned) return fail(res, 'Account suspended. Contact support.', 403, [{ code: 'BANNED' }]);
 
       user.lastLogin = new Date();
-      await user.save();
-
-      const tokens = generateTokens(user._id);
-      res.cookie('refreshToken', tokens.refreshToken, refreshCookieOptions);
-      return ok(res, { user: publicUser(user), accessToken: tokens.accessToken }, 'Logged in');
+      const accessToken = await issueSession(res, user); // persists lastLogin + the new session
+      return ok(res, { user: publicUser(user), accessToken }, 'Logged in');
     } catch (err) {
       return next(err);
     }
@@ -174,7 +178,7 @@ router.post(
   validate({ body: credentialsBody }),
   async (req, res, next) => {
     try {
-      const user = await User.findOne({ email: req.body.email }).select('+password');
+      const user = await User.findOne({ email: req.body.email }).select('+password +refreshTokens');
       if (!user || !(await user.comparePassword(req.body.password))) {
         return fail(res, 'Invalid credentials', 401, [{ code: 'INVALID_CREDENTIALS' }]);
       }
@@ -184,11 +188,8 @@ router.post(
       if (user.isBanned) return fail(res, 'Account suspended. Contact support.', 403, [{ code: 'BANNED' }]);
 
       user.lastLogin = new Date();
-      await user.save();
-
-      const tokens = generateTokens(user._id);
-      res.cookie('refreshToken', tokens.refreshToken, refreshCookieOptions);
-      return ok(res, { user: publicUser(user), accessToken: tokens.accessToken }, 'Admin logged in');
+      const accessToken = await issueSession(res, user); // persists lastLogin + the new session
+      return ok(res, { user: publicUser(user), accessToken }, 'Admin logged in');
     } catch (err) {
       return next(err);
     }
@@ -196,26 +197,87 @@ router.post(
 );
 
 // ── REFRESH ──────────────────────────────────────────────
-router.post('/refresh', (req, res, next) => {
+// Stateful rotation with reuse detection. The presented refresh token must hash
+// to the family's *current* stored hash; if it doesn't (an old, already-rotated
+// token was replayed) the whole family is revoked and the caller must sign in
+// again. On success the family's hash is advanced and a new cookie is set.
+const clearRefreshCookie = (res) => res.clearCookie('refreshToken', { ...refreshCookieOptions, maxAge: undefined });
+
+router.post('/refresh', async (req, res, next) => {
   try {
     const token = req.cookies?.refreshToken;
     if (!token) return fail(res, 'No refresh token', 401, [{ code: 'NO_TOKEN' }]);
-    const decoded = verify(token);
-    if (decoded.type !== 'refresh') return fail(res, 'Invalid token', 403, [{ code: 'INVALID_TOKEN' }]);
-    // Rotate: issue a fresh refresh token alongside the new access token, so a
-    // leaked refresh token has a bounded lifetime instead of living the full 7d.
-    const tokens = generateTokens(decoded.userId);
-    res.cookie('refreshToken', tokens.refreshToken, refreshCookieOptions);
-    return ok(res, { accessToken: tokens.accessToken }, 'Token refreshed');
+
+    let decoded;
+    try {
+      decoded = verify(token);
+    } catch {
+      clearRefreshCookie(res);
+      return fail(res, 'Invalid token', 401, [{ code: 'INVALID_TOKEN' }]);
+    }
+    if (decoded.type !== 'refresh' || !decoded.fid) {
+      return fail(res, 'Invalid token', 403, [{ code: 'INVALID_TOKEN' }]);
+    }
+
+    const user = await User.findById(decoded.userId).select('+refreshTokens');
+    if (!user) {
+      clearRefreshCookie(res);
+      return fail(res, 'Invalid token', 401, [{ code: 'INVALID_TOKEN' }]);
+    }
+    if (user.isBanned) {
+      clearRefreshCookie(res);
+      return fail(res, 'Account suspended. Contact support.', 403, [{ code: 'BANNED' }]);
+    }
+
+    const rotated = generateTokens(user._id, decoded.fid);
+    const result = user.rotateRefreshSession(
+      decoded.fid,
+      hashToken(token),
+      hashToken(rotated.refreshToken),
+      new Date(Date.now() + REFRESH_TTL_MS)
+    );
+
+    if (result === 'reuse') {
+      await user.save();
+      clearRefreshCookie(res);
+      logger.warn({ userId: String(user._id), fid: decoded.fid }, 'refresh token reuse detected — family revoked');
+      return fail(res, 'Session revoked — please sign in again', 401, [{ code: 'TOKEN_REUSE' }]);
+    }
+    if (result === 'unknown') {
+      // Family already gone: logged out, expired/pruned, or a forged fid.
+      clearRefreshCookie(res);
+      return fail(res, 'Session expired — please sign in again', 401, [{ code: 'SESSION_EXPIRED' }]);
+    }
+
+    await user.save();
+    res.cookie('refreshToken', rotated.refreshToken, refreshCookieOptions);
+    return ok(res, { accessToken: rotated.accessToken }, 'Token refreshed');
   } catch (err) {
     return next(err);
   }
 });
 
 // ── LOGOUT ───────────────────────────────────────────────
-router.post('/logout', (req, res) => {
-  res.clearCookie('refreshToken', { ...refreshCookieOptions, maxAge: undefined });
-  return ok(res, null, 'Logged out');
+// Revoke the server-side session for this token's family, then clear the cookie.
+// Best-effort: an expired/invalid cookie has nothing to revoke — we still clear it.
+router.post('/logout', async (req, res, next) => {
+  try {
+    const token = req.cookies?.refreshToken;
+    if (token) {
+      try {
+        const decoded = verify(token);
+        if (decoded.type === 'refresh' && decoded.fid) {
+          await User.updateOne({ _id: decoded.userId }, { $pull: { refreshTokens: { familyId: decoded.fid } } });
+        }
+      } catch {
+        /* expired/invalid token — nothing to revoke */
+      }
+    }
+    clearRefreshCookie(res);
+    return ok(res, null, 'Logged out');
+  } catch (err) {
+    return next(err);
+  }
 });
 
 // ── ME ───────────────────────────────────────────────────

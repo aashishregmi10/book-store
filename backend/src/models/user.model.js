@@ -73,6 +73,24 @@ const userSchema = new mongoose.Schema(
     resetPasswordToken: { type: String, select: false },
     resetPasswordExpires: { type: Date, select: false },
 
+    // Active refresh-token rotation families — one per live login session.
+    // Each entry stores only a SHA-256 hash of the family's *current* refresh
+    // token; rotation overwrites `tokenHash` in place. select:false keeps these
+    // off ordinary reads — load explicitly with `.select('+refreshTokens')` on
+    // the routes that start or rotate a session.
+    refreshTokens: {
+      type: [
+        {
+          familyId: { type: String, required: true },
+          tokenHash: { type: String, required: true },
+          expiresAt: { type: Date, required: true },
+          _id: false,
+        },
+      ],
+      default: [],
+      select: false,
+    },
+
     notificationPreferences: {
       email: { type: Boolean, default: true },
       sms: { type: Boolean, default: false },
@@ -114,11 +132,53 @@ userSchema.methods.comparePassword = function comparePassword(candidate) {
   return bcrypt.compare(candidate, this.password);
 };
 
+// ── Refresh-token session management ─────────────────────
+// Cap concurrent sessions so the array can't grow without bound (e.g. a client
+// that logs in repeatedly without logging out). Oldest families fall off first.
+const MAX_SESSIONS = 10;
+
+// Drop expired families. These routes always load refreshTokens via
+// `.select('+refreshTokens')`; the guard only protects against a caller that
+// forgot to — better an empty array than a thrown TypeError.
+userSchema.methods.pruneRefreshTokens = function pruneRefreshTokens() {
+  if (!Array.isArray(this.refreshTokens)) { this.refreshTokens = []; return; }
+  const now = Date.now();
+  this.refreshTokens = this.refreshTokens.filter((t) => t.expiresAt.getTime() > now);
+};
+
+// Begin a new login session: register a fresh family with its first token hash.
+userSchema.methods.startRefreshSession = function startRefreshSession(familyId, tokenHash, expiresAt) {
+  this.pruneRefreshTokens();
+  this.refreshTokens.push({ familyId, tokenHash, expiresAt });
+  if (this.refreshTokens.length > MAX_SESSIONS) {
+    this.refreshTokens = this.refreshTokens.slice(-MAX_SESSIONS);
+  }
+};
+
+// Rotate a family on /refresh. Returns:
+//   'ok'      — hash matched the family's current token; rotated in place.
+//   'reuse'   — a superseded token was replayed → the whole family is revoked.
+//   'unknown' — no such family (already logged out, pruned/expired, or forged).
+userSchema.methods.rotateRefreshSession = function rotateRefreshSession(familyId, presentedHash, nextHash, expiresAt) {
+  this.pruneRefreshTokens();
+  const family = this.refreshTokens.find((t) => t.familyId === familyId);
+  if (!family) return 'unknown';
+  if (family.tokenHash !== presentedHash) {
+    // Replay of an old token from this family — treat the chain as compromised.
+    this.refreshTokens = this.refreshTokens.filter((t) => t.familyId !== familyId);
+    return 'reuse';
+  }
+  family.tokenHash = nextHash;
+  family.expiresAt = expiresAt;
+  return 'ok';
+};
+
 userSchema.set('toJSON', {
   transform(_doc, ret) {
     delete ret.password;
     delete ret.resetPasswordToken;
     delete ret.resetPasswordExpires;
+    delete ret.refreshTokens;
     delete ret.__v;
     return ret;
   },
