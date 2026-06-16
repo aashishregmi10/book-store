@@ -2,26 +2,30 @@
 // brand mark never drifts between sizes. Re-run after editing the glyph below:
 //   node scripts/gen-icons.mjs
 //
-// Mark: a minimal bookmark (the chosen concept) — off-white ribbon on a forest
-// green tile (palette locked in /CLAUDE.md: accent #2D5A3D, bg #FAF7F2). The tile
-// is opaque so the icon stays legible on both light and dark browser chrome; a
-// transparent single-colour mark would vanish on dark backgrounds.
+// Mark: a "PT" monogram (Page Turn) where P and T share one vertical stem — the
+// T's crossbar runs across the top, the P's bowl hangs off the stem's upper
+// right. Forest-green letters (#2D5A3D, brand accent from /CLAUDE.md) on a pale
+// blue tile (#E8F1FB, chosen by the owner for this mark). The tile is opaque so
+// the mark renders consistently across browser chrome.
 import sharp from "sharp";
 import { writeFileSync } from "node:fs";
 
-const GREEN = "#2D5A3D";
-const CREAM = "#FAF7F2";
+const GREEN = "#2D5A3D"; // letterforms
+const BLUE = "#E8F1FB"; // tile background
 
-// Bookmark ribbon with softly rounded top corners + a short "title" band.
-// Authored in a 512×512 canvas; the notch tip sits at the horizontal centre.
+// Shared-stem PT, authored in a 512×512 canvas: T crossbar across the top, one
+// shared vertical stem, and the P's bowl as a solid D (with a punched counter)
+// dropped just below the crossbar so the two letters stay legible at 16px.
 const glyph = `
-  <path d="M176 132 Q176 120 188 120 L324 120 Q336 120 336 132 L336 372 L256 300 L176 372 Z" fill="${CREAM}"/>
-  <line x1="214" y1="180" x2="298" y2="180" stroke="${GREEN}" stroke-width="13" stroke-linecap="round"/>`;
+  <rect x="118" y="132" width="220" height="52" rx="14" fill="${GREEN}"/>
+  <rect x="200" y="132" width="52" height="248" rx="14" fill="${GREEN}"/>
+  <path d="M252 205 A64 64 0 0 1 252 333 Z" fill="${GREEN}"/>
+  <path d="M252 227 A42 42 0 0 1 252 311 Z" fill="${BLUE}"/>`;
 
 // rx 112 → rounded tile for the in-tab favicon; rx 0 → full-bleed square for
 // Apple touch (Apple masks corners) and Android maskable (safe zone is centred).
 const svg = (rx) =>
-  `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" rx="${rx}" fill="${GREEN}"/>${glyph}</svg>`;
+  `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" rx="${rx}" fill="${BLUE}"/>${glyph}</svg>`;
 
 const rounded = svg(112);
 const fleed = svg(0);
