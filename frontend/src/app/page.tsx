@@ -47,9 +47,7 @@ export default async function HomePage() {
               >
                 Browse the shelves
               </Link>
-              <Link href="/genre/nepali-literature" className="font-data text-sm uppercase tracking-wide text-text underline-offset-4 hover:text-accent hover:underline">
-                Nepali literature →
-              </Link>
+  
             </div>
           </div>
 
