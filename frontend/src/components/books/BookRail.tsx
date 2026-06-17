@@ -20,7 +20,8 @@ export function BookRail({
   const drag = useRef({ active: false, startX: 0, startLeft: 0, moved: false });
 
   if (!books?.length) return null;
-  const items = books.slice(0, 20);
+  // Cap the rail at 15; "See all titles" leads to the full list for more.
+  const items = books.slice(0, 15);
 
   function onPointerDown(e: React.PointerEvent) {
     if (e.pointerType !== "mouse" || !scroller.current) return;

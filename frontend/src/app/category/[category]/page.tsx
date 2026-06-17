@@ -7,6 +7,7 @@ import type { BookCardData, Genre, Paged } from "@/lib/types";
 import { itemListLd, breadcrumbLd } from "@/lib/seo";
 import { JsonLd } from "@/components/JsonLd";
 import { BookCard } from "@/components/books/BookCard";
+import { Pagination } from "@/components/books/Pagination";
 
 export const dynamic = "force-dynamic";
 
@@ -36,10 +37,10 @@ const SECTIONS = {
 type Slug = keyof typeof SECTIONS;
 const isSection = (s: string): s is Slug => s in SECTIONS;
 
-async function getBooks(slug: Slug, sort?: string) {
+async function getBooks(slug: Slug, sort?: string, page?: number) {
   return apiGet<Paged<BookCardData>>("/books", {
     tags: ["books"],
-    searchParams: { category: slug, sort, limit: 24 },
+    searchParams: { category: slug, sort, page, limit: 24 },
   }).catch(() => null);
 }
 
@@ -68,16 +69,27 @@ export default async function CategoryPage({
   searchParams,
 }: {
   params: Promise<{ category: string }>;
-  searchParams: Promise<{ sort?: string }>;
+  searchParams: Promise<{ sort?: string; page?: string }>;
 }) {
   const { category } = await params;
   if (!isSection(category)) notFound();
-  const { sort } = await searchParams;
+  const { sort, page: pageParam } = await searchParams;
+  const page = Number(pageParam) || 1;
 
-  const data = await getBooks(category, sort);
+  const data = await getBooks(category, sort, page);
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
+  const pages = data?.pages ?? 1;
   const s = SECTIONS[category];
+
+  // Page URL preserving the active sort.
+  const pageHref = (n: number) => {
+    const qp = new URLSearchParams();
+    if (sort) qp.set("sort", sort);
+    if (n > 1) qp.set("page", String(n));
+    const qs = qp.toString();
+    return qs ? `/category/${category}?${qs}` : `/category/${category}`;
+  };
 
   // itemListLd only reads `name`; pass a minimal section object.
   const listGenre = { name: s.name, slug: category } as unknown as Genre;
@@ -116,6 +128,8 @@ export default async function CategoryPage({
             ))}
           </div>
         )}
+
+        <Pagination page={page} pages={pages} hrefFor={pageHref} />
       </div>
     </>
   );
