@@ -32,6 +32,7 @@ const booksListQuery = z.object({
   limit: intQuery({ min: 1, max: 50 }).optional(),
   minPrice: intQuery({ min: 0 }).optional(),
   maxPrice: intQuery({ min: 0 }).optional(),
+  minRating: intQuery({ min: 1, max: 5 }).optional(),
   sort: z.enum(Object.keys(SORTS)).optional(),
 });
 const suggestQuery = z.object({ q: trimmedString() });
@@ -100,12 +101,17 @@ router.get(
         if (req.query.minPrice) filter.price.$gte = req.query.minPrice;
         if (req.query.maxPrice) filter.price.$lte = req.query.maxPrice;
       }
+      if (req.query.minRating) filter.avgRating = { $gte: req.query.minRating };
+      // Author / publisher — exact single-value match (these are free-text names
+      // that can contain commas, so they are NOT comma-split like the enum facets).
+      if (req.query.author) filter.author = String(req.query.author);
+      if (req.query.publisher) filter['specifications.publisher'] = String(req.query.publisher);
       if (req.query.search) filter.$text = { $search: String(req.query.search) };
       if (and.length) filter.$and = and;
 
       // Cache each distinct query for 60s (busted on admin book mutations via
       // `books_list:*`). The count runs only on a cache miss.
-      const key = `books_list:${page}:${limit}:${req.query.sort || 'newest'}:${req.query.genre || ''}:${req.query.category || ''}:${req.query.condition || ''}:${req.query.format || ''}:${req.query.language || ''}:${req.query.year || ''}:${req.query.minPrice || ''}:${req.query.maxPrice || ''}:${req.query.search || ''}`;
+      const key = `books_list:${page}:${limit}:${req.query.sort || 'newest'}:${req.query.genre || ''}:${req.query.category || ''}:${req.query.condition || ''}:${req.query.format || ''}:${req.query.language || ''}:${req.query.year || ''}:${req.query.minPrice || ''}:${req.query.maxPrice || ''}:${req.query.minRating || ''}:${req.query.author || ''}:${req.query.publisher || ''}:${req.query.search || ''}`;
       const data = await withCache(key, 60, async () => {
         const [items, total] = await Promise.all([
           Book.find(filter).select(LIST_FIELDS).sort(sort).skip((page - 1) * limit).limit(limit).lean(),
@@ -154,17 +160,30 @@ router.get('/search-suggestions', validate({ query: suggestQuery }), async (req,
 router.get('/filters/metadata', async (_req, res, next) => {
   try {
     const data = await withCache('filters_metadata', 3600, async () => {
-      const [genres, priceRange] = await Promise.all([
+      const [genres, priceRange, authors, publishers] = await Promise.all([
         Genre.find({ isActive: true }).select('slug name').sort({ name: 1 }).lean(),
         Book.aggregate([
           { $match: { isActive: true } },
           { $group: { _id: null, min: { $min: '$price' }, max: { $max: '$price' } } },
+        ]),
+        // Most common authors / publishers among active books (facet options).
+        Book.aggregate([
+          { $match: { isActive: true, author: { $nin: [null, ''] } } },
+          { $sortByCount: '$author' },
+          { $limit: 50 },
+        ]),
+        Book.aggregate([
+          { $match: { isActive: true, 'specifications.publisher': { $nin: [null, ''] } } },
+          { $sortByCount: '$specifications.publisher' },
+          { $limit: 50 },
         ]),
       ]);
       return {
         genres,
         priceRange: priceRange[0] ? { min: priceRange[0].min, max: priceRange[0].max } : { min: 0, max: 0 },
         conditions: ['new', 'used'],
+        authors: authors.map((a) => a._id),
+        publishers: publishers.map((p) => p._id),
         sorts: Object.keys(SORTS),
       };
     });

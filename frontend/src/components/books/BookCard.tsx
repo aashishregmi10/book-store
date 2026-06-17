@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Star } from "lucide-react";
 import type { BookCardData } from "@/lib/types";
 import { npr, discountPct } from "@/lib/format";
 import { WishlistButton } from "./WishlistButton";
@@ -14,6 +15,16 @@ export function BookCard({ book }: { book: BookCardData }) {
   const off = discountPct(book.price, book.comparePrice);
   const soldOut = book.stockStatus === "out-of-stock" || book.stockStatus === "discontinued";
   const multiFormat = (book.variants?.length ?? 0) > 1;
+
+  // A single cover badge keeps the top corners balanced against the wishlist
+  // heart. Priority: discount → bestseller → new arrival.
+  const badge = off > 0 ? (
+    <Badge tone="sale">-{off}%</Badge>
+  ) : book.isBestseller ? (
+    <Badge>Bestseller</Badge>
+  ) : book.isNewArrival ? (
+    <Badge>New</Badge>
+  ) : null;
 
   return (
     <article className="group flex flex-col" title={book.title}>
@@ -40,8 +51,7 @@ export function BookCard({ book }: { book: BookCardData }) {
           </div>
         </Link>
 
-        {book.isBestseller && <Badge>Bestseller</Badge>}
-        {book.isNewArrival && !book.isBestseller && <Badge>New</Badge>}
+        {badge && <div className="absolute left-2 top-2">{badge}</div>}
 
         <div className="absolute right-2 top-2">
           <WishlistButton bookId={book._id} />
@@ -56,6 +66,13 @@ export function BookCard({ book }: { book: BookCardData }) {
           </h3>
         </Link>
         <p className="mt-0.5 line-clamp-1 font-body text-sm text-muted">{book.author}</p>
+
+        {book.reviewCount > 0 && (
+          <div className="mt-1 inline-flex items-center gap-1 font-data text-xs text-muted">
+            <Star className="size-3 fill-current text-accent" />
+            {book.avgRating.toFixed(1)} <span className="text-muted">({book.reviewCount})</span>
+          </div>
+        )}
 
         <div className="mt-1.5 flex items-baseline gap-2">
           {multiFormat && <span className="font-data text-xs text-muted">From</span>}
@@ -94,9 +111,13 @@ export function BookCard({ book }: { book: BookCardData }) {
   );
 }
 
-function Badge({ children }: { children: React.ReactNode }) {
+function Badge({ children, tone = "accent" }: { children: React.ReactNode; tone?: "accent" | "sale" }) {
   return (
-    <span className="absolute left-2 top-2 rounded-full bg-accent px-2.5 py-1 font-data text-[10px] font-semibold uppercase tracking-wide text-white">
+    <span
+      className={`rounded-full px-2.5 py-1 font-data text-[10px] font-semibold uppercase tracking-wide text-white ${
+        tone === "sale" ? "bg-sale" : "bg-accent"
+      }`}
+    >
       {children}
     </span>
   );

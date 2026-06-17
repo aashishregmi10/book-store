@@ -22,21 +22,53 @@ const FORMS: Option[] = [
   { value: "Audiobook", label: "Audiobook" },
 ];
 
+const RATINGS: Option[] = [
+  { value: "4", label: "4★ & up" },
+  { value: "3", label: "3★ & up" },
+  { value: "2", label: "2★ & up" },
+];
+
+const CONDITIONS: Option[] = [
+  { value: "new", label: "New" },
+  { value: "used", label: "Used" },
+];
+
 // Most recent six years (today is 2026).
 const YEARS: Option[] = Array.from({ length: 6 }, (_, i) => {
   const y = String(2026 - i);
   return { value: y, label: y };
 });
 
-export function BooksFilters({ genres }: { genres: { slug: string; name: string }[] }) {
+// Multi-select (comma-joined) keys vs. single-value keys.
+const MULTI_KEYS = ["genre", "language", "format", "year"] as const;
+
+export function BooksFilters({
+  genres,
+  authors = [],
+  publishers = [],
+}: {
+  genres: { slug: string; name: string }[];
+  authors?: string[];
+  publishers?: string[];
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [genreQuery, setGenreQuery] = useState("");
+  const [authorQuery, setAuthorQuery] = useState("");
+  const [publisherQuery, setPublisherQuery] = useState("");
+  const [priceMin, setPriceMin] = useState(sp.get("minPrice") || "");
+  const [priceMax, setPriceMax] = useState(sp.get("maxPrice") || "");
 
   const selected = (key: string) => new Set((sp.get(key) || "").split(",").filter(Boolean));
 
+  function commit(params: URLSearchParams) {
+    params.delete("page"); // reset pagination when filters change
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  }
+
+  // Multi-select toggle (comma-joined; only used for safe enum/slug values).
   function toggle(key: string, value: string) {
     const set = selected(key);
     if (set.has(value)) set.delete(value);
@@ -44,18 +76,47 @@ export function BooksFilters({ genres }: { genres: { slug: string; name: string 
     const params = new URLSearchParams(sp.toString());
     if (set.size) params.set(key, [...set].join(","));
     else params.delete(key);
-    params.delete("page"); // reset pagination when filters change
-    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    commit(params);
+  }
+
+  // Single-select toggle (one value; clicking the active one clears it). Used for
+  // rating, condition, author, publisher — the last two can contain commas.
+  function setSingle(key: string, value: string) {
+    const params = new URLSearchParams(sp.toString());
+    if (sp.get(key) === value) params.delete(key);
+    else params.set(key, value);
+    commit(params);
+  }
+
+  function applyPrice() {
+    const params = new URLSearchParams(sp.toString());
+    if (priceMin) params.set("minPrice", priceMin);
+    else params.delete("minPrice");
+    if (priceMax) params.set("maxPrice", priceMax);
+    else params.delete("maxPrice");
+    commit(params);
   }
 
   function clearAll() {
     const params = new URLSearchParams(sp.toString());
-    ["genre", "language", "format", "year"].forEach((k) => params.delete(k));
-    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    [...MULTI_KEYS, "minPrice", "maxPrice", "minRating", "condition", "author", "publisher"].forEach((k) =>
+      params.delete(k)
+    );
+    setPriceMin("");
+    setPriceMax("");
+    commit(params);
   }
 
   const activeCount =
-    selected("genre").size + selected("language").size + selected("format").size + selected("year").size;
+    MULTI_KEYS.reduce((n, k) => n + selected(k).size, 0) +
+    (sp.get("minPrice") || sp.get("maxPrice") ? 1 : 0) +
+    (sp.get("minRating") ? 1 : 0) +
+    (sp.get("condition") ? 1 : 0) +
+    (sp.get("author") ? 1 : 0) +
+    (sp.get("publisher") ? 1 : 0);
+
+  const filterList = (items: string[], query: string) =>
+    items.filter((v) => v.toLowerCase().includes(query.trim().toLowerCase()));
 
   const genreOptions = genres
     .filter((g) => g.name.toLowerCase().includes(genreQuery.trim().toLowerCase()))
@@ -99,6 +160,46 @@ export function BooksFilters({ genres }: { genres: { slug: string; name: string 
           </div>
         </Section>
 
+        <Section title="Price (NPR)">
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={0}
+              value={priceMin}
+              onChange={(e) => setPriceMin(e.target.value)}
+              placeholder="Min"
+              className="w-full rounded-md border border-border bg-surface px-2.5 py-1.5 font-data text-sm text-text outline-none focus:border-accent"
+            />
+            <span className="text-muted">–</span>
+            <input
+              type="number"
+              min={0}
+              value={priceMax}
+              onChange={(e) => setPriceMax(e.target.value)}
+              placeholder="Max"
+              className="w-full rounded-md border border-border bg-surface px-2.5 py-1.5 font-data text-sm text-text outline-none focus:border-accent"
+            />
+          </div>
+          <button
+            onClick={applyPrice}
+            className="mt-2.5 w-full rounded-md bg-accent px-3 py-1.5 font-data text-xs uppercase tracking-wide text-white hover:bg-accent-hover"
+          >
+            Apply
+          </button>
+        </Section>
+
+        <Section title="Rating">
+          {RATINGS.map((o) => (
+            <Check key={o.value} label={o.label} checked={sp.get("minRating") === o.value} onChange={() => setSingle("minRating", o.value)} />
+          ))}
+        </Section>
+
+        <Section title="Condition">
+          {CONDITIONS.map((o) => (
+            <Check key={o.value} label={o.label} checked={sp.get("condition") === o.value} onChange={() => setSingle("condition", o.value)} />
+          ))}
+        </Section>
+
         <Section title="Language">
           {LANGUAGES.map((o) => (
             <Check key={o.value} label={o.label} checked={selected("language").has(o.value)} onChange={() => toggle("language", o.value)} />
@@ -110,6 +211,38 @@ export function BooksFilters({ genres }: { genres: { slug: string; name: string 
             <Check key={o.value} label={o.label} checked={selected("format").has(o.value)} onChange={() => toggle("format", o.value)} />
           ))}
         </Section>
+
+        {authors.length > 0 && (
+          <Section title="Author">
+            <input
+              value={authorQuery}
+              onChange={(e) => setAuthorQuery(e.target.value)}
+              placeholder="Search author…"
+              className="mb-3 w-full rounded-md border border-border bg-surface px-3 py-2 font-body text-sm text-text outline-none placeholder:text-muted focus:border-accent"
+            />
+            <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+              {filterList(authors, authorQuery).map((a) => (
+                <Check key={a} label={a} checked={sp.get("author") === a} onChange={() => setSingle("author", a)} />
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {publishers.length > 0 && (
+          <Section title="Publisher">
+            <input
+              value={publisherQuery}
+              onChange={(e) => setPublisherQuery(e.target.value)}
+              placeholder="Search publisher…"
+              className="mb-3 w-full rounded-md border border-border bg-surface px-3 py-2 font-body text-sm text-text outline-none placeholder:text-muted focus:border-accent"
+            />
+            <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+              {filterList(publishers, publisherQuery).map((p) => (
+                <Check key={p} label={p} checked={sp.get("publisher") === p} onChange={() => setSingle("publisher", p)} />
+              ))}
+            </div>
+          </Section>
+        )}
 
         <Section title="Publication Year" last>
           {YEARS.map((o) => (

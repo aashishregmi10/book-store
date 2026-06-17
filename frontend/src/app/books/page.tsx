@@ -9,7 +9,10 @@ import { BooksToolbar } from "@/components/books/BooksToolbar";
 
 export const dynamic = "force-dynamic";
 
-const FILTER_PARAMS = ["q", "genre", "language", "format", "year", "page", "sort"];
+const FILTER_PARAMS = [
+  "q", "genre", "language", "format", "year", "page", "sort",
+  "minPrice", "maxPrice", "minRating", "condition", "author", "publisher",
+];
 
 // Filtered/sorted/paged catalogue views are consolidated to the clean /books
 // canonical and kept out of the index (links stay followable) to avoid thin,
@@ -35,7 +38,7 @@ export default async function BooksPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const sp = await searchParams;
-  const [data, genres] = await Promise.all([
+  const [data, genres, meta] = await Promise.all([
     apiGet<Paged<BookCardData>>("/books", {
       tags: ["books"],
       searchParams: {
@@ -46,10 +49,20 @@ export default async function BooksPage({
         language: sp.language,
         format: sp.format,
         year: sp.year,
+        minPrice: sp.minPrice,
+        maxPrice: sp.maxPrice,
+        minRating: sp.minRating,
+        condition: sp.condition,
+        author: sp.author,
+        publisher: sp.publisher,
         page: sp.page,
       },
     }).catch(() => null),
     apiGet<Genre[]>("/genres", { tags: ["genres"] }).catch(() => [] as Genre[]),
+    apiGet<{ authors: string[]; publishers: string[] }>("/books/filters/metadata", { tags: ["books"] }).catch(() => ({
+      authors: [],
+      publishers: [],
+    })),
   ]);
 
   const page = data?.page ?? 1;
@@ -67,7 +80,11 @@ export default async function BooksPage({
   return (
     <div className="mx-auto max-w-[1600px] px-6 py-10 sm:px-8 lg:px-16 xl:px-24">
       <div className="grid gap-8 lg:grid-cols-[16rem_1fr]">
-        <BooksFilters genres={genres.map((g) => ({ slug: g.slug, name: g.name }))} />
+        <BooksFilters
+          genres={genres.map((g) => ({ slug: g.slug, name: g.name }))}
+          authors={meta.authors}
+          publishers={meta.publishers}
+        />
 
         <div className="min-w-0">
           <BooksToolbar genres={genres.map((g) => ({ slug: g.slug, name: g.name }))} total={data?.total ?? 0} />
