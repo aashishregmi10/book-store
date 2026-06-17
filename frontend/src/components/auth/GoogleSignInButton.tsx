@@ -42,9 +42,18 @@ export function GoogleSignInButton({ onError }: { onError?: (msg: string) => voi
           credential: response.credential,
         });
         setAuth(data.user, data.accessToken);
-        const { next, close } = useAuthModal.getState();
+
+        const { next: modalNext, close } = useAuthModal.getState();
         close();
-        if (next) router.push(next);
+        // Where to go after sign-in: an explicit `next` wins (modal store, then a
+        // ?next= query param on the /login page). Otherwise, the dedicated auth
+        // pages must navigate away (home), while an inline modal over a content
+        // page just refreshes in place to reflect the new session.
+        const urlNext = new URLSearchParams(window.location.search).get("next");
+        const target = modalNext || urlNext;
+        const onAuthPage = window.location.pathname === "/login" || window.location.pathname === "/register";
+        if (target) router.push(target);
+        else if (onAuthPage) router.push("/");
         else router.refresh();
       } catch (err) {
         onError?.(err instanceof ClientApiError ? err.message : "Google sign-in failed — try again.");
