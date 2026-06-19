@@ -2,32 +2,20 @@
 
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import { GoogleSignInButton } from "./GoogleSignInButton";
+import { GoogleSignInButton, isGoogleConfigured } from "./GoogleSignInButton";
 
-/** Real Google sign-in (Identity Services); Facebook is still a "coming soon"
- *  note until configured (no Apple, by request). */
+/** Whether any social sign-in option is available (only Google for now).
+ *  The modal uses this to decide whether to show the social row + divider. */
+export const hasSocialSignIn = isGoogleConfigured;
+
+/** Real Google sign-in (Identity Services). Facebook was removed by request. */
 export function SocialButtons() {
   const [note, setNote] = useState("");
   return (
     <div className="space-y-3">
       <GoogleSignInButton onError={setNote} />
-      <SocialButton onClick={() => setNote("Facebook sign-in is coming soon — use Google or email.")}>
-        <FacebookIcon /> Facebook
-      </SocialButton>
       {note && <p className="mt-2 text-center font-body text-xs text-muted">{note}</p>}
     </div>
-  );
-}
-
-function SocialButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-border bg-surface px-4 py-2.5 font-body text-sm text-text transition-colors hover:border-accent"
-    >
-      {children}
-    </button>
   );
 }
 
@@ -116,13 +104,5 @@ export function PasswordInput({
         </button>
       </div>
     </label>
-  );
-}
-
-function FacebookIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-4" aria-hidden>
-      <path fill="#1877F2" d="M24 12a12 12 0 1 0-13.88 11.85v-8.38H7.08V12h3.04V9.36c0-3 1.79-4.67 4.53-4.67 1.31 0 2.68.24 2.68.24v2.95h-1.51c-1.49 0-1.95.92-1.95 1.87V12h3.32l-.53 3.47h-2.79v8.38A12 12 0 0 0 24 12Z" />
-    </svg>
   );
 }

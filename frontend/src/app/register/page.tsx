@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { clientApi, ClientApiError } from "@/lib/client-api";
 import { useAuth, type AuthUser } from "@/lib/stores/auth";
-import { SocialButtons, OrDivider, Field, PasswordInput } from "@/components/auth/AuthUI";
+import { SocialButtons, OrDivider, Field, PasswordInput, hasSocialSignIn } from "@/components/auth/AuthUI";
 
 export default function RegisterPage() {
   return (
@@ -58,11 +58,14 @@ function RegisterForm() {
         <h1 className="mt-5 font-display text-3xl text-text">Signup</h1>
         <p className="mt-1 font-body text-muted">Hi there! Welcome to PageTurn Nepal.</p>
 
-        <div className="mt-6">
-          <SocialButtons />
-        </div>
-
-        <OrDivider />
+        {hasSocialSignIn && (
+          <>
+            <div className="mt-6">
+              <SocialButtons />
+            </div>
+            <OrDivider />
+          </>
+        )}
 
         <form onSubmit={onSubmit} className="space-y-4">
           {error && (

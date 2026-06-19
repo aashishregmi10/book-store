@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, ShoppingCart, Heart, User } from "lucide-react";
+import { Search, ShoppingCart, Heart, LogIn } from "lucide-react";
 import { useCart, selectCount } from "@/lib/stores/cart";
 import { useAuth } from "@/lib/stores/auth";
 import { useAuthModal } from "@/lib/stores/authModal";
@@ -103,16 +103,17 @@ export function Header() {
             )}
           </button>
 
-          {/* Auth: name + person icon when signed in, person icon only otherwise */}
+          {/* Auth: account menu when signed in; a clear "Sign in" control otherwise */}
           {authHydrated && user ? (
             <AccountMenu />
           ) : (
             <button
               onClick={() => openLogin()}
               aria-label="Sign in"
-              className="grid size-9 place-items-center rounded-full text-text transition-colors hover:bg-bg hover:text-accent"
+              className="flex items-center gap-1.5 rounded-full border border-border px-3.5 py-1.5 font-data text-sm font-medium text-text transition-colors hover:border-accent hover:text-accent md:px-3.5"
             >
-              <User className="size-5" />
+              <LogIn className="size-4 text-accent" />
+              <span className="hidden sm:inline">Sign in</span>
             </button>
           )}
         </div>

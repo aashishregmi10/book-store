@@ -7,7 +7,7 @@ import { X } from "lucide-react";
 import { useAuthModal } from "@/lib/stores/authModal";
 import { useAuth, type AuthUser } from "@/lib/stores/auth";
 import { clientApi, ClientApiError } from "@/lib/client-api";
-import { SocialButtons, OrDivider, Field, PasswordInput } from "./AuthUI";
+import { SocialButtons, OrDivider, Field, PasswordInput, hasSocialSignIn } from "./AuthUI";
 
 export function AuthModal() {
   const { open, mode, next, setMode, close } = useAuthModal();
@@ -31,7 +31,7 @@ export function AuthModal() {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-text/40 p-4 backdrop-blur-sm sm:items-center"
+      className="animate-overlay-in fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-text/40 p-4 backdrop-blur-sm sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-label={mode === "login" ? "Login" : "Sign up"}
@@ -97,7 +97,7 @@ function AuthModalBody({
   }
 
   return (
-    <div className="relative w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-2xl sm:p-8">
+    <div className="animate-panel-in relative my-auto w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-2xl sm:p-8">
       <button
         onClick={close}
         aria-label="Close"
@@ -111,12 +111,16 @@ function AuthModalBody({
         {isLogin ? "Hi, welcome back! Please login to your account." : "Hi there! Welcome to PageTurn Nepal."}
       </p>
 
-      <div className="mt-6">
-        <SocialButtons />
-      </div>
-      <OrDivider />
+      {hasSocialSignIn && (
+        <>
+          <div className="mt-6">
+            <SocialButtons />
+          </div>
+          <OrDivider />
+        </>
+      )}
 
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form onSubmit={onSubmit} className={hasSocialSignIn ? "space-y-4" : "mt-6 space-y-4"}>
         {error && <p className="rounded-md border border-sale/40 bg-sale/5 px-3 py-2 font-body text-sm text-sale">{error}</p>}
         {!isLogin && <Field label="Name" value={form.fullName} onChange={set("fullName")} placeholder="Enter your name" required autoFocus />}
         <Field label="Email" type="email" value={form.email} onChange={set("email")} placeholder="Enter your email" required autoFocus={isLogin} />
