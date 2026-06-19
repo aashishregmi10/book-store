@@ -106,6 +106,24 @@ describe('POST /api/orders (COD)', () => {
     expect(user.points).toBe(500 - 100 + Math.floor(899 * 0.05));
   });
 
+  it('pays the referrer 100 points on the referred friend\'s first purchase, once only', async () => {
+    const ref = await User.create({ email: 'ref@test.com', password: 'supersecret', fullName: 'Ref Errer' });
+    const reg = await request(app).post('/api/auth/register').send({ email: 'friend@test.com', password: 'supersecret', fullName: 'New Friend', referralCode: ref.referralCode });
+    const token = reg.body.data.accessToken;
+
+    // No payout yet at signup.
+    expect((await User.findById(ref._id)).points).toBe(65);
+
+    // First purchase → referrer gets +100.
+    await request(app).post('/api/orders').set('Authorization', `Bearer ${token}`).send({ items: [{ bookId: bookA.id, quantity: 1 }], deliveryAddress: ADDR });
+    expect((await User.findById(ref._id)).points).toBe(165);
+    expect((await User.findOne({ email: 'friend@test.com' })).referralRewarded).toBe(true);
+
+    // Second purchase → no further payout.
+    await request(app).post('/api/orders').set('Authorization', `Bearer ${token}`).send({ items: [{ bookId: bookA.id, quantity: 1 }], deliveryAddress: ADDR });
+    expect((await User.findById(ref._id)).points).toBe(165);
+  });
+
   it('applies a percentage coupon', async () => {
     const { token } = await makeUser();
     await Coupon.create({ code: 'save10', type: 'percentage', value: 10, isActive: true });

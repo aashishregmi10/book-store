@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth, type AuthUser } from "@/lib/stores/auth";
 import { useAuthModal } from "@/lib/stores/authModal";
@@ -8,6 +8,9 @@ import { clientApi, ClientApiError } from "@/lib/client-api";
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 const GIS_SRC = "https://accounts.google.com/gsi/client";
+
+/** True when Google sign-in is configured (button will render something). */
+export const isGoogleConfigured = Boolean(CLIENT_ID);
 
 // Minimal typing for the Google Identity Services global.
 interface GoogleIdApi {
@@ -33,6 +36,7 @@ export function GoogleSignInButton({ onError }: { onError?: (msg: string) => voi
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const setAuth = useAuth((s) => s.setAuth);
+  const [ready, setReady] = useState(false);
 
   const handleCredential = useCallback(
     async (response: { credential?: string }) => {
@@ -77,6 +81,7 @@ export function GoogleSignInButton({ onError }: { onError?: (msg: string) => voi
         width: 300,
         logo_alignment: "center",
       });
+      setReady(true);
     };
 
     if (window.google) {
@@ -99,5 +104,17 @@ export function GoogleSignInButton({ onError }: { onError?: (msg: string) => voi
   }, [handleCredential]);
 
   if (!CLIENT_ID) return null;
-  return <div ref={ref} className="flex justify-center" />;
+  // Reserve the button's height so the modal doesn't jump when GIS finishes
+  // loading; show a quiet skeleton in the meantime.
+  return (
+    <div className="relative flex min-h-[44px] items-center justify-center">
+      {!ready && (
+        <div
+          aria-hidden
+          className="absolute inset-0 animate-pulse rounded-md border border-border bg-bg"
+        />
+      )}
+      <div ref={ref} className="flex justify-center" />
+    </div>
+  );
 }

@@ -25,12 +25,15 @@ describe('POST /api/auth/register', () => {
     expect(res.headers['set-cookie'][0]).toMatch(/HttpOnly/i);
   });
 
-  it('awards referral bonuses to both parties', async () => {
+  it('gives the new friend 50 bonus points and links the referrer, but defers the referrer payout', async () => {
     const ref = await User.create({ email: 'ref@test.com', password: 'supersecret', fullName: 'Ref Errer' });
     const res = await request(app).post('/api/auth/register').send({ ...REG, referralCode: ref.referralCode });
-    expect(res.body.data.user.points).toBe(115); // 65 + 50
+    expect(res.body.data.user.points).toBe(115); // 65 + 50 welcome
+    const newUser = await User.findOne({ email: REG.email });
+    expect(String(newUser.referredBy)).toBe(String(ref._id));
+    expect(newUser.referralRewarded).toBe(false);
     const updatedRef = await User.findById(ref._id);
-    expect(updatedRef.points).toBe(165); // 65 + 100
+    expect(updatedRef.points).toBe(65); // referrer's 100 is paid only when the friend buys
     expect(updatedRef.referralCount).toBe(1);
   });
 

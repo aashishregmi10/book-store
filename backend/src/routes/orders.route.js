@@ -196,6 +196,18 @@ router.post(
         user.points = Math.max(0, user.points - priced.pointsUsed + priced.pointsEarned);
         if (priced.pointsUsed) user.pointsHistory.push({ amount: -priced.pointsUsed, reason: 'Redeemed at checkout', orderId: order._id });
         if (priced.pointsEarned) user.pointsHistory.push({ amount: priced.pointsEarned, reason: 'Purchase reward', orderId: order._id });
+
+        // Referral payout: the first time a referred user buys, credit their
+        // referrer 100 points (once). `referralRewarded` guards against repeats.
+        if (user.referredBy && !user.referralRewarded) {
+          const referrer = await User.findById(user.referredBy);
+          if (referrer) {
+            referrer.points += 100;
+            referrer.pointsHistory.push({ amount: 100, reason: 'Referral bonus — friend made first purchase', orderId: order._id });
+            await referrer.save();
+          }
+          user.referralRewarded = true; // mark even if the referrer is gone, so we don't retry every order
+        }
         await user.save();
 
         Activity.insertMany(

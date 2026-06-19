@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Package, Award, Copy, Check, Gift } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "@/lib/stores/auth";
 import { clientApi } from "@/lib/client-api";
 import { npr } from "@/lib/format";
@@ -100,6 +101,21 @@ export default function AccountPage() {
                 {copied === "code" ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
                 {copied === "code" ? "Copied" : "Copy"}
               </button>
+            </div>
+
+            {/* Scannable invite — point a phone camera at it to open the link */}
+            <div className="mt-5 flex items-center gap-4 border-t border-border pt-5">
+              <div className="shrink-0 rounded-md border border-border bg-white p-2.5">
+                {/* qrcode.react needs literal colour strings; these mirror the
+                    --color-text (navy) / surface tokens for a high-contrast scan. */}
+                <QRCodeSVG value={link} size={104} fgColor="#15233b" bgColor="#ffffff" level="M" aria-label="QR code for your invite link" />
+              </div>
+              <div>
+                <p className="font-data text-xs uppercase tracking-wide text-muted">Scan to invite</p>
+                <p className="mt-1 font-body text-sm text-text">
+                  Point a phone camera here to open your invite link — handy for sharing in person.
+                </p>
+              </div>
             </div>
           </div>
         );
