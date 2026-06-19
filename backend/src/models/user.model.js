@@ -59,6 +59,9 @@ const userSchema = new mongoose.Schema(
     referralCode: { type: String, unique: true, index: true },
     referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     referralCount: { type: Number, default: 0 },
+    // True once this user's first purchase has paid out the referrer's bonus, so
+    // the referrer is rewarded exactly once "when their friend buys" (not at signup).
+    referralRewarded: { type: Boolean, default: false },
 
     wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Book' }],
     followedGenres: [{ type: String }],

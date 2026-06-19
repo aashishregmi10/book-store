@@ -77,11 +77,13 @@ router.post(
       if (referralCode) {
         const referrer = await User.findOne({ referralCode: referralCode.toUpperCase() });
         if (referrer) {
+          // Record the referral and give the new friend their 50-point welcome now.
+          // The referrer's 100-point bonus is paid out only when this friend makes
+          // their first purchase (see orders.route.js) — matching "earn 100 points
+          // for every friend who buys" and preventing fake-signup point farming.
           referredBy = referrer._id;
           signupPoints += 50;
           referrer.referralCount += 1;
-          referrer.points += 100;
-          referrer.pointsHistory.push({ amount: 100, reason: 'Referral bonus' });
           await referrer.save();
         }
       }
