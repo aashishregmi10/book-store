@@ -10,9 +10,9 @@ export const metadata: Metadata = {
 };
 
 const PRINCIPLES: [string, string][] = [
-  ["Handpicked, not algorithm-fed", "Every title on the shelf is one a real bookseller would press into your hands — no endless filler, no pay-to-rank."],
+  ["Handpicked, not algorithm-fed", "Every title on the shelf is one a real bookseller would press into your hands - no endless filler, no pay-to-rank."],
   ["Honest prices, in rupees", "Clear NPR pricing with no surprises at checkout. What you see is what you pay at your door."],
-  ["The whole country is our catchment", "Kathmandu in a day or two, the rest of Nepal in three to five — careful packaging to all 77 districts."],
+  ["The whole country is our catchment", "Kathmandu in a day or two, the rest of Nepal in three to five - careful packaging to all 77 districts."],
   ["Pay when it arrives", "Cash on delivery, because trust is earned at the doorstep, not demanded at the form."],
 ];
 
