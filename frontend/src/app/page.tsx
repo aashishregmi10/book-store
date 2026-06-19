@@ -37,7 +37,7 @@ export default async function HomePage() {
               <span className="text-accent">delivered across Nepal.</span>
             </h1>
             <p className="mt-6 max-w-xl font-body text-lg leading-relaxed text-muted">
-              A small, opinionated bookshop — handpicked titles, honest prices in NPR, and cash on
+              A small, opinionated bookshop - handpicked titles, honest prices in NPR, and cash on
               delivery to all seven provinces. Same-day inside the Valley.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-4">

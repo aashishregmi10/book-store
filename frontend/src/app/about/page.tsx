@@ -5,7 +5,7 @@ import Image from "next/image";
 export const metadata: Metadata = {
   title: "Our Story",
   description:
-    "PageTurn Nepal is a small, opinionated bookshop in Kathmandu — handpicked titles, honest NPR prices, and cash on delivery to all seven provinces.",
+    "PageTurn Nepal is a small, opinionated bookshop in Kathmandu - handpicked titles, honest NPR prices, and cash on delivery to all seven provinces.",
   alternates: { canonical: "/about" },
 };
 
