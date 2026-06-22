@@ -7,9 +7,14 @@ import type { BookCardData, Genre, Paged } from "@/lib/types";
 import { itemListLd, breadcrumbLd } from "@/lib/seo";
 import { JsonLd } from "@/components/JsonLd";
 import { BookCard } from "@/components/books/BookCard";
+import { BooksFilters } from "@/components/books/BooksFilters";
 import { Pagination } from "@/components/books/Pagination";
 
 export const dynamic = "force-dynamic";
+
+// Filters relevant to a fixed section page (genre is excluded — the section IS
+// the silo; author/publisher omitted to keep it focused).
+const FILTER_KEYS = ["language", "format", "year", "minPrice", "maxPrice", "minRating", "condition", "sort", "page"] as const;
 
 // The browse sections (separate from the literary genre silo). Slugs match the
 // backend Book.category enum.
@@ -37,10 +42,24 @@ const SECTIONS = {
 type Slug = keyof typeof SECTIONS;
 const isSection = (s: string): s is Slug => s in SECTIONS;
 
-async function getBooks(slug: Slug, sort?: string, page?: number) {
+type SP = Record<string, string | undefined>;
+
+async function getBooks(slug: Slug, sp: SP) {
   return apiGet<Paged<BookCardData>>("/books", {
     tags: ["books"],
-    searchParams: { category: slug, sort, page, limit: 24 },
+    searchParams: {
+      category: slug,
+      sort: sp.sort,
+      page: sp.page,
+      language: sp.language,
+      format: sp.format,
+      year: sp.year,
+      minPrice: sp.minPrice,
+      maxPrice: sp.maxPrice,
+      minRating: sp.minRating,
+      condition: sp.condition,
+      limit: 25,
+    },
   }).catch(() => null);
 }
 
@@ -49,13 +68,13 @@ export async function generateMetadata({
   searchParams,
 }: {
   params: Promise<{ category: string }>;
-  searchParams: Promise<{ sort?: string; page?: string }>;
+  searchParams: Promise<SP>;
 }): Promise<Metadata> {
   const { category } = await params;
   if (!isSection(category)) return { title: "Section not found" };
   const sp = await searchParams;
   const s = SECTIONS[category];
-  const filtered = !!(sp.sort || sp.page);
+  const filtered = FILTER_KEYS.some((k) => sp[k]);
   return {
     title: `${s.heading} | Buy Online`,
     description: s.blurb,
@@ -69,23 +88,24 @@ export default async function CategoryPage({
   searchParams,
 }: {
   params: Promise<{ category: string }>;
-  searchParams: Promise<{ sort?: string; page?: string }>;
+  searchParams: Promise<SP>;
 }) {
   const { category } = await params;
   if (!isSection(category)) notFound();
-  const { sort, page: pageParam } = await searchParams;
-  const page = Number(pageParam) || 1;
+  const sp = await searchParams;
+  const sort = sp.sort;
+  const page = Number(sp.page) || 1;
 
-  const data = await getBooks(category, sort, page);
+  const data = await getBooks(category, sp);
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
   const pages = data?.pages ?? 1;
   const s = SECTIONS[category];
 
-  // Page URL preserving the active sort.
+  // Page URL preserving the active sort + filters.
   const pageHref = (n: number) => {
     const qp = new URLSearchParams();
-    if (sort) qp.set("sort", sort);
+    for (const [k, v] of Object.entries(sp)) if (v && k !== "page") qp.set(k, v);
     if (n > 1) qp.set("page", String(n));
     const qs = qp.toString();
     return qs ? `/category/${category}?${qs}` : `/category/${category}`;
@@ -114,40 +134,53 @@ export default async function CategoryPage({
         {/* BLUF — extractable definition */}
         <p className="mt-4 max-w-3xl font-body text-lg leading-relaxed text-muted">{s.blurb}</p>
 
-        <div className="mt-6 flex items-center justify-between border-b border-border pb-3">
-          <p className="font-data text-xs uppercase tracking-wide text-muted">{total} books</p>
-          <SortLinks slug={category} active={sort} />
-        </div>
+        <div className="mt-8 grid gap-8 lg:grid-cols-[16rem_1fr]">
+          {/* Section-relevant filters (no Genre — the section is the silo) */}
+          <BooksFilters genres={[]} hideGenre />
 
-        {items.length === 0 ? (
-          <p className="py-16 text-center font-body text-muted">Nothing on this shelf yet — check back soon.</p>
-        ) : (
-          <div className="mt-8 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {items.map((b) => (
-              <BookCard key={b.slug} book={b} />
-            ))}
+          <div className="min-w-0">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <p className="font-data text-xs uppercase tracking-wide text-muted">{total} books</p>
+              <SortLinks slug={category} active={sort} sp={sp} />
+            </div>
+
+            {items.length === 0 ? (
+              <p className="py-16 text-center font-body text-muted">Nothing on this shelf matches — try removing a filter.</p>
+            ) : (
+              <div className="mt-8 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                {items.map((b) => (
+                  <BookCard key={b.slug} book={b} />
+                ))}
+              </div>
+            )}
+
+            <Pagination page={page} pages={pages} hrefFor={pageHref} />
           </div>
-        )}
-
-        <Pagination page={page} pages={pages} hrefFor={pageHref} />
+        </div>
       </div>
     </>
   );
 }
 
-function SortLinks({ slug, active }: { slug: string; active?: string }) {
+function SortLinks({ slug, active, sp }: { slug: string; active?: string; sp: SP }) {
   const opts = [
     ["popular", "Popular"],
     ["newest", "Newest"],
     ["price-low", "Price ↑"],
     ["price-high", "Price ↓"],
   ];
+  const hrefFor = (value: string) => {
+    const qp = new URLSearchParams();
+    for (const [k, v] of Object.entries(sp)) if (v && k !== "sort" && k !== "page") qp.set(k, v);
+    qp.set("sort", value);
+    return `/category/${slug}?${qp.toString()}`;
+  };
   return (
     <div className="flex gap-3">
       {opts.map(([value, label]) => (
         <Link
           key={value}
-          href={`/category/${slug}?sort=${value}`}
+          href={hrefFor(value)}
           className={`font-data text-xs uppercase tracking-wide ${active === value ? "text-accent" : "text-muted hover:text-accent"}`}
         >
           {label}

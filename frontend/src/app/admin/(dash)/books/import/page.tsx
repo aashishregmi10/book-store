@@ -15,6 +15,7 @@ interface LookupBook {
   pageCount?: number | null;
   language?: string | null;
   isbn13?: string | null;
+  description?: string | null;
   coverUrl?: string | null;
   origin?: string;
 }
@@ -44,16 +45,20 @@ interface BulkCreate {
   results: CreateRow[];
 }
 
-// One book per line. A line that cleans to a 10/13-digit ISBN becomes an ISBN
-// lookup; anything else is treated as a title.
-function parseLines(raw: string): { isbn?: string; title?: string }[] {
+// One book per line, optionally followed by ", <price>" (NPR). A query that
+// cleans to a 10/13-digit ISBN becomes an ISBN lookup; anything else is a title.
+function parseLines(raw: string): { isbn?: string; title?: string; price?: number }[] {
   return raw
     .split("\n")
     .map((l) => l.trim())
     .filter(Boolean)
     .map((line) => {
-      const cleaned = line.replace(/[\s-]/g, "");
-      return /^\d{9}[\dXx]$/.test(cleaned) || /^\d{13}$/.test(cleaned) ? { isbn: cleaned } : { title: line };
+      const m = line.match(/,\s*(\d+)\s*$/); // trailing ", 650" → price
+      const price = m ? Number(m[1]) : undefined;
+      const query = m ? line.slice(0, m.index).trim() : line;
+      const cleaned = query.replace(/[\s-]/g, "");
+      const base = /^\d{9}[\dXx]$/.test(cleaned) || /^\d{13}$/.test(cleaned) ? { isbn: cleaned } : { title: query };
+      return price != null ? { ...base, price } : base;
     });
 }
 
@@ -80,7 +85,10 @@ export default function BulkImport() {
     if (tooMany) return setMsg(`Max ${MAX} per batch — you have ${parsed.length}.`);
     setLooking(true);
     try {
-      const data = await clientApi.post<BulkLookup>("/admin/books/lookup/bulk", { books: parsed });
+      // The lookup endpoint only wants identifiers; price is kept locally (by line) for create.
+      const data = await clientApi.post<BulkLookup>("/admin/books/lookup/bulk", {
+        books: parsed.map(({ isbn, title }) => ({ isbn, title })),
+      });
       setRows(data.results);
       setSelected(new Set(data.results.filter((r) => r.success).map((r) => r.input_index)));
     } catch (err) {
@@ -115,6 +123,8 @@ export default function BulkImport() {
         publisher: r.book!.publisher,
         pages: r.book!.pageCount,
         language: r.book!.language,
+        description: r.book!.description ?? undefined,
+        price: parsed[r.input_index]?.price, // per-line price wins over the batch default
       }));
       const data = await clientApi.post<BulkCreate>("/admin/books/bulk-create", {
         defaults: { genre, price: Number(price), stock: Number(stock) || 0 },
@@ -138,14 +148,15 @@ export default function BulkImport() {
       <h1 className="mt-2 font-display text-3xl text-text">Bulk import</h1>
       <p className="mt-1 max-w-2xl font-body text-sm text-muted">
         Paste up to {MAX} ISBNs or titles (one per line), look them up, then create them as
-        drafts. Drafts stay hidden until you set the real description and publish.
+        drafts. Add a price per line with <code className="font-data">, 650</code>; lines without one
+        use the batch default. Drafts stay hidden until you review and publish.
       </p>
 
       <textarea
         value={raw}
         onChange={(e) => setRaw(e.target.value)}
         rows={6}
-        placeholder={"9780735211292\nThe Alchemist\nMuna Madan"}
+        placeholder={"9780735211292, 899\nThe Alchemist, 499\nMuna Madan"}
         className="mt-5 w-full max-w-2xl border border-border bg-surface px-3 py-2 font-data text-sm text-text outline-none focus:border-accent"
       />
       <div className="mt-2 flex items-center gap-3">

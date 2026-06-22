@@ -193,10 +193,10 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
           </div>
         </div>
 
-        {/* Description */}
-        <section className="mt-12 max-w-3xl">
+        {/* Description — full width */}
+        <section className="mt-12 border-t border-border pt-8">
           <h2 className="font-display text-2xl text-text">About this book</h2>
-          <p className="mt-3 whitespace-pre-line font-body leading-relaxed text-text">{book.description}</p>
+          <p className="mt-3 whitespace-pre-line font-body text-[1.0625rem] leading-relaxed text-text">{book.description}</p>
         </section>
 
         {/* Reviews */}

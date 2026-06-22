@@ -92,6 +92,7 @@ const bookSchema = new mongoose.Schema(
       publishedDate: { type: String },
       dimensions: { type: String },
       weight: { type: String },
+      isbn10: { type: String, trim: true }, // ISBN-13 lives in the top-level `isbn`; this keeps the 10-digit form too
     },
 
     metaTitle: { type: String, maxlength: 70 },

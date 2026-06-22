@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Search, ShoppingCart, Heart, LogIn } from "lucide-react";
@@ -7,6 +8,7 @@ import { useCart, selectCount } from "@/lib/stores/cart";
 import { useAuth } from "@/lib/stores/auth";
 import { useAuthModal } from "@/lib/stores/authModal";
 import { useDrawer } from "@/lib/stores/uiDrawer";
+import { useWishlist } from "@/lib/stores/wishlist";
 import { AccountMenu } from "./AccountMenu";
 
 const NAV = [
@@ -29,9 +31,18 @@ export function Header() {
   const openLogin = useAuthModal((s) => s.openLogin);
   const openCart = useDrawer((s) => s.openCart);
   const openWishlist = useDrawer((s) => s.openWishlist);
+  const wishlistCount = useWishlist((s) => s.ids.size);
+
+  // Load the wishlist once the session is known; drop it on sign-out.
+  useEffect(() => {
+    if (!authHydrated) return;
+    if (user) useWishlist.getState().hydrate();
+    else useWishlist.getState().clear();
+  }, [authHydrated, user]);
 
   const isActive = (to: string) => pathname === to || (to !== "/" && pathname?.startsWith(to));
   const cartCount = cartHydrated ? count : 0;
+  const wishCount = authHydrated && user ? wishlistCount : 0;
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/70 bg-bg/85 backdrop-blur">
@@ -82,15 +93,14 @@ export function Header() {
             <Search className="size-5" />
           </Link>
 
-          {/* Wishlist — pill on desktop, icon on mobile (opens drawer) */}
-          <button
-            onClick={openWishlist}
-            className="hidden items-center gap-1.5 rounded-full border border-border px-3.5 py-1.5 font-data text-sm font-medium text-text transition-colors hover:border-accent md:inline-flex"
-          >
-            <Heart className="size-4 text-accent" /> Wishlist
-          </button>
-          <button onClick={openWishlist} aria-label="Wishlist" className="p-2 text-text transition-colors hover:text-[#e3534c] md:hidden">
+          {/* Wishlist — icon only with count badge (opens drawer) */}
+          <button onClick={openWishlist} aria-label={`Wishlist, ${wishCount} saved`} className="relative p-2 text-text transition-colors hover:text-[#e3534c]">
             <Heart className="size-5" />
+            {wishCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 grid min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-semibold leading-4 text-white">
+                {wishCount}
+              </span>
+            )}
           </button>
 
           {/* Cart icon + count badge (opens drawer) */}

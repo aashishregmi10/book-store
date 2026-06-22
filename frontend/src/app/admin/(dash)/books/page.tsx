@@ -11,6 +11,16 @@ import type { AdminBook } from "./_components/types";
 
 const PAGE_SIZE = 10;
 
+const TABS = [
+  { key: "all", label: "All" },
+  { key: "active", label: "Active" },
+  { key: "inactive", label: "Inactive" },
+  { key: "bestseller", label: "Bestseller" },
+  { key: "featured", label: "Featured" },
+  { key: "new-arrival", label: "New arrival" },
+] as const;
+type TabKey = (typeof TABS)[number]["key"];
+
 interface BooksPage {
   items: AdminBook[];
   total: number;
@@ -26,6 +36,7 @@ export default function AdminBooks() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [tab, setTab] = useState<TabKey>("all");
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -39,6 +50,7 @@ export default function AdminBooks() {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
     if (search) params.set("search", search);
+    if (tab !== "all") params.set("filter", tab);
     clientApi
       .get<BooksPage>(`/admin/books?${params}`, { signal: ctrl.signal })
       .then((d) => {
@@ -56,11 +68,16 @@ export default function AdminBooks() {
         if (!ctrl.signal.aborted) setLoading(false);
       });
     return () => ctrl.abort();
-  }, [search, page, refreshKey]);
+  }, [search, page, tab, refreshKey]);
 
   function onSearch(value: string) {
     setSearch(value);
     setPage(1); // a new query restarts at the first page
+  }
+
+  function onTab(key: TabKey) {
+    setTab(key);
+    setPage(1); // switching tabs restarts at the first page
   }
 
   async function del(e: React.MouseEvent, b: AdminBook) {
@@ -92,11 +109,28 @@ export default function AdminBooks() {
         </div>
       </div>
 
+      {/* Status / merchandising tabs */}
+      <div className="mt-5 flex flex-wrap gap-1 border-b border-border">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => onTab(t.key)}
+            className={`-mb-px border-b-2 px-3.5 py-2 font-data text-xs uppercase tracking-wide transition-colors ${
+              tab === t.key
+                ? "border-accent text-accent"
+                : "border-transparent text-muted hover:text-text"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
       <input
         value={search}
         onChange={(e) => onSearch(e.target.value)}
         placeholder="Search title or author…"
-        className="mt-5 w-full max-w-sm border border-border bg-surface px-3 py-2 font-body text-sm text-text outline-none focus:border-accent"
+        className="mt-4 w-full max-w-sm border border-border bg-surface px-3 py-2 font-body text-sm text-text outline-none focus:border-accent"
       />
 
       {loading ? (

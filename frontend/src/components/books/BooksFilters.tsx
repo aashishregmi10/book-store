@@ -46,10 +46,13 @@ export function BooksFilters({
   genres,
   authors = [],
   publishers = [],
+  hideGenre = false,
 }: {
   genres: { slug: string; name: string }[];
   authors?: string[];
   publishers?: string[];
+  /** Hide the Genre filter (e.g. on a fixed section page like Manga/Kids). */
+  hideGenre?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -142,23 +145,25 @@ export function BooksFilters({
           </button>
         )}
 
-        <Section title="Genre">
-          <input
-            value={genreQuery}
-            onChange={(e) => setGenreQuery(e.target.value)}
-            placeholder="Search genre…"
-            className="mb-3 w-full rounded-md border border-border bg-surface px-3 py-2 font-body text-sm text-text outline-none placeholder:text-muted focus:border-accent"
-          />
-          <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
-            {genreOptions.length === 0 ? (
-              <p className="font-body text-sm text-muted">No matching genres.</p>
-            ) : (
-              genreOptions.map((o) => (
-                <Check key={o.value} label={o.label} checked={selected("genre").has(o.value)} onChange={() => toggle("genre", o.value)} />
-              ))
-            )}
-          </div>
-        </Section>
+        {!hideGenre && (
+          <Section title="Genre">
+            <input
+              value={genreQuery}
+              onChange={(e) => setGenreQuery(e.target.value)}
+              placeholder="Search genre…"
+              className="mb-3 w-full rounded-md border border-border bg-surface px-3 py-2 font-body text-sm text-text outline-none placeholder:text-muted focus:border-accent"
+            />
+            <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+              {genreOptions.length === 0 ? (
+                <p className="font-body text-sm text-muted">No matching genres.</p>
+              ) : (
+                genreOptions.map((o) => (
+                  <Check key={o.value} label={o.label} checked={selected("genre").has(o.value)} onChange={() => toggle("genre", o.value)} />
+                ))
+              )}
+            </div>
+          </Section>
+        )}
 
         <Section title="Price (NPR)">
           <div className="flex items-center gap-2">

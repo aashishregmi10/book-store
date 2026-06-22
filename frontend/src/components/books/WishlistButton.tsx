@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Heart } from "lucide-react";
-import { clientApi } from "@/lib/client-api";
 import { useAuth } from "@/lib/stores/auth";
+import { useWishlist } from "@/lib/stores/wishlist";
 
 export function WishlistButton({
   bookId,
@@ -18,20 +18,16 @@ export function WishlistButton({
 }) {
   const token = useAuth((s) => s.token);
   const router = useRouter();
-  const [wishlisted, setWishlisted] = useState(false);
+  // Reads from the shared store so the heart reflects adds/removes made anywhere
+  // (book card, drawer, wishlist page) without its own fetch.
+  const wishlisted = useWishlist((s) => s.ids.has(bookId));
+  const hydrate = useWishlist((s) => s.hydrate);
+  const toggleWishlist = useWishlist((s) => s.toggle);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!token) return;
-    let active = true;
-    clientApi
-      .get<{ isWishlisted: boolean }>(`/wishlist/check/${bookId}`)
-      .then((d) => active && setWishlisted(d.isWishlisted))
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, [bookId, token]);
+    if (token) hydrate();
+  }, [token, hydrate]);
 
   async function toggle(e: React.MouseEvent) {
     e.preventDefault();
@@ -42,15 +38,7 @@ export function WishlistButton({
     }
     setBusy(true);
     try {
-      if (wishlisted) {
-        await clientApi.del(`/wishlist/${bookId}`);
-        setWishlisted(false);
-      } else {
-        await clientApi.post(`/wishlist`, { bookId, source: "book_card" });
-        setWishlisted(true);
-      }
-    } catch {
-      /* swallow — keep UI responsive */
+      await toggleWishlist(bookId);
     } finally {
       setBusy(false);
     }
