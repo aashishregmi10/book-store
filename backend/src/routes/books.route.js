@@ -57,7 +57,7 @@ router.get(
   async (req, res, next) => {
     try {
       const page = req.query.page || 1;
-      const limit = req.query.limit || 24;
+      const limit = req.query.limit || 25;
       const sort = SORTS[req.query.sort] || SORTS.newest;
 
       const filter = { isActive: true };
@@ -344,11 +344,14 @@ router.get('/:slug', validate({ params: slugParams }), async (req, res, next) =>
         const have = new Set(books.map((b) => b.slug));
         have.add(book.slug);
         const siblingFilter = book.category ? { category: book.category } : { genre: book.genre };
-        const fill = await Book.find({ ...siblingFilter, slug: { $nin: [...have] }, isActive: true })
-          .select(LIST_FIELDS)
-          .sort({ soldCount: -1 })
-          .limit(4 - books.length)
-          .lean();
+        // Randomise the fill so "More in …" varies per visit instead of always
+        // surfacing the same top-soldCount titles (every 'general' book looked alike).
+        const project = LIST_FIELDS.split(' ').reduce((o, f) => ((o[f] = 1), o), {});
+        const fill = await Book.aggregate([
+          { $match: { ...siblingFilter, isActive: true, slug: { $nin: [...have] } } },
+          { $sample: { size: 4 - books.length } },
+          { $project: project },
+        ]);
         books = books.concat(fill);
       }
       return books;
