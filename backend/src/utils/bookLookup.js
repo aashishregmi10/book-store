@@ -23,7 +23,7 @@ async function fetchRetry(url, opts) {
 }
 
 // ── Open Library ─────────────────────────────────────────
-const OL_FIELDS = 'title,author_name,cover_i,publisher,first_publish_year,number_of_pages_median,language,isbn';
+const OL_FIELDS = 'title,author_name,cover_i,publisher,first_publish_year,number_of_pages_median,language,isbn,subject';
 
 function mapOpenLibraryDoc(doc) {
   const langCode = Array.isArray(doc.language) ? doc.language[0] : undefined;
@@ -35,6 +35,8 @@ function mapOpenLibraryDoc(doc) {
     coverUrl: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : undefined,
     isbn13: isbns.map(toIsbn13).find(Boolean) || null,
     isbn10: isbns.map(toIsbn10).find(Boolean) || null,
+    // Open Library "subjects" are noisy/numerous — keep the first few as genre signals.
+    categories: Array.isArray(doc.subject) ? doc.subject.slice(0, 5) : [],
     specifications: {
       pages: doc.number_of_pages_median || undefined,
       publisher: Array.isArray(doc.publisher) ? doc.publisher[0] : undefined,
@@ -74,6 +76,8 @@ function mapGoogleVolume(v) {
     coverUrl: cover ? cover.replace(/^http:/, 'https:').replace(/&edge=curl/, '') : undefined,
     isbn13: pick('ISBN_13'),
     isbn10: pick('ISBN_10'),
+    description: v.description || undefined,
+    categories: Array.isArray(v.categories) ? v.categories : [],
     specifications: {
       pages: v.pageCount || undefined,
       publisher: v.publisher || undefined,

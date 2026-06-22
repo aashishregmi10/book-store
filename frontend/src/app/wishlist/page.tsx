@@ -7,7 +7,7 @@ import { Heart, Share2, ShoppingBag, Bell, Check, Sparkles } from "lucide-react"
 import { useAuth } from "@/lib/stores/auth";
 import { useAuthModal } from "@/lib/stores/authModal";
 import { useCart } from "@/lib/stores/cart";
-import { clientApi } from "@/lib/client-api";
+import { useWishlist } from "@/lib/stores/wishlist";
 import type { BookCardData } from "@/lib/types";
 import { npr } from "@/lib/format";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -22,16 +22,18 @@ export default function WishlistPage() {
   const hydrated = useAuth((s) => s.hydrated);
   const openLogin = useAuthModal((s) => s.openLogin);
   const add = useCart((s) => s.add);
-  const [books, setBooks] = useState<BookCardData[] | null>(null);
+  // Shared store is the source of truth so removals here keep the header count in sync.
+  const books = useWishlist((s) => s.items);
+  const hydrateWishlist = useWishlist((s) => s.hydrate);
+  const removeItem = useWishlist((s) => s.remove);
   const [filter, setFilter] = useState<Filter>("all");
   const [notified, setNotified] = useState<Set<string>>(new Set());
   const [shared, setShared] = useState(false);
   const [alerted, setAlerted] = useState(false);
 
   useEffect(() => {
-    if (!token) return;
-    clientApi.get<BookCardData[]>("/wishlist").then((d) => setBooks([...d].reverse())).catch(() => setBooks([]));
-  }, [token]);
+    if (token) hydrateWishlist(true);
+  }, [token, hydrateWishlist]);
 
   const stats = useMemo(() => {
     const list = books ?? [];
@@ -44,10 +46,6 @@ export default function WishlistPage() {
     };
   }, [books]);
 
-  async function removeItem(bookId: string) {
-    setBooks((b) => b?.filter((x) => x._id !== bookId) ?? null);
-    await clientApi.del(`/wishlist/${bookId}`).catch(() => {});
-  }
   function moveToCart(b: BookCardData) {
     add({ bookId: b._id, slug: b.slug, title: b.title, author: b.author, coverImage: b.coverImage.secureUrl, price: b.price });
     removeItem(b._id);

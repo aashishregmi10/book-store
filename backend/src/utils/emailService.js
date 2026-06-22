@@ -108,6 +108,33 @@ function sendLowStockAlert(adminEmail, books) {
   return send({ to: adminEmail, subject: `Low stock: ${books.length} book(s) need attention`, html });
 }
 
+function sendPriceDrop(user, book, oldPrice, newPrice) {
+  const link = `${FRONTEND}/books/${book.slug}`;
+  const saved = Math.max(0, oldPrice - newPrice);
+  const cover = book.coverImage?.secureUrl
+    ? `<img src="${book.coverImage.secureUrl}" alt="" width="96" style="display:block;border:1px solid #E7E0D4;border-radius:4px;" />`
+    : '';
+  const html = shell(
+    `Price drop on your wishlist`,
+    `<p>Good news, ${user.fullName.split(' ')[0]} — a book you saved just got cheaper.</p>
+     <table style="margin:16px 0;"><tr>
+       <td style="padding-right:14px;vertical-align:top;">${cover}</td>
+       <td style="vertical-align:top;">
+         <div style="font-size:18px;font-weight:bold;">${book.title}</div>
+         <div style="color:#8C7B6B;margin:2px 0 10px;">${book.author || ''}</div>
+         <div>
+           <span style="text-decoration:line-through;color:#8C7B6B;font-family:monospace;">${nf(oldPrice)}</span>
+           &nbsp;<strong style="color:#2D5A3D;font-size:20px;font-family:monospace;">${nf(newPrice)}</strong>
+         </div>
+         <div style="color:#9B2C2C;font-size:13px;margin-top:4px;">You save ${nf(saved)}</div>
+       </td>
+     </tr></table>
+     <p>${button('Grab it now', link)}</p>
+     <p style="font-size:12px;color:#8C7B6B;">You're getting this because it's on your wishlist. Turn off price alerts anytime in your account settings.</p>`
+  );
+  return send({ to: user.email, subject: `Price drop: ${book.title}`, html });
+}
+
 function sendPointsEarned(user, points) {
   const html = shell(
     `You earned ${points} points 🎉`,
@@ -126,4 +153,5 @@ module.exports = {
   sendPasswordReset,
   sendLowStockAlert,
   sendPointsEarned,
+  sendPriceDrop,
 };

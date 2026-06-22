@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { X, ShoppingBag, Heart, Minus, Plus, Trash2 } from "lucide-react";
@@ -8,6 +8,7 @@ import { useDrawer } from "@/lib/stores/uiDrawer";
 import { useCart, selectSubtotal, lineKey, type StockInfo } from "@/lib/stores/cart";
 import { useAuth } from "@/lib/stores/auth";
 import { useAuthModal } from "@/lib/stores/authModal";
+import { useWishlist } from "@/lib/stores/wishlist";
 import { clientApi } from "@/lib/client-api";
 import type { BookCardData } from "@/lib/types";
 import { npr } from "@/lib/format";
@@ -145,17 +146,15 @@ function WishlistPanel({ onClose }: { onClose: () => void }) {
   const hydrated = useAuth((s) => s.hydrated);
   const openLogin = useAuthModal((s) => s.openLogin);
   const add = useCart((s) => s.add);
-  const [books, setBooks] = useState<BookCardData[] | null>(null);
+  // Shared store: removing here also un-fills hearts across the page instantly.
+  const books = useWishlist((s) => s.items);
+  const hydrateWishlist = useWishlist((s) => s.hydrate);
+  const removeItem = useWishlist((s) => s.remove);
 
   useEffect(() => {
-    if (!token) return;
-    clientApi.get<BookCardData[]>("/wishlist").then((d) => setBooks([...d].reverse())).catch(() => setBooks([]));
-  }, [token]);
+    if (token) hydrateWishlist(true); // refresh on open
+  }, [token, hydrateWishlist]);
 
-  async function removeItem(id: string) {
-    setBooks((b) => b?.filter((x) => x._id !== id) ?? null);
-    await clientApi.del(`/wishlist/${id}`).catch(() => {});
-  }
   function moveToCart(b: BookCardData) {
     add({ bookId: b._id, slug: b.slug, title: b.title, author: b.author, coverImage: b.coverImage.secureUrl, price: b.price });
     removeItem(b._id);

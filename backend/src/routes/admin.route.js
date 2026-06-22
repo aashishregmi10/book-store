@@ -17,9 +17,10 @@ const { z, objectId, trimmedString, intQuery } = require('../utils/zod');
 const { restoreStock } = require('../services/stock');
 const { cacheDel } = require('../config/redis');
 const { ok, created, fail } = require('../utils/apiResponse');
+const logger = require('../config/logger');
 const email = require('../utils/emailService');
 const { pingIndexNow } = require('../utils/indexnow');
-const { uploadBuffer } = require('../config/cloudinary');
+const { uploadCoverFromUrl } = require('../utils/coverUpload');
 const { lookupBook } = require('../utils/bookLookup');
 const { normalizeIsbns } = require('../utils/isbn');
 const { detectOrigin, scoreConfidence } = require('../utils/bookOrigin');
@@ -90,6 +91,18 @@ const lookupQuery = z
 
 const slugify = (s) => String(s).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
+// Email every shopper who has this book wishlisted that its price dropped.
+// Honours the opt-outs in notificationPreferences (email + promotions).
+async function notifyWishlistPriceDrop(book, oldPrice) {
+  const users = await User.find({ wishlist: book._id })
+    .select('email fullName notificationPreferences')
+    .lean();
+  const recipients = users.filter(
+    (u) => u.notificationPreferences?.email !== false && u.notificationPreferences?.promotions !== false
+  );
+  await Promise.all(recipients.map((u) => email.sendPriceDrop(u, book, oldPrice, book.price)));
+}
+
 async function invalidateCatalogCaches(slug) {
   await Promise.all([
     slug ? cacheDel(`book:${slug}`) : Promise.resolve(),
@@ -103,36 +116,105 @@ async function invalidateCatalogCaches(slug) {
   ]);
 }
 
-// ── OVERVIEW ─────────────────────────────────────────────
+// ── OVERVIEW (admin dashboard) ───────────────────────────
+const TZ = 'Asia/Kathmandu';
+const REVENUE_MATCH = { status: { $nin: ['cancelled', 'refunded'] } }; // revenue counts only fulfilled-track orders
+const sumTotal = (match) => Order.aggregate([{ $match: match }, { $group: { _id: null, total: { $sum: '$total' }, n: { $sum: 1 } } }]);
+
 router.get('/overview', async (req, res, next) => {
   try {
-    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    const [totalOrders, monthOrders, revenueAgg, customers, books, lowStock, pendingReviews, recentOrders] = await Promise.all([
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const since14 = new Date(startOfToday); since14.setDate(since14.getDate() - 13); // 14-day window incl. today
+
+    const [
+      totalOrders, monthOrders, todayOrders,
+      lifetimeAgg, monthAgg, lastMonthAgg, todayAgg,
+      customers, newCustomers, books,
+      lowStock, pendingReviews, unansweredQuestions,
+      statusAgg, seriesAgg, topBooks, mostWishlisted,
+      recentOrders, recentCustomers,
+    ] = await Promise.all([
       Order.countDocuments(),
       Order.countDocuments({ createdAt: { $gte: startOfMonth } }),
-      Order.aggregate([
-        { $match: { status: { $nin: ['cancelled', 'refunded'] } } },
-        { $group: { _id: null, total: { $sum: '$total' } } },
-      ]),
+      Order.countDocuments({ createdAt: { $gte: startOfToday } }),
+      sumTotal(REVENUE_MATCH),
+      sumTotal({ ...REVENUE_MATCH, createdAt: { $gte: startOfMonth } }),
+      sumTotal({ ...REVENUE_MATCH, createdAt: { $gte: startOfLastMonth, $lt: startOfMonth } }),
+      sumTotal({ ...REVENUE_MATCH, createdAt: { $gte: startOfToday } }),
       User.countDocuments({ isAdmin: false }),
+      User.countDocuments({ isAdmin: false, createdAt: { $gte: startOfMonth } }),
       Book.countDocuments({ isActive: true }),
-      Book.find({ isActive: true, stock: { $lte: 5 } }).select('title slug stock').sort({ stock: 1 }).limit(10).lean(),
+      Book.find({ isActive: true, stock: { $lte: 5 } }).select('title slug stock').sort({ stock: 1 }).limit(8).lean(),
       Review.countDocuments({ isApproved: false }),
+      Question.countDocuments({ isAnswered: false, isActive: true }),
+      Order.aggregate([{ $group: { _id: '$status', n: { $sum: 1 } } }]),
+      Order.aggregate([
+        { $match: { ...REVENUE_MATCH, createdAt: { $gte: since14 } } },
+        { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: TZ } }, revenue: { $sum: '$total' }, orders: { $sum: 1 } } },
+      ]),
+      Book.find({ isActive: true, soldCount: { $gt: 0 } }).select('title slug soldCount price').sort({ soldCount: -1 }).limit(5).lean(),
+      User.aggregate([
+        { $unwind: '$wishlist' },
+        { $group: { _id: '$wishlist', n: { $sum: 1 } } },
+        { $sort: { n: -1 } },
+        { $limit: 5 },
+        { $lookup: { from: 'books', localField: '_id', foreignField: '_id', as: 'book' } },
+        { $unwind: '$book' },
+        { $match: { 'book.isActive': true } },
+        { $project: { _id: 0, title: '$book.title', slug: '$book.slug', count: '$n' } },
+      ]),
       Order.find().sort({ createdAt: -1 }).limit(8).populate('user', 'fullName email').lean(),
+      User.find({ isAdmin: false }).select('fullName email createdAt').sort({ createdAt: -1 }).limit(5).lean(),
     ]);
+
+    const revenue = lifetimeAgg[0]?.total || 0;
+    const paidOrders = lifetimeAgg[0]?.n || 0;
+    const monthRevenue = monthAgg[0]?.total || 0;
+    const lastMonthRevenue = lastMonthAgg[0]?.total || 0;
+
+    // Status counts → object; derive "to fulfill" (placed/confirmed/processing).
+    const ordersByStatus = Object.fromEntries(Order.ORDER_STATUS.map((s) => [s, 0]));
+    for (const s of statusAgg) if (s._id in ordersByStatus) ordersByStatus[s._id] = s.n;
+    const ordersToFulfill = ordersByStatus.placed + ordersByStatus.confirmed + ordersByStatus.processing;
+
+    // Fill the 14-day series so every day is present (zeros for quiet days).
+    const seriesMap = new Map(seriesAgg.map((d) => [d._id, d]));
+    const revenueSeries = [];
+    for (let i = 0; i < 14; i += 1) {
+      const d = new Date(since14); d.setDate(d.getDate() + i);
+      const key = d.toISOString().slice(0, 10);
+      const hit = seriesMap.get(key);
+      revenueSeries.push({ date: key, revenue: hit?.revenue || 0, orders: hit?.orders || 0 });
+    }
 
     return ok(
       res,
       {
         kpis: {
+          revenue,
+          monthRevenue,
+          lastMonthRevenue,
+          monthRevenueDelta: lastMonthRevenue ? Math.round(((monthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100) : null,
+          todayRevenue: todayAgg[0]?.total || 0,
           totalOrders,
           monthOrders,
-          revenue: revenueAgg[0]?.total || 0,
+          todayOrders,
+          avgOrderValue: paidOrders ? Math.round(revenue / paidOrders) : 0,
           customers,
+          newCustomers,
           books,
           lowStockCount: lowStock.length,
           pendingReviews,
+          unansweredQuestions,
+          ordersToFulfill,
         },
+        ordersByStatus,
+        revenueSeries,
+        topBooks,
+        mostWishlisted,
         lowStock,
         recentOrders: recentOrders.map((o) => ({
           orderNumber: o.orderNumber,
@@ -141,6 +223,7 @@ router.get('/overview', async (req, res, next) => {
           status: o.status,
           createdAt: o.createdAt,
         })),
+        recentCustomers: recentCustomers.map((u) => ({ fullName: u.fullName, email: u.email, createdAt: u.createdAt })),
       },
       'Overview'
     );
@@ -155,7 +238,17 @@ const adminBooksQuery = z.object({
   page: intQuery({ min: 1 }).optional(),
   limit: intQuery({ min: 1, max: 100 }).optional(),
   search: z.string().trim().optional(),
+  filter: z.enum(['all', 'active', 'inactive', 'bestseller', 'featured', 'new-arrival']).optional(),
 });
+
+// Map a tab name → the Mongo filter clause it adds.
+const BOOK_FILTERS = {
+  active: { isActive: true },
+  inactive: { isActive: false },
+  bestseller: { isBestseller: true },
+  featured: { isFeatured: true },
+  'new-arrival': { isNewArrival: true },
+};
 
 // Paginated so the table scales past a few hundred titles. Returns
 // { items, total, page, pages } — the client renders 10 per page.
@@ -163,7 +256,7 @@ router.get('/books', validate({ query: adminBooksQuery }), async (req, res, next
   try {
     const page = req.query.page || 1;
     const limit = req.query.limit || 20;
-    const filter = {};
+    const filter = { ...(BOOK_FILTERS[req.query.filter] || {}) };
     if (req.query.search) {
       const rx = new RegExp(escapeRegex(req.query.search), 'i'); // escaped: search is user input
       filter.$or = [{ title: rx }, { author: rx }];
@@ -203,21 +296,7 @@ router.get('/books/lookup', validate({ query: lookupQuery }), async (req, res, n
     isbn10 = isbn10 || meta.isbn10 || null;
 
     // Store the cover in Cloudinary so we own a permanent, fast asset.
-    let coverImage = null;
-    if (meta.coverUrl && typeof fetch === 'function') {
-      try {
-        const img = await fetch(meta.coverUrl);
-        if (img.ok) {
-          const buf = Buffer.from(await img.arrayBuffer());
-          if (buf.length > 1024) {
-            const up = await uploadBuffer(buf, { folder: 'pageturn/books' });
-            coverImage = { publicId: up.public_id, secureUrl: up.secure_url, name: `${meta.title || isbn13 || 'cover'}.jpg` };
-          }
-        }
-      } catch {
-        /* cover optional — proceed without it */
-      }
-    }
+    const coverImage = await uploadCoverFromUrl(meta.coverUrl, meta.title || isbn13 || 'cover');
 
     const origin = detectOrigin({
       isbn13,
@@ -323,6 +402,8 @@ async function lookupOneBulk(item, index) {
         language: origin.language || meta.specifications?.language || null,
         isbn13,
         isbn10,
+        description: meta.description || null,
+        categories: meta.categories || [],
         coverUrl: meta.coverUrl || null,
         origin: origin.origin,
         market: origin.market,
@@ -384,24 +465,13 @@ const bulkCreateBody = z.object({
         pages: z.coerce.number().int().optional(),
         language: z.string().trim().optional(),
         description: z.string().trim().optional(),
+        // Per-row overrides — fall back to batch defaults when omitted.
+        price: z.coerce.number().int().min(0).optional(),
+        stock: z.coerce.number().int().min(0).optional(),
       })
     )
     .min(1),
 });
-
-async function uploadCoverFromUrl(url, name) {
-  if (!url || typeof fetch !== 'function') return null;
-  try {
-    const img = await fetch(url);
-    if (!img.ok) return null;
-    const buf = Buffer.from(await img.arrayBuffer());
-    if (buf.length <= 1024) return null;
-    const up = await uploadBuffer(buf, { folder: 'pageturn/books' });
-    return { publicId: up.public_id, secureUrl: up.secure_url, name: `${name || 'cover'}.jpg` };
-  } catch {
-    return null;
-  }
-}
 
 async function createOneDraft(item, defaults) {
   try {
@@ -420,8 +490,8 @@ async function createOneDraft(item, defaults) {
       author: item.author || 'Unknown',
       genre: defaults.genre ? slugify(defaults.genre) : undefined,
       category: defaults.category || null,
-      price: defaults.price,
-      stock: defaults.stock || 0,
+      price: item.price ?? defaults.price,
+      stock: item.stock ?? defaults.stock ?? 0,
       coverImage,
       description,
       isbn: item.isbn13 || undefined,
@@ -491,6 +561,7 @@ router.put('/books/:slug', validate({ params: slugParams }), async (req, res, ne
   try {
     const book = await Book.findOne({ slug: req.params.slug });
     if (!book) return fail(res, 'Book not found', 404, [{ code: 'NOT_FOUND' }]);
+    const prevPrice = book.price; // capture before edits to detect a drop
     // Whitelist updatable fields.
     const fields = ['title', 'author', 'isbn', 'genre', 'category', 'subgenre', 'tags', 'condition', 'price', 'comparePrice', 'costPrice', 'stock', 'stockStatus', 'reorderPoint', 'coverImage', 'images', 'description', 'shortDescription', 'specifications', 'variants', 'includedTitles', 'metaTitle', 'metaDescription', 'isBestseller', 'isNewArrival', 'isFeatured', 'isStaffPick', 'staffPickNote', 'isActive'];
     for (const f of fields) if (f in req.body) book[f] = req.body[f];
@@ -499,7 +570,14 @@ router.put('/books/:slug', validate({ params: slugParams }), async (req, res, ne
     if (!book.genre && !book.category) {
       return fail(res, 'Pick a genre or a section.', 400, [{ field: 'genre', code: 'GENRE_OR_SECTION' }]);
     }
-    await book.save(); // triggers stockStatus recompute
+    await book.save(); // triggers stockStatus + price (from variants) recompute
+
+    // Price dropped while the book sits in wishlists → email those shoppers.
+    // Fire-and-forget so the admin response isn't held up by mail delivery.
+    if (book.isActive && book.price < prevPrice) {
+      notifyWishlistPriceDrop(book, prevPrice).catch((err) => logger.warn({ err: err.message, slug: book.slug }, 'price-drop notify failed'));
+    }
+
     await invalidateCatalogCaches(book.slug);
     pingIndexNow([`/books/${book.slug}`, '/books', ...(book.genre ? [`/genre/${book.genre}`] : []), ...(book.category ? [`/category/${book.category}`] : [])]);
     return ok(res, book, 'Book updated');
