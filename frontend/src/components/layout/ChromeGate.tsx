@@ -5,8 +5,10 @@ import { TopBar } from "./TopBar";
 import { Header } from "./Header";
 import { Footer } from "./Footer";
 import { BottomNav } from "./BottomNav";
+import { CartBar } from "./CartBar";
 import { AuthModal } from "../auth/AuthModal";
 import { SideDrawers } from "./SideDrawers";
+import { QuickViewSheet } from "../books/QuickViewSheet";
 import { JsonLd } from "../JsonLd";
 import { organizationLd, websiteLd } from "@/lib/seo";
 
@@ -29,8 +31,10 @@ export function ChromeGate({ children }: { children: React.ReactNode }) {
       {/* Spacer so the fixed bottom nav never covers the footer on mobile. */}
       <div className="h-14 md:hidden" aria-hidden />
       <BottomNav />
+      <CartBar />
       <AuthModal />
       <SideDrawers />
+      <QuickViewSheet />
     </>
   );
 }
