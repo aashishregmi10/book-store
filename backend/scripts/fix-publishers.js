@@ -29,18 +29,25 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const STAGGER_MS = 600;
 
 function parseArgs(argv) {
-  const a = { brand: 'New International Books Center', concurrency: 2, limit: Infinity, dry: false };
+  const a = { brand: 'New International Books Center', concurrency: 2, limit: Infinity, dry: false, force: false };
   for (let i = 0; i < argv.length; i += 1) {
     const v = argv[i];
     if (v === '--brand') a.brand = argv[++i];
     else if (v === '--concurrency') a.concurrency = Math.max(1, parseInt(argv[++i], 10) || 2);
     else if (v === '--limit') a.limit = parseInt(argv[++i], 10) || Infinity;
     else if (v === '--dry') a.dry = true;
+    else if (v === '--force') a.force = true; // re-look-up even books that already have a (possibly wrong) publisher
   }
   return a;
 }
 
 async function fixOne(book, opts) {
+  // Already has a real publisher (not the seller brand)? Leave it alone —
+  // unless --force, which re-looks-up everything (use after setting the API key
+  // to overwrite wrong publishers from an earlier keyless run).
+  const cur = book.specifications?.publisher?.trim();
+  if (!opts.force && cur && cur !== opts.brand) return { title: book.title, publisher: cur, skipped: true };
+
   let realPublisher = '';
   if (book.isbn && /^\d{13}$/.test(book.isbn)) {
     try {
@@ -61,7 +68,11 @@ async function fixOne(book, opts) {
   const opts = parseArgs(process.argv.slice(2));
   await connectMongo();
   try {
-    let books = await Book.find({ 'specifications.publisher': opts.brand }).select('title isbn').lean();
+    // Catch both: old imports (seller brand stored as publisher) AND new imports
+    // (seller stored as supplier, publisher blank).
+    let books = await Book.find({ $or: [{ 'specifications.publisher': opts.brand }, { supplier: opts.brand }] })
+      .select('title isbn specifications.publisher')
+      .lean();
     if (books.length > opts.limit) books = books.slice(0, opts.limit);
     logger.info({ matched: books.length, brand: opts.brand, dry: opts.dry }, books.length ? 'Fixing publishers' : 'Nothing to fix');
 

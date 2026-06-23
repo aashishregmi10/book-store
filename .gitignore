@@ -42,3 +42,6 @@ Thumbs.db
 *.pem
 .cache/
 .turbo/
+
+# OS crash dumps
+*.stackdump

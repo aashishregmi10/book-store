@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { TopBar } from "./TopBar";
 import { Header } from "./Header";
 import { Footer } from "./Footer";
+import { BottomNav } from "./BottomNav";
 import { AuthModal } from "../auth/AuthModal";
 import { SideDrawers } from "./SideDrawers";
 import { JsonLd } from "../JsonLd";
@@ -25,6 +26,9 @@ export function ChromeGate({ children }: { children: React.ReactNode }) {
       <Header />
       <main className="flex-1">{children}</main>
       <Footer />
+      {/* Spacer so the fixed bottom nav never covers the footer on mobile. */}
+      <div className="h-14 md:hidden" aria-hidden />
+      <BottomNav />
       <AuthModal />
       <SideDrawers />
     </>

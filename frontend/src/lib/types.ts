@@ -34,6 +34,7 @@ export interface BookCardData {
   avgRating: number;
   reviewCount: number;
   stockStatus: "in-stock" | "low-stock" | "out-of-stock" | "discontinued";
+  stock?: number; // remaining units — drives the "Only N left" urgency badge
   genre: string;
   category?: "manga" | "kids" | "loksewa" | null;
   condition?: "new" | "used";

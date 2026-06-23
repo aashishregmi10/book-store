@@ -54,7 +54,33 @@ async function openLibrary(queryString) {
   return doc ? mapOpenLibraryDoc(doc) : null;
 }
 
-const fromOpenLibraryIsbn = (isbn) => openLibrary(`isbn=${encodeURIComponent(isbn)}`);
+// Resolve the EXACT edition by ISBN (…/isbn/<isbn>.json) so the publisher/pages
+// belong to that specific edition — the work-level search returns an aggregated
+// publisher list whose first entry is frequently the wrong edition.
+async function fromOpenLibraryIsbn(isbn) {
+  const url = `https://openlibrary.org/isbn/${encodeURIComponent(isbn)}.json`;
+  const r = await fetchRetry(url, { headers: { 'User-Agent': 'PageTurnNepal/1.0 (hello@pageturn.com.np)' } });
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error(`Open Library ${r.status}`);
+  const ed = await r.json();
+  if (!ed || !ed.title) return null;
+  const langCode = ed.languages?.[0]?.key?.split('/').pop();
+  return {
+    source: 'openlibrary',
+    title: ed.title,
+    author: undefined, // editions reference authors by key; not needed for publisher
+    coverUrl: ed.covers?.[0] ? `https://covers.openlibrary.org/b/id/${ed.covers[0]}-L.jpg` : undefined,
+    isbn13: Array.isArray(ed.isbn_13) ? ed.isbn_13[0] : undefined,
+    isbn10: Array.isArray(ed.isbn_10) ? ed.isbn_10[0] : undefined,
+    categories: [],
+    specifications: {
+      pages: ed.number_of_pages || undefined,
+      publisher: Array.isArray(ed.publishers) ? ed.publishers[0] : undefined,
+      publishedDate: ed.publish_date || undefined,
+      language: mapLang(langCode),
+    },
+  };
+}
 
 function fromOpenLibrarySearch({ title, author, publisher } = {}) {
   const p = new URLSearchParams();

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Cormorant_Garamond, Source_Serif_4, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ChromeGate } from "@/components/layout/ChromeGate";
+import { PWARegister } from "@/components/PWARegister";
 import { SITE } from "@/lib/seo";
 
 // Editorial type stack (see /CLAUDE.md). Inter is banned.
@@ -63,6 +64,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body className="flex min-h-full flex-col bg-bg text-text">
         <ChromeGate>{children}</ChromeGate>
+        <PWARegister />
       </body>
     </html>
   );
