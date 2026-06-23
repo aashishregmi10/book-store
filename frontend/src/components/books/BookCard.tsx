@@ -3,7 +3,6 @@ import { Star } from "lucide-react";
 import type { BookCardData } from "@/lib/types";
 import { npr, discountPct } from "@/lib/format";
 import { WishlistButton } from "./WishlistButton";
-import { QuickViewButton } from "./QuickViewButton";
 import { AddToCartButton } from "./AddToCartButton";
 import { BookCover } from "./BookCover";
 
@@ -54,9 +53,8 @@ export function BookCard({ book }: { book: BookCardData }) {
 
         {badge && <div className="absolute left-2 top-2">{badge}</div>}
 
-        <div className="absolute right-2 top-2 flex flex-col gap-1.5">
+        <div className="absolute right-2 top-2">
           <WishlistButton bookId={book._id} />
-          <QuickViewButton slug={book.slug} />
         </div>
       </div>
 

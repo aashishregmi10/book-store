@@ -8,7 +8,6 @@ import { BottomNav } from "./BottomNav";
 import { CartBar } from "./CartBar";
 import { AuthModal } from "../auth/AuthModal";
 import { SideDrawers } from "./SideDrawers";
-import { QuickViewSheet } from "../books/QuickViewSheet";
 import { JsonLd } from "../JsonLd";
 import { organizationLd, websiteLd } from "@/lib/seo";
 
@@ -34,7 +33,6 @@ export function ChromeGate({ children }: { children: React.ReactNode }) {
       <CartBar />
       <AuthModal />
       <SideDrawers />
-      <QuickViewSheet />
     </>
   );
 }
