@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Search, ShoppingCart, Heart, LogIn } from "lucide-react";
 import { useCart, selectCount } from "@/lib/stores/cart";
 import { useAuth } from "@/lib/stores/auth";
@@ -67,25 +67,10 @@ export function Header() {
           ))}
         </nav>
 
-        {/* Search — fills the middle */}
-        <form action="/books" className="mx-4 hidden max-w-md flex-1 items-center md:flex">
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
-            <input
-              type="search"
-              name="q"
-              placeholder="Search by title, author, or ISBN"
-              aria-label="Search books"
-              className="w-full rounded-l-md border border-border bg-surface py-2 pl-9 pr-3 font-body text-sm text-text outline-none placeholder:text-muted focus:border-accent"
-            />
-          </div>
-          <button
-            type="submit"
-            className="inline-flex items-center gap-1.5 rounded-r-md border border-l-0 border-border bg-surface px-3 py-2 font-data text-sm text-text transition-colors hover:border-accent hover:text-accent"
-          >
-            <Search className="size-4" /> Search
-          </button>
-        </form>
+        {/* Search — fills the middle (keeps the typed query visible after search) */}
+        <Suspense fallback={<div className="mx-4 hidden max-w-md flex-1 md:flex" />}>
+          <HeaderSearch />
+        </Suspense>
 
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
           {/* Mobile search icon */}
@@ -129,5 +114,33 @@ export function Header() {
         </div>
       </div>
     </header>
+  );
+}
+
+// Reads the active `q` from the URL so the box keeps showing what was searched.
+// `key={q}` remounts the input on each new search so its value tracks the URL.
+function HeaderSearch() {
+  const q = useSearchParams().get("q") ?? "";
+  return (
+    <form action="/books" className="mx-4 hidden max-w-md flex-1 items-center md:flex">
+      <div className="relative flex-1">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
+        <input
+          key={q}
+          defaultValue={q}
+          type="search"
+          name="q"
+          placeholder="Search by title, author, or ISBN"
+          aria-label="Search books"
+          className="w-full rounded-l-md border border-border bg-surface py-2 pl-9 pr-3 font-body text-sm text-text outline-none placeholder:text-muted focus:border-accent"
+        />
+      </div>
+      <button
+        type="submit"
+        className="inline-flex items-center gap-1.5 rounded-r-md border border-l-0 border-border bg-surface px-3 py-2 font-data text-sm text-text transition-colors hover:border-accent hover:text-accent"
+      >
+        <Search className="size-4" /> Search
+      </button>
+    </form>
   );
 }

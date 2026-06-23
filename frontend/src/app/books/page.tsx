@@ -2,10 +2,10 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { apiGet } from "@/lib/api";
 import type { BookCardData, Genre, Paged } from "@/lib/types";
-import { BookCard } from "@/components/books/BookCard";
 import { BooksFilters } from "@/components/books/BooksFilters";
 import { BooksToolbar } from "@/components/books/BooksToolbar";
-import { Pagination } from "@/components/books/Pagination";
+import { BooksGrid } from "@/components/books/BooksGrid";
+import { CategoryChips } from "@/components/books/CategoryChips";
 
 export const dynamic = "force-dynamic";
 
@@ -68,17 +68,24 @@ export default async function BooksPage({
   const page = data?.page ?? 1;
   const pages = data?.pages ?? 1;
 
-  // Build a page URL that preserves the current filters/sort/search.
-  const pageHref = (n: number) => {
-    const params = new URLSearchParams();
-    for (const [k, v] of Object.entries(sp)) if (v && k !== "page") params.set(k, v);
-    if (n > 1) params.set("page", String(n));
-    const qs = params.toString();
-    return qs ? `/books?${qs}` : "/books";
-  };
+  // Params the client re-sends to GET /books when loading more (no page).
+  const apiParams: Record<string, string> = {};
+  for (const [k, v] of Object.entries({
+    search: sp.q, sort: sp.sort, genre: sp.genre, language: sp.language, format: sp.format,
+    year: sp.year, minPrice: sp.minPrice, maxPrice: sp.maxPrice, minRating: sp.minRating,
+    condition: sp.condition, author: sp.author, publisher: sp.publisher,
+  })) if (v) apiParams[k] = v;
+  // Address-bar query (for the crawlable "load more" href), minus page.
+  const urlQuery = Object.entries(sp)
+    .filter(([k, v]) => v && k !== "page")
+    .map(([k, v]) => `${k}=${encodeURIComponent(v as string)}`)
+    .join("&");
 
   return (
     <div className="mx-auto max-w-[1600px] px-6 py-10 sm:px-8 lg:px-16 xl:px-24">
+      {/* Quick genre chips — mobile-first browse without opening the filter panel */}
+      <CategoryChips genres={genres.map((g) => ({ slug: g.slug, name: g.name }))} className="mb-5 lg:hidden" />
+
       <div className="grid gap-8 lg:grid-cols-[16rem_1fr]">
         <BooksFilters
           genres={genres.map((g) => ({ slug: g.slug, name: g.name }))}
@@ -102,15 +109,16 @@ export default async function BooksPage({
               </Link>
             </div>
           ) : (
-            <>
-              <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                {data.items.map((b) => (
-                  <BookCard key={b.slug} book={b} />
-                ))}
-              </div>
-
-              <Pagination page={page} pages={pages} hrefFor={pageHref} />
-            </>
+            <BooksGrid
+              key={urlQuery}
+              initialItems={data.items}
+              initialPage={page}
+              pages={pages}
+              total={data.total}
+              apiParams={apiParams}
+              path="/books"
+              urlQuery={urlQuery}
+            />
           )}
         </div>
       </div>

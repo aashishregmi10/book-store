@@ -16,7 +16,7 @@ const { ok, created, fail } = require('../utils/apiResponse');
 
 const router = express.Router();
 
-const LIST_FIELDS = 'slug title author price comparePrice coverImage avgRating reviewCount stockStatus genre condition isBestseller isNewArrival variants';
+const LIST_FIELDS = 'slug title author price comparePrice coverImage avgRating reviewCount stockStatus stock genre condition isBestseller isNewArrival variants';
 
 const SORTS = {
   popular: { soldCount: -1 },
@@ -106,7 +106,16 @@ router.get(
       // that can contain commas, so they are NOT comma-split like the enum facets).
       if (req.query.author) filter.author = String(req.query.author);
       if (req.query.publisher) filter['specifications.publisher'] = String(req.query.publisher);
-      if (req.query.search) filter.$text = { $search: String(req.query.search) };
+      // Forgiving substring search across title / author / ISBN (matches the
+      // "title, author, or ISBN" placeholder). $text only matched whole words and
+      // ignored ISBNs, so partial titles and ISBN lookups found nothing.
+      if (req.query.search) {
+        const term = String(req.query.search).trim();
+        if (term) {
+          const rx = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+          and.push({ $or: [{ title: rx }, { author: rx }, { isbn: rx }, { 'specifications.isbn10': rx }] });
+        }
+      }
       if (and.length) filter.$and = and;
 
       // Cache each distinct query for 60s (busted on admin book mutations via

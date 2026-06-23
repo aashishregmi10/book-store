@@ -52,7 +52,7 @@ router.get(
       if (!genre) return fail(res, 'Genre not found', 404, [{ code: 'NOT_FOUND' }]);
 
       const page = req.query.page || 1;
-      const limit = req.query.limit || 24;
+      const limit = req.query.limit || 25; // match /books so "load more" pages align
       const sort = SORTS[req.query.sort] || SORTS.popular;
 
       const filter = { genre: slug, isActive: true };

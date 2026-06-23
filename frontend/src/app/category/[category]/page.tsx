@@ -6,9 +6,8 @@ import { apiGet } from "@/lib/api";
 import type { BookCardData, Genre, Paged } from "@/lib/types";
 import { itemListLd, breadcrumbLd } from "@/lib/seo";
 import { JsonLd } from "@/components/JsonLd";
-import { BookCard } from "@/components/books/BookCard";
 import { BooksFilters } from "@/components/books/BooksFilters";
-import { Pagination } from "@/components/books/Pagination";
+import { BooksGrid } from "@/components/books/BooksGrid";
 
 export const dynamic = "force-dynamic";
 
@@ -102,14 +101,17 @@ export default async function CategoryPage({
   const pages = data?.pages ?? 1;
   const s = SECTIONS[category];
 
-  // Page URL preserving the active sort + filters.
-  const pageHref = (n: number) => {
-    const qp = new URLSearchParams();
-    for (const [k, v] of Object.entries(sp)) if (v && k !== "page") qp.set(k, v);
-    if (n > 1) qp.set("page", String(n));
-    const qs = qp.toString();
-    return qs ? `/category/${category}?${qs}` : `/category/${category}`;
-  };
+  // Params the client re-sends to GET /books when loading more (no page).
+  const apiParams: Record<string, string> = { category };
+  for (const [k, v] of Object.entries({
+    sort: sp.sort, language: sp.language, format: sp.format, year: sp.year,
+    minPrice: sp.minPrice, maxPrice: sp.maxPrice, minRating: sp.minRating, condition: sp.condition,
+  })) if (v) apiParams[k] = v;
+  // Address-bar query (for the crawlable "load more" href), minus page.
+  const urlQuery = Object.entries(sp)
+    .filter(([k, v]) => v && k !== "page")
+    .map(([k, v]) => `${k}=${encodeURIComponent(v as string)}`)
+    .join("&");
 
   // itemListLd only reads `name`; pass a minimal section object.
   const listGenre = { name: s.name, slug: category } as unknown as Genre;
@@ -147,14 +149,17 @@ export default async function CategoryPage({
             {items.length === 0 ? (
               <p className="py-16 text-center font-body text-muted">Nothing on this shelf matches — try removing a filter.</p>
             ) : (
-              <div className="mt-8 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                {items.map((b) => (
-                  <BookCard key={b.slug} book={b} />
-                ))}
-              </div>
+              <BooksGrid
+                key={`${category}-${urlQuery}`}
+                initialItems={items}
+                initialPage={page}
+                pages={pages}
+                total={total}
+                apiParams={apiParams}
+                path={`/category/${category}`}
+                urlQuery={urlQuery}
+              />
             )}
-
-            <Pagination page={page} pages={pages} hrefFor={pageHref} />
           </div>
         </div>
       </div>

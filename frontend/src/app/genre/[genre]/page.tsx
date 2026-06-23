@@ -7,7 +7,7 @@ import { apiGetOrNull } from "@/lib/api";
 import type { Genre, BookCardData, Paged } from "@/lib/types";
 import { itemListLd, breadcrumbLd, faqLd } from "@/lib/seo";
 import { JsonLd } from "@/components/JsonLd";
-import { BookCard } from "@/components/books/BookCard";
+import { BooksGrid } from "@/components/books/BooksGrid";
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +52,10 @@ export default async function GenrePage({
   const data = await getGenre(slug, sort);
   if (!data) notFound();
 
-  const { genre, items, total } = data;
+  const { genre, items, total, page, pages } = data;
+  const apiParams: Record<string, string> = { genre: genre.slug };
+  if (sort) apiParams.sort = sort;
+  const urlQuery = sort ? `sort=${encodeURIComponent(sort)}` : "";
 
   const g = genre.name.toLowerCase();
   const faqs = [
@@ -112,11 +115,16 @@ export default async function GenrePage({
         {items.length === 0 ? (
           <p className="py-16 text-center font-body text-muted">Nothing on this shelf yet — check back soon.</p>
         ) : (
-          <div className="mt-8 grid grid-cols-2 gap-x-5 gap-y-9 sm:grid-cols-3 lg:grid-cols-4">
-            {items.map((b) => (
-              <BookCard key={b.slug} book={b} />
-            ))}
-          </div>
+          <BooksGrid
+            key={`${genre.slug}-${urlQuery}`}
+            initialItems={items}
+            initialPage={page}
+            pages={pages}
+            total={total}
+            apiParams={apiParams}
+            path={`/genre/${genre.slug}`}
+            urlQuery={urlQuery}
+          />
         )}
 
         {/* Visible FAQ mirrors the FAQPage schema */}

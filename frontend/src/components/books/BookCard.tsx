@@ -40,7 +40,7 @@ export function BookCard({ book }: { book: BookCardData }) {
             />
             {book.stockStatus === "low-stock" && !soldOut && (
               <span className="absolute inset-x-0 bottom-0 bg-text/75 px-2 py-1 text-center font-data text-[11px] text-white">
-                Only a few left
+                {book.stock && book.stock > 0 ? `Only ${book.stock} left` : "Only a few left"}
               </span>
             )}
             {soldOut && (
