@@ -12,6 +12,7 @@ import { bookLd, breadcrumbLd, qaPageLd } from "@/lib/seo";
 import { JsonLd } from "@/components/JsonLd";
 import { BookCard } from "@/components/books/BookCard";
 import { AddToCartButton } from "@/components/books/AddToCartButton";
+import { StickyBuyBar } from "@/components/books/StickyBuyBar";
 import { FormatPicker } from "@/components/books/FormatPicker";
 import { WishlistButton } from "@/components/books/WishlistButton";
 import { AskQuestion } from "@/components/books/AskQuestion";
@@ -256,6 +257,17 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
           </section>
         )}
       </div>
+
+      {/* Mobile sticky buy bar (single-format books) + spacer so it never covers content */}
+      {!book.variants?.length && (
+        <>
+          <div className="h-16 md:hidden" aria-hidden />
+          <StickyBuyBar
+            book={{ bookId: book._id, slug: book.slug, title: book.title, author: book.author, coverImage: book.coverImage.secureUrl, price: book.price }}
+            soldOut={soldOut}
+          />
+        </>
+      )}
     </>
   );
 }
