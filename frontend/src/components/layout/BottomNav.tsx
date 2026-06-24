@@ -7,6 +7,7 @@ import { useDrawer } from "@/lib/stores/uiDrawer";
 import { useCart, selectCount } from "@/lib/stores/cart";
 import { useAuth } from "@/lib/stores/auth";
 import { useAuthModal } from "@/lib/stores/authModal";
+import { useSearchOverlay } from "@/lib/stores/searchOverlay";
 
 /**
  * Sticky bottom navigation for one-handed mobile use (hidden on ≥ md, where the
@@ -20,6 +21,7 @@ export function BottomNav() {
   const user = useAuth((s) => s.user);
   const authHydrated = useAuth((s) => s.hydrated);
   const openLogin = useAuthModal((s) => s.openLogin);
+  const openSearch = useSearchOverlay((s) => s.openSearch);
 
   const cartCount = cartHydrated ? count : 0;
   const browseActive = ["/books", "/category", "/genre"].some((p) => pathname.startsWith(p));
@@ -32,7 +34,7 @@ export function BottomNav() {
       <div className="grid grid-cols-5">
         <TabLink href="/" icon={Home} label="Home" active={pathname === "/"} />
         <TabLink href="/books" icon={LayoutGrid} label="Categories" active={browseActive && !pathname.includes("?")} />
-        <TabLink href="/books" icon={Search} label="Search" active={false} />
+        <TabButton icon={Search} label="Search" onClick={openSearch} />
         <TabButton icon={ShoppingCart} label="Cart" onClick={openCart} badge={cartCount} />
         {authHydrated && user ? (
           <TabLink href="/account" icon={User} label="Account" active={pathname.startsWith("/account")} />

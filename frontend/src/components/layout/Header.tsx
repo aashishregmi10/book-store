@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/stores/auth";
 import { useAuthModal } from "@/lib/stores/authModal";
 import { useDrawer } from "@/lib/stores/uiDrawer";
 import { useWishlist } from "@/lib/stores/wishlist";
+import { useSearchOverlay } from "@/lib/stores/searchOverlay";
 import { AccountMenu } from "./AccountMenu";
 
 const NAV = [
@@ -32,6 +33,7 @@ export function Header() {
   const openCart = useDrawer((s) => s.openCart);
   const openWishlist = useDrawer((s) => s.openWishlist);
   const wishlistCount = useWishlist((s) => s.ids.size);
+  const openSearch = useSearchOverlay((s) => s.openSearch);
 
   // Load the wishlist once the session is known; drop it on sign-out.
   useEffect(() => {
@@ -73,10 +75,10 @@ export function Header() {
         </Suspense>
 
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
-          {/* Mobile search icon */}
-          <Link href="/books" aria-label="Search" className="p-2 text-text hover:text-accent md:hidden">
+          {/* Mobile search icon — opens the search overlay */}
+          <button onClick={openSearch} aria-label="Search" className="p-2 text-text hover:text-accent md:hidden">
             <Search className="size-5" />
-          </Link>
+          </button>
 
           {/* Wishlist — icon only with count badge (opens drawer) */}
           <button onClick={openWishlist} aria-label={`Wishlist, ${wishCount} saved`} className="relative p-2 text-text transition-colors hover:text-[#e3534c]">

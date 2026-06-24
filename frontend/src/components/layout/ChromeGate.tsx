@@ -6,6 +6,7 @@ import { Header } from "./Header";
 import { Footer } from "./Footer";
 import { BottomNav } from "./BottomNav";
 import { CartBar } from "./CartBar";
+import { SearchOverlay } from "./SearchOverlay";
 import { AuthModal } from "../auth/AuthModal";
 import { SideDrawers } from "./SideDrawers";
 import { JsonLd } from "../JsonLd";
@@ -31,6 +32,7 @@ export function ChromeGate({ children }: { children: React.ReactNode }) {
       <div className="h-14 md:hidden" aria-hidden />
       <BottomNav />
       <CartBar />
+      <SearchOverlay />
       <AuthModal />
       <SideDrawers />
     </>
