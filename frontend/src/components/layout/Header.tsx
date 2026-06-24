@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Search, ShoppingCart, Heart, LogIn } from "lucide-react";
 import { useCart, selectCount } from "@/lib/stores/cart";
 import { useAuth } from "@/lib/stores/auth";
@@ -10,6 +10,8 @@ import { useAuthModal } from "@/lib/stores/authModal";
 import { useDrawer } from "@/lib/stores/uiDrawer";
 import { useWishlist } from "@/lib/stores/wishlist";
 import { useSearchOverlay } from "@/lib/stores/searchOverlay";
+import { useSuggestions } from "@/lib/hooks/useSuggestions";
+import { SearchSuggestions } from "@/components/books/SearchSuggestions";
 import { AccountMenu } from "./AccountMenu";
 
 const NAV = [
@@ -119,30 +121,64 @@ export function Header() {
   );
 }
 
-// Reads the active `q` from the URL so the box keeps showing what was searched.
-// `key={q}` remounts the input on each new search so its value tracks the URL.
+// Desktop search with a live typeahead dropdown. Initialises from the URL `q`
+// so the box reflects the active search; Enter searches the full catalogue.
 function HeaderSearch() {
-  const q = useSearchParams().get("q") ?? "";
+  const router = useRouter();
+  const initialQ = useSearchParams().get("q") ?? "";
+  const [q, setQ] = useState(initialQ);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const { results, loading } = useSuggestions(q);
+
+  // Close the dropdown on outside click.
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const term = q.trim();
+    setOpen(false);
+    router.push(term ? `/books?q=${encodeURIComponent(term)}` : "/books");
+  }
+
   return (
-    <form action="/books" className="mx-4 hidden max-w-md flex-1 items-center md:flex">
-      <div className="relative flex-1">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
-        <input
-          key={q}
-          defaultValue={q}
-          type="search"
-          name="q"
-          placeholder="Search by title, author, or ISBN"
-          aria-label="Search books"
-          className="w-full rounded-l-md border border-border bg-surface py-2 pl-9 pr-3 font-body text-sm text-text outline-none placeholder:text-muted focus:border-accent"
-        />
-      </div>
-      <button
-        type="submit"
-        className="inline-flex items-center gap-1.5 rounded-r-md border border-l-0 border-border bg-surface px-3 py-2 font-data text-sm text-text transition-colors hover:border-accent hover:text-accent"
-      >
-        <Search className="size-4" /> Search
-      </button>
-    </form>
+    <div ref={ref} className="relative mx-4 hidden max-w-md flex-1 md:block">
+      <form onSubmit={submit} className="flex items-center">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
+          <input
+            value={q}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setOpen(true);
+            }}
+            onFocus={() => setOpen(true)}
+            type="search"
+            name="q"
+            placeholder="Search by title, author, or ISBN"
+            aria-label="Search books"
+            className="w-full rounded-l-md border border-border bg-surface py-2 pl-9 pr-3 font-body text-sm text-text outline-none placeholder:text-muted focus:border-accent"
+          />
+        </div>
+        <button
+          type="submit"
+          className="inline-flex items-center gap-1.5 rounded-r-md border border-l-0 border-border bg-surface px-3 py-2 font-data text-sm text-text transition-colors hover:border-accent hover:text-accent"
+        >
+          <Search className="size-4" /> Search
+        </button>
+      </form>
+
+      {open && q.trim().length >= 2 && (
+        <div className="absolute inset-x-0 top-full z-50 mt-1 max-h-[70vh] overflow-y-auto rounded-md border border-border bg-bg shadow-[0_12px_32px_-12px_rgba(28,93,156,0.35)]">
+          <SearchSuggestions term={q} results={results} loading={loading} onNavigate={() => setOpen(false)} />
+        </div>
+      )}
+    </div>
   );
 }
