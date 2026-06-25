@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BookCover } from "@/components/books/BookCover";
 import { notFound } from "next/navigation";
-import { Star, Truck, RotateCcw, ShieldCheck } from "lucide-react";
+import { Star, Truck, Package, ShieldCheck } from "lucide-react";
 
 import { apiGetOrNull } from "@/lib/api";
 import type { BookDetail, BookCardData, ReviewData, QuestionData } from "@/lib/types";
@@ -175,7 +175,7 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
             {/* trust row */}
             <ul className="mt-6 grid gap-2 font-body text-sm text-muted">
               <li className="flex items-center gap-2"><Truck className="size-4 text-accent" /> Kathmandu 1–2 days · rest of Nepal 3–5 days</li>
-              <li className="flex items-center gap-2"><RotateCcw className="size-4 text-accent" /> 7-day returns on unread books</li>
+              <li className="flex items-center gap-2"><Package className="size-4 text-accent" /> Carefully packed &amp; shipped safely</li>
               <li className="flex items-center gap-2"><ShieldCheck className="size-4 text-accent" /> Cash on delivery — pay when it arrives</li>
             </ul>
 

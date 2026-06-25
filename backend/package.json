@@ -11,6 +11,7 @@
     "import-from-scrape": "node scripts/import-from-scrape.js",
     "fix-publishers": "node scripts/fix-publishers.js",
     "recategorize-kids": "node scripts/recategorize-kids.js",
+    "seed-articles": "node scripts/seed-articles.js",
     "sync-indexes": "node scripts/sync-indexes.js",
     "test": "jest --runInBand",
     "test:watch": "jest --watch --runInBand"

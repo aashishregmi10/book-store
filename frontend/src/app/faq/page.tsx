@@ -33,8 +33,8 @@ const FAQS: { q: string; a: string }[] = [
     a: "Delivery is free on orders over NPR 1,500. Below that, a flat fee of NPR 120 applies anywhere in Nepal.",
   },
   {
-    q: "Can I return a book?",
-    a: "Yes. Unread books can be returned within 7 days of delivery. Reach us at hello@pageturn.com.np to arrange a return.",
+    q: "What if my book arrives damaged or wrong?",
+    a: "Every order is carefully checked and packed before it ships. If a book arrives damaged or you received the wrong title, email us at hello@pageturn.com.np with a photo and we'll make it right with a replacement.",
   },
   {
     q: "Are the books new or used?",

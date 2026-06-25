@@ -15,10 +15,17 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    const fe: typeof fieldErrors = {};
+    if (!email.trim()) fe.email = "Email is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) fe.email = "Enter a valid email address.";
+    if (!password) fe.password = "Password is required.";
+    if (Object.keys(fe).length) return setFieldErrors(fe);
+    setFieldErrors({});
     setLoading(true);
     try {
       const data = await clientApi.post<{ user: AuthUser; accessToken: string }>("/auth/login", { email, password });
@@ -55,8 +62,8 @@ export default function LoginPage() {
           {error && (
             <p className="rounded-md border border-sale/40 bg-sale/5 px-3 py-2 font-body text-sm text-sale">{error}</p>
           )}
-          <Field label="Email" type="email" value={email} onChange={setEmail} placeholder="Enter your email" required autoFocus />
-          <PasswordInput label="Password" value={password} onChange={setPassword} placeholder="Enter your password" required />
+          <Field label="Email" type="email" value={email} onChange={(v) => { setEmail(v); setFieldErrors((fe) => ({ ...fe, email: undefined })); }} placeholder="Enter your email" required autoFocus error={fieldErrors.email} />
+          <PasswordInput label="Password" value={password} onChange={(v) => { setPassword(v); setFieldErrors((fe) => ({ ...fe, password: undefined })); }} placeholder="Enter your password" required error={fieldErrors.password} />
           <div className="flex justify-end">
             <Link href="/auth/forgot-password" className="font-body text-sm text-accent hover:underline">
               Forgot password?

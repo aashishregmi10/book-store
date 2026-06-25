@@ -38,6 +38,7 @@ export function Field({
   required,
   autoFocus,
   placeholder,
+  error,
 }: {
   label: string;
   type?: string;
@@ -46,6 +47,7 @@ export function Field({
   required?: boolean;
   autoFocus?: boolean;
   placeholder?: string;
+  error?: string;
 }) {
   return (
     <label className="block">
@@ -56,11 +58,13 @@ export function Field({
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        required={required}
+        aria-required={required}
+        aria-invalid={!!error}
         autoFocus={autoFocus}
         placeholder={placeholder}
-        className="mt-1.5 w-full rounded-md border border-border bg-surface px-3 py-2.5 font-body text-text outline-none placeholder:text-muted/70 focus:border-accent"
+        className={`mt-1.5 w-full rounded-md border bg-surface px-3 py-2.5 font-body text-text outline-none placeholder:text-muted/70 focus:border-accent ${error ? "border-sale" : "border-border"}`}
       />
+      {error && <span className="mt-1 block font-body text-xs text-sale">{error}</span>}
     </label>
   );
 }
@@ -72,12 +76,14 @@ export function PasswordInput({
   onChange,
   required,
   placeholder = "Enter a password",
+  error,
 }: {
   label?: string;
   value: string;
   onChange: (v: string) => void;
   required?: boolean;
   placeholder?: string;
+  error?: string;
 }) {
   const [show, setShow] = useState(false);
   return (
@@ -90,9 +96,10 @@ export function PasswordInput({
           type={show ? "text" : "password"}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          required={required}
+          aria-required={required}
+          aria-invalid={!!error}
           placeholder={placeholder}
-          className="w-full rounded-md border border-border bg-surface px-3 py-2.5 pr-11 font-body text-text outline-none placeholder:text-muted/70 focus:border-accent"
+          className={`w-full rounded-md border bg-surface px-3 py-2.5 pr-11 font-body text-text outline-none placeholder:text-muted/70 focus:border-accent ${error ? "border-sale" : "border-border"}`}
         />
         <button
           type="button"
@@ -103,6 +110,7 @@ export function PasswordInput({
           {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
         </button>
       </div>
+      {error && <span className="mt-1 block font-body text-xs text-sale">{error}</span>}
     </label>
   );
 }

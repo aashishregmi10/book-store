@@ -35,8 +35,11 @@ export default function CheckoutPage() {
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
 
   const [addr, setAddr] = useState({ fullName: "", phone: "", address1: "", address2: "", city: "", province: "Bagmati" });
-  const set = (k: keyof typeof addr) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof typeof addr, string>>>({});
+  const set = (k: keyof typeof addr) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setAddr((a) => ({ ...a, [k]: e.target.value }));
+    setFieldErrors((fe) => (fe[k] ? { ...fe, [k]: undefined } : fe));
+  };
 
   // Authoritative pricing from the server whenever items / method change.
   useEffect(() => {
@@ -73,6 +76,17 @@ export default function CheckoutPage() {
   async function placeOrder(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    const fe: Partial<Record<keyof typeof addr, string>> = {};
+    if (!addr.fullName.trim()) fe.fullName = "Full name is required.";
+    if (!addr.phone.trim()) fe.phone = "Phone number is required.";
+    else if (addr.phone.replace(/\D/g, "").length < 7) fe.phone = "Enter a valid phone number.";
+    if (!addr.address1.trim()) fe.address1 = "Address is required.";
+    if (!addr.city.trim()) fe.city = "City is required.";
+    if (Object.keys(fe).length) {
+      setFieldErrors(fe);
+      return;
+    }
+    setFieldErrors({});
     setPlacing(true);
     try {
       const data = await clientApi.post<{ order: { orderNumber: string } }>("/orders", {
@@ -104,11 +118,11 @@ export default function CheckoutPage() {
           <h2 className="font-display text-xl text-text">Delivery details</h2>
           {error && <p className="border border-sale/40 bg-sale/5 px-3 py-2 font-body text-sm text-sale">{error}</p>}
           <div className="grid gap-5 sm:grid-cols-2">
-            <Field label="Full name" value={addr.fullName} onChange={set("fullName")} required />
-            <Field label="Phone (+977)" value={addr.phone} onChange={set("phone")} required />
-            <div className="sm:col-span-2"><Field label="Address" value={addr.address1} onChange={set("address1")} required /></div>
+            <Field label="Full name" value={addr.fullName} onChange={set("fullName")} required error={fieldErrors.fullName} />
+            <Field label="Phone (+977)" value={addr.phone} onChange={set("phone")} required error={fieldErrors.phone} />
+            <div className="sm:col-span-2"><Field label="Address" value={addr.address1} onChange={set("address1")} required error={fieldErrors.address1} /></div>
             <div className="sm:col-span-2"><Field label="Apartment, landmark (optional)" value={addr.address2} onChange={set("address2")} /></div>
-            <Field label="City" value={addr.city} onChange={set("city")} required />
+            <Field label="City" value={addr.city} onChange={set("city")} required error={fieldErrors.city} />
             <label className="block">
               <span className="font-data text-xs uppercase tracking-wide text-muted">Province</span>
               <select value={addr.province} onChange={set("province")} className="mt-1 w-full border border-border bg-surface px-3 py-2.5 font-body text-text outline-none focus:border-accent">
@@ -152,11 +166,20 @@ export default function CheckoutPage() {
   );
 }
 
-function Field({ label, value, onChange, required }: { label: string; value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; required?: boolean }) {
+function Field({ label, value, onChange, required, error }: { label: string; value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; required?: boolean; error?: string }) {
   return (
     <label className="block">
-      <span className="font-data text-xs uppercase tracking-wide text-muted">{label}</span>
-      <input value={value} onChange={onChange} required={required} className="mt-1 w-full border border-border bg-surface px-3 py-2.5 font-body text-text outline-none focus:border-accent" />
+      <span className="font-data text-xs uppercase tracking-wide text-muted">
+        {label} {required && <span className="text-sale">*</span>}
+      </span>
+      <input
+        value={value}
+        onChange={onChange}
+        aria-required={required}
+        aria-invalid={!!error}
+        className={`mt-1 w-full border bg-surface px-3 py-2.5 font-body text-text outline-none focus:border-accent ${error ? "border-sale" : "border-border"}`}
+      />
+      {error && <span className="mt-1 block font-body text-xs text-sale">{error}</span>}
     </label>
   );
 }
