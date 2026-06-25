@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import { apiGet } from "@/lib/api";
+import { ArticleCover } from "@/components/blog/ArticleCover";
 import type { ArticleCard, Paged } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -36,15 +36,13 @@ export default async function BlogPage() {
             <article key={a._id} className="group flex flex-col">
               <Link href={`/blog/${a.slug}`} className="block">
                 <div className="relative aspect-[16/10] overflow-hidden rounded-xl border border-border bg-bg">
-                  {a.coverImage?.secureUrl && (
-                    <Image
-                      src={a.coverImage.secureUrl}
-                      alt={a.title}
-                      fill
-                      sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 30vw"
-                      className="object-cover transition duration-500 group-hover:scale-[1.03]"
-                    />
-                  )}
+                  <ArticleCover
+                    src={a.coverImage?.secureUrl}
+                    alt={a.title}
+                    title={a.title}
+                    category={a.category}
+                    sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 30vw"
+                  />
                 </div>
               </Link>
               <div className="mt-3 flex flex-1 flex-col">
