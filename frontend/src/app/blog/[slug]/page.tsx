@@ -1,7 +1,6 @@
 import { cache } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 
@@ -11,6 +10,7 @@ import { articleLd, breadcrumbLd } from "@/lib/seo";
 import { JsonLd } from "@/components/JsonLd";
 import { MarkdownLite } from "@/components/MarkdownLite";
 import { BookCard } from "@/components/books/BookCard";
+import { ArticleCover } from "@/components/blog/ArticleCover";
 
 export const dynamic = "force-dynamic";
 
@@ -74,11 +74,17 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           {a.readingTime ? ` · ${a.readingTime} min read` : ""}
         </p>
 
-        {a.coverImage?.secureUrl && (
-          <div className="relative mt-6 aspect-[16/9] overflow-hidden rounded-2xl border border-border bg-bg">
-            <Image src={a.coverImage.secureUrl} alt={a.title} fill priority sizes="(max-width: 768px) 90vw, 768px" className="object-cover" />
-          </div>
-        )}
+        <div className="relative mt-6 aspect-[16/9] overflow-hidden rounded-2xl border border-border bg-bg">
+          <ArticleCover
+            src={a.coverImage?.secureUrl}
+            alt={a.title}
+            title={a.title}
+            category={a.category}
+            priority
+            sizes="(max-width: 768px) 90vw, 768px"
+            className="object-cover"
+          />
+        </div>
 
         {/* BLUF — the excerpt leads as an extractable summary */}
         {a.excerpt && <p className="mt-8 border-l-2 border-accent pl-4 font-body text-xl leading-relaxed text-text">{a.excerpt}</p>}
