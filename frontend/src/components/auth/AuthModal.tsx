@@ -61,17 +61,31 @@ function AuthModalBody({
   const [form, setForm] = useState({ fullName: "", email: "", password: "", referralCode: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{ fullName?: string; email?: string; password?: string }>({});
 
-  const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
+  // Clear a field's error as the user fixes it.
+  const set = (k: keyof typeof form) => (v: string) => {
+    setForm((f) => ({ ...f, [k]: v }));
+    setFieldErrors((fe) => (fe[k as keyof typeof fe] ? { ...fe, [k]: undefined } : fe));
+  };
   const isLogin = mode === "login";
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!isLogin && form.password.length < 8) {
-      setError("Password must be at least 8 characters.");
+
+    // Inline required-field validation.
+    const fe: typeof fieldErrors = {};
+    if (!isLogin && !form.fullName.trim()) fe.fullName = "Please enter your name.";
+    if (!form.email.trim()) fe.email = "Email is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) fe.email = "Enter a valid email address.";
+    if (!form.password) fe.password = "Password is required.";
+    else if (!isLogin && form.password.length < 8) fe.password = "Password must be at least 8 characters.";
+    if (Object.keys(fe).length) {
+      setFieldErrors(fe);
       return;
     }
+    setFieldErrors({});
     setLoading(true);
     try {
       const data = isLogin
@@ -122,14 +136,15 @@ function AuthModalBody({
 
       <form onSubmit={onSubmit} className={hasSocialSignIn ? "space-y-4" : "mt-6 space-y-4"}>
         {error && <p className="rounded-md border border-sale/40 bg-sale/5 px-3 py-2 font-body text-sm text-sale">{error}</p>}
-        {!isLogin && <Field label="Name" value={form.fullName} onChange={set("fullName")} placeholder="Enter your name" required autoFocus />}
-        <Field label="Email" type="email" value={form.email} onChange={set("email")} placeholder="Enter your email" required autoFocus={isLogin} />
+        {!isLogin && <Field label="Name" value={form.fullName} onChange={set("fullName")} placeholder="Enter your name" required autoFocus error={fieldErrors.fullName} />}
+        <Field label="Email" type="email" value={form.email} onChange={set("email")} placeholder="Enter your email" required autoFocus={isLogin} error={fieldErrors.email} />
         <PasswordInput
           label="Password"
           value={form.password}
           onChange={set("password")}
           placeholder={isLogin ? "Enter your password" : "At least 8 characters"}
           required
+          error={fieldErrors.password}
         />
         {!isLogin && <Field label="Referral code (optional)" value={form.referralCode} onChange={set("referralCode")} placeholder="Got a code? Enter it here" />}
 

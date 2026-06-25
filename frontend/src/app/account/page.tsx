@@ -52,7 +52,10 @@ export default function AccountPage() {
       <div className="mt-8 grid items-start gap-8 lg:grid-cols-[1fr_1.4fr]">
       {/* Rewards / referral */}
       {user.referralCode && (() => {
-        const site = process.env.NEXT_PUBLIC_SITE_URL || "";
+        // Build from the live origin so the link always points at the real
+        // deployment (avoids a stale/wrong NEXT_PUBLIC_SITE_URL → 404). This block
+        // only renders client-side (after auth hydration), so window is available.
+        const site = (typeof window !== "undefined" && window.location.origin) || process.env.NEXT_PUBLIC_SITE_URL || "";
         const link = `${site}/register?ref=${user.referralCode}`;
         async function copy(kind: "code" | "link", text: string) {
           try {

@@ -1,9 +1,16 @@
 import Link from "next/link";
-import { Truck, RotateCcw, Banknote } from "lucide-react";
+import { Truck, Banknote, Package } from "lucide-react";
 import { apiGet } from "@/lib/api";
-import type { BookCardData } from "@/lib/types";
+import type { BookCardData, Genre } from "@/lib/types";
 import { BookRail } from "@/components/books/BookRail";
 import { HeroPhoto } from "@/components/home/HeroPhoto";
+
+// Fixed browse sections (separate from the genre silo).
+const SECTION_PILLS = [
+  { name: "Manga", href: "/category/manga" },
+  { name: "Kids", href: "/category/kids" },
+  { name: "Loksewa", href: "/category/loksewa" },
+];
 
 // Request-time render: the storefront reads live catalog data from the API.
 export const dynamic = "force-dynamic";
@@ -23,7 +30,12 @@ async function getFeatured(): Promise<Featured | null> {
 }
 
 export default async function HomePage() {
-  const data = await getFeatured();
+  const [data, genres] = await Promise.all([
+    getFeatured(),
+    apiGet<Genre[]>("/genres", { tags: ["genres"] }).catch(() => [] as Genre[]),
+  ]);
+
+  const pills = [...SECTION_PILLS, ...genres.slice(0, 10).map((g) => ({ name: g.name, href: `/genre/${g.slug}` }))];
 
   return (
     <>
@@ -48,7 +60,12 @@ export default async function HomePage() {
               >
                 Browse the shelves
               </Link>
-  
+              <Link
+                href="/genre/nepali-literature"
+                className="border border-accent px-6 py-3 font-data text-sm uppercase tracking-wide text-accent transition-colors hover:bg-accent hover:text-white"
+              >
+                Nepali Literature
+              </Link>
             </div>
           </div>
 
@@ -64,9 +81,28 @@ export default async function HomePage() {
         <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-3 px-6 py-4 sm:grid-cols-3 sm:px-8 lg:px-16 xl:px-24">
           <Trust icon={Banknote} title="Cash on Delivery" sub="Pay when it arrives — all 7 provinces" />
           <Trust icon={Truck} title="Free delivery over NPR 1,500" sub="Same-day inside the Valley" />
-          <Trust icon={RotateCcw} title="7-day returns" sub="On unread books, no fuss" />
+          <Trust icon={Package} title="Carefully packed & delivered" sub="Wrapped well and shipped safely" />
         </div>
       </section>
+
+      {/* Genre pills — quick browse by section/genre */}
+      {pills.length > 0 && (
+        <section className="border-b border-border bg-surface">
+          <div className="mx-auto max-w-[1600px] px-6 py-4 sm:px-8 lg:px-16 xl:px-24">
+            <div className="mx-auto flex max-w-4xl gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:justify-center sm:overflow-visible">
+              {pills.map((p) => (
+                <Link
+                  key={p.href}
+                  href={p.href}
+                  className="shrink-0 whitespace-nowrap rounded-full border border-border px-4 py-1.5 font-data text-xs uppercase tracking-wide text-text transition-colors hover:border-accent hover:text-accent"
+                >
+                  {p.name}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {data ? (
         <>

@@ -33,14 +33,8 @@ const CONDITIONS: Option[] = [
   { value: "used", label: "Used" },
 ];
 
-// Most recent six years (today is 2026).
-const YEARS: Option[] = Array.from({ length: 6 }, (_, i) => {
-  const y = String(2026 - i);
-  return { value: y, label: y };
-});
-
 // Multi-select (comma-joined) keys vs. single-value keys.
-const MULTI_KEYS = ["genre", "language", "format", "year"] as const;
+const MULTI_KEYS = ["genre", "language", "format"] as const;
 
 export function BooksFilters({
   genres,
@@ -248,12 +242,6 @@ export function BooksFilters({
             </div>
           </Section>
         )}
-
-        <Section title="Publication Year" last>
-          {YEARS.map((o) => (
-            <Check key={o.value} label={o.label} checked={selected("year").has(o.value)} onChange={() => toggle("year", o.value)} />
-          ))}
-        </Section>
       </div>
     </aside>
   );

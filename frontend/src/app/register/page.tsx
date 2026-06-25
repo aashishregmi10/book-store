@@ -28,13 +28,24 @@ function RegisterForm() {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{ fullName?: string; email?: string; password?: string }>({});
 
-  const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k: keyof typeof form) => (v: string) => {
+    setForm((f) => ({ ...f, [k]: v }));
+    setFieldErrors((fe) => (fe[k as keyof typeof fe] ? { ...fe, [k]: undefined } : fe));
+  };
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (form.password.length < 8) return setError("Password must be at least 8 characters.");
+    const fe: typeof fieldErrors = {};
+    if (!form.fullName.trim()) fe.fullName = "Please enter your name.";
+    if (!form.email.trim()) fe.email = "Email is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) fe.email = "Enter a valid email address.";
+    if (!form.password) fe.password = "Password is required.";
+    else if (form.password.length < 8) fe.password = "Password must be at least 8 characters.";
+    if (Object.keys(fe).length) return setFieldErrors(fe);
+    setFieldErrors({});
     setLoading(true);
     try {
       const payload = { ...form, referralCode: form.referralCode || undefined };
@@ -71,9 +82,9 @@ function RegisterForm() {
           {error && (
             <p className="rounded-md border border-sale/40 bg-sale/5 px-3 py-2 font-body text-sm text-sale">{error}</p>
           )}
-          <Field label="Name" value={form.fullName} onChange={set("fullName")} placeholder="Enter your name" required autoFocus />
-          <Field label="Email" type="email" value={form.email} onChange={set("email")} placeholder="Enter your email" required />
-          <PasswordInput value={form.password} onChange={set("password")} placeholder="Enter a password" required />
+          <Field label="Name" value={form.fullName} onChange={set("fullName")} placeholder="Enter your name" required autoFocus error={fieldErrors.fullName} />
+          <Field label="Email" type="email" value={form.email} onChange={set("email")} placeholder="Enter your email" required error={fieldErrors.email} />
+          <PasswordInput value={form.password} onChange={set("password")} placeholder="Enter a password" required error={fieldErrors.password} />
           <Field label="Referral code (optional)" value={form.referralCode} onChange={set("referralCode")} placeholder="Got a code? Enter it here" />
           <button
             type="submit"

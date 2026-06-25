@@ -15,7 +15,7 @@ import { SearchSuggestions } from "@/components/books/SearchSuggestions";
 import { AccountMenu } from "./AccountMenu";
 
 const NAV = [
-  { to: "/books", label: "Catalogue" },
+  { to: "/books", label: "Category" },
   { to: "/category/manga", label: "Manga" },
   { to: "/category/kids", label: "Kids" },
   { to: "/category/loksewa", label: "Loksewa" },

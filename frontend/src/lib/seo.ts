@@ -82,10 +82,9 @@ const shippingDetails = (price: number) => ({
 const returnPolicy = {
   "@type": "MerchantReturnPolicy",
   applicableCountry: "NP",
-  returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
-  merchantReturnDays: 7,
-  returnMethod: "https://schema.org/ReturnByMail",
-  returnFees: "https://schema.org/FreeReturn",
+  // No general returns (low-margin COD store); damaged/wrong items are replaced
+  // on contact, which isn't a "return" in schema terms.
+  returnPolicyCategory: "https://schema.org/MerchantReturnNotPermitted",
 };
 
 // One schema.org Review from a stored review.

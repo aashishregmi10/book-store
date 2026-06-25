@@ -39,7 +39,7 @@ ${genreLines || `- [Browse all genres](${SITE.url}/books)`}
 - Currency: NPR. Payment: Cash on Delivery only.
 - Free delivery on orders over NPR 1,500; otherwise a flat NPR 120.
 - Delivery: 1–2 days in Kathmandu Valley, 3–5 days to the rest of Nepal.
-- Returns: 7 days on unread books.
+- Every order is carefully packed and shipped safely.
 
 ## Contact
 - Email: ${SITE.email}
