@@ -21,6 +21,7 @@ const logger = require('../config/logger');
 const email = require('../utils/emailService');
 const { pingIndexNow } = require('../utils/indexnow');
 const { uploadCoverFromUrl } = require('../utils/coverUpload');
+const { deleteImage } = require('../config/cloudinary');
 const { lookupBook } = require('../utils/bookLookup');
 const { normalizeIsbns } = require('../utils/isbn');
 const { detectOrigin, scoreConfidence } = require('../utils/bookOrigin');
@@ -101,6 +102,18 @@ async function notifyWishlistPriceDrop(book, oldPrice) {
     (u) => u.notificationPreferences?.email !== false && u.notificationPreferences?.promotions !== false
   );
   await Promise.all(recipients.map((u) => email.sendPriceDrop(u, book, oldPrice, book.price)));
+}
+
+// Best-effort Cloudinary cleanup for images no longer referenced by a book
+// (removed cover, removed gallery entries, or the whole book deleted). Never
+// throws — a failed cleanup just leaves an orphaned asset, which is far
+// preferable to blocking or failing the admin's save/delete.
+function cleanupImages(publicIds, slug) {
+  const ids = [...new Set(publicIds.filter(Boolean))];
+  if (!ids.length) return;
+  Promise.all(
+    ids.map((id) => deleteImage(id).catch((err) => logger.warn({ err: err.message, publicId: id, slug }, 'cloudinary cleanup failed')))
+  ).catch(() => {});
 }
 
 async function invalidateCatalogCaches(slug) {
@@ -562,6 +575,9 @@ router.put('/books/:slug', validate({ params: slugParams }), async (req, res, ne
     const book = await Book.findOne({ slug: req.params.slug });
     if (!book) return fail(res, 'Book not found', 404, [{ code: 'NOT_FOUND' }]);
     const prevPrice = book.price; // capture before edits to detect a drop
+    // Cloudinary public IDs before the edit, so we can tell which cover/gallery
+    // images were removed once the new values are saved.
+    const prevPublicIds = [book.coverImage?.publicId, ...(book.images || []).map((i) => i.publicId)];
     // Whitelist updatable fields.
     const fields = ['title', 'author', 'isbn', 'genre', 'category', 'subgenre', 'tags', 'condition', 'price', 'comparePrice', 'costPrice', 'stock', 'stockStatus', 'reorderPoint', 'coverImage', 'images', 'description', 'shortDescription', 'specifications', 'variants', 'includedTitles', 'metaTitle', 'metaDescription', 'isBestseller', 'isNewArrival', 'isFeatured', 'isStaffPick', 'staffPickNote', 'isActive'];
     for (const f of fields) if (f in req.body) book[f] = req.body[f];
@@ -571,6 +587,11 @@ router.put('/books/:slug', validate({ params: slugParams }), async (req, res, ne
       return fail(res, 'Pick a genre or a section.', 400, [{ field: 'genre', code: 'GENRE_OR_SECTION' }]);
     }
     await book.save(); // triggers stockStatus + price (from variants) recompute
+
+    // Any cover/gallery image present before the edit but not after was removed
+    // in the admin UI — delete it from Cloudinary now that the save succeeded.
+    const nextPublicIds = new Set([book.coverImage?.publicId, ...(book.images || []).map((i) => i.publicId)].filter(Boolean));
+    cleanupImages(prevPublicIds.filter((id) => id && !nextPublicIds.has(id)), book.slug);
 
     // Price dropped while the book sits in wishlists → email those shoppers.
     // Fire-and-forget so the admin response isn't held up by mail delivery.
@@ -592,6 +613,7 @@ router.delete('/books/:id', validate({ params: idParams }), async (req, res, nex
     if (book) {
       // Remove the dangling reference from every user's wishlist.
       await User.updateMany({ wishlist: book._id }, { $pull: { wishlist: book._id } });
+      cleanupImages([book.coverImage?.publicId, ...(book.images || []).map((i) => i.publicId)], book.slug);
       await invalidateCatalogCaches(book.slug);
     }
     return ok(res, null, 'Book deleted');

@@ -40,4 +40,14 @@ function uploadBuffer(buffer, { folder = 'pageturn/books' } = {}) {
   });
 }
 
-module.exports = { getCloudinary, uploadBuffer };
+/**
+ * Delete an uploaded image by its Cloudinary public ID. Resolves even if the
+ * asset is already gone (Cloudinary's destroy is idempotent); rejects only on
+ * transport/credential errors.
+ */
+async function deleteImage(publicId) {
+  if (!publicId) return;
+  await getCloudinary().uploader.destroy(publicId);
+}
+
+module.exports = { getCloudinary, uploadBuffer, deleteImage };
