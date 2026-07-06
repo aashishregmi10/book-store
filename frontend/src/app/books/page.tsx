@@ -9,6 +9,10 @@ import { CategoryChips } from "@/components/books/CategoryChips";
 
 export const dynamic = "force-dynamic";
 
+// Most-sold-first by default (real Daraz demand data backs soldCount), not
+// "newest" — matches the category pages' default.
+const DEFAULT_SORT = "popular";
+
 const FILTER_PARAMS = [
   "q", "genre", "language", "format", "year", "page", "sort",
   "minPrice", "maxPrice", "minRating", "condition", "author", "publisher",
@@ -38,13 +42,14 @@ export default async function BooksPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const sp = await searchParams;
+  const sort = sp.sort || DEFAULT_SORT;
   const [data, genres, meta] = await Promise.all([
     apiGet<Paged<BookCardData>>("/books", {
       tags: ["books"],
       searchParams: {
         q: sp.q,
         search: sp.q,
-        sort: sp.sort,
+        sort,
         genre: sp.genre,
         language: sp.language,
         format: sp.format,
@@ -68,10 +73,12 @@ export default async function BooksPage({
   const page = data?.page ?? 1;
   const pages = data?.pages ?? 1;
 
-  // Params the client re-sends to GET /books when loading more (no page).
-  const apiParams: Record<string, string> = {};
+  // Params the client re-sends to GET /books when loading more (no page) —
+  // include the resolved default sort so page 2+ stays in the same order as
+  // page 1 instead of silently reverting to the API's own default.
+  const apiParams: Record<string, string> = { sort };
   for (const [k, v] of Object.entries({
-    search: sp.q, sort: sp.sort, genre: sp.genre, language: sp.language, format: sp.format,
+    search: sp.q, genre: sp.genre, language: sp.language, format: sp.format,
     year: sp.year, minPrice: sp.minPrice, maxPrice: sp.maxPrice, minRating: sp.minRating,
     condition: sp.condition, author: sp.author, publisher: sp.publisher,
   })) if (v) apiParams[k] = v;

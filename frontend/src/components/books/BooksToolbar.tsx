@@ -77,7 +77,9 @@ export function BooksToolbar({ genres, total }: { genres: { slug: string; name: 
     push(params);
   }
 
-  const sort = sp.get("sort") || "newest";
+  // Matches the server's default (books/page.tsx / category pages): most-sold
+  // first, backed by real Daraz demand data, not an arbitrary "newest" order.
+  const sort = sp.get("sort") || "popular";
 
   return (
     <div className="space-y-3">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronUp, SlidersHorizontal } from "lucide-react";
 
@@ -55,8 +55,27 @@ export function BooksFilters({
   const [genreQuery, setGenreQuery] = useState("");
   const [authorQuery, setAuthorQuery] = useState("");
   const [publisherQuery, setPublisherQuery] = useState("");
-  const [priceMin, setPriceMin] = useState(sp.get("minPrice") || "");
-  const [priceMax, setPriceMax] = useState(sp.get("maxPrice") || "");
+  const appliedMin = sp.get("minPrice") || "";
+  const appliedMax = sp.get("maxPrice") || "";
+  const [priceMin, setPriceMin] = useState(appliedMin);
+  const [priceMax, setPriceMax] = useState(appliedMax);
+
+  // Keep the inputs in sync if the price filter changes from elsewhere (e.g.
+  // its chip is removed in BooksToolbar, or "Clear all" runs) — otherwise the
+  // Apply/Reset logic below would compare against a stale applied value.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync local echo from the URL (external source of truth) when the filter changes elsewhere
+    setPriceMin(appliedMin);
+    setPriceMax(appliedMax);
+  }, [appliedMin, appliedMax]);
+
+  // Only offer "Reset" once the applied filter matches what's in the boxes —
+  // if the shopper edits the range after applying, the button flips back to
+  // "Apply" so they can commit the new range in one click instead of first
+  // having to reset and then re-enter it.
+  const hasAppliedPrice = !!(appliedMin || appliedMax);
+  const priceDirty = priceMin !== appliedMin || priceMax !== appliedMax;
+  const showPriceReset = hasAppliedPrice && !priceDirty;
 
   const selected = (key: string) => new Set((sp.get(key) || "").split(",").filter(Boolean));
 
@@ -91,6 +110,15 @@ export function BooksFilters({
     else params.delete("minPrice");
     if (priceMax) params.set("maxPrice", priceMax);
     else params.delete("maxPrice");
+    commit(params);
+  }
+
+  function resetPrice() {
+    const params = new URLSearchParams(sp.toString());
+    params.delete("minPrice");
+    params.delete("maxPrice");
+    setPriceMin("");
+    setPriceMax("");
     commit(params);
   }
 
@@ -180,10 +208,14 @@ export function BooksFilters({
             />
           </div>
           <button
-            onClick={applyPrice}
-            className="mt-2.5 w-full rounded-md bg-accent px-3 py-1.5 font-data text-xs uppercase tracking-wide text-white hover:bg-accent-hover"
+            onClick={showPriceReset ? resetPrice : applyPrice}
+            className={
+              showPriceReset
+                ? "mt-2.5 w-full rounded-md border border-border px-3 py-1.5 font-data text-xs uppercase tracking-wide text-muted hover:border-sale hover:text-sale"
+                : "mt-2.5 w-full rounded-md bg-accent px-3 py-1.5 font-data text-xs uppercase tracking-wide text-white hover:bg-accent-hover"
+            }
           >
-            Apply
+            {showPriceReset ? "Reset" : "Apply"}
           </button>
         </Section>
 
