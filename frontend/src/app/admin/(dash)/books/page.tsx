@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { clientApi } from "@/lib/client-api";
 import { npr } from "@/lib/format";
@@ -10,6 +10,7 @@ import { TableSkeleton } from "@/components/ui/Skeleton";
 import type { AdminBook } from "./_components/types";
 
 const PAGE_SIZE = 10;
+const SEARCH_DEBOUNCE_MS = 400;
 
 const TABS = [
   { key: "all", label: "All" },
@@ -29,14 +30,55 @@ interface BooksPage {
 }
 
 export default function AdminBooks() {
+  return (
+    <Suspense fallback={<TableSkeleton rows={6} cols={5} />}>
+      <AdminBooksContent />
+    </Suspense>
+  );
+}
+
+function AdminBooksContent() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // The URL is the single source of truth for search/tab/page — shareable,
+  // survives a refresh, and back/forward moves between prior filter states.
+  const search = searchParams.get("search") || "";
+  const tab = (searchParams.get("tab") as TabKey) || "all";
+  const page = Number(searchParams.get("page")) || 1;
+
+  // Local echo of the search box so typing feels instant; only pushed to the
+  // URL (and therefore only triggers a fetch) after SEARCH_DEBOUNCE_MS of
+  // no typing, same debounce-in-an-effect pattern as lib/hooks/useSuggestions.
+  const [searchInput, setSearchInput] = useState(search);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync local echo from the URL (external source of truth) on back/forward navigation
+    setSearchInput(search);
+  }, [search]);
+
+  function updateParams(patch: Record<string, string | null>) {
+    const params = new URLSearchParams(searchParams.toString());
+    for (const [key, value] of Object.entries(patch)) {
+      if (value === null) params.delete(key);
+      else params.set(key, value);
+    }
+    router.push(`${pathname}?${params}`, { scroll: false });
+  }
+
+  useEffect(() => {
+    if (searchInput === search) return;
+    const t = setTimeout(() => {
+      updateParams({ search: searchInput || null, page: null }); // new query restarts at page 1
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchInput]);
+
   const [books, setBooks] = useState<AdminBook[]>([]);
   const [total, setTotal] = useState(0);
   const [pages, setPages] = useState(1);
-  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [tab, setTab] = useState<TabKey>("all");
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -70,14 +112,12 @@ export default function AdminBooks() {
     return () => ctrl.abort();
   }, [search, page, tab, refreshKey]);
 
-  function onSearch(value: string) {
-    setSearch(value);
-    setPage(1); // a new query restarts at the first page
+  function onTab(key: TabKey) {
+    updateParams({ tab: key === "all" ? null : key, page: null }); // switching tabs restarts at page 1
   }
 
-  function onTab(key: TabKey) {
-    setTab(key);
-    setPage(1); // switching tabs restarts at the first page
+  function goToPage(next: number) {
+    updateParams({ page: next === 1 ? null : String(next) });
   }
 
   async function del(e: React.MouseEvent, b: AdminBook) {
@@ -85,7 +125,7 @@ export default function AdminBooks() {
     if (!confirm(`Delete “${b.title}”? This cannot be undone.`)) return;
     await clientApi.del(`/admin/books/${b._id}`).catch(() => {});
     // Step back a page if we just removed the only row on it.
-    if (books.length === 1 && page > 1) setPage((p) => p - 1);
+    if (books.length === 1 && page > 1) goToPage(page - 1);
     else setRefreshKey((k) => k + 1);
   }
 
@@ -127,8 +167,8 @@ export default function AdminBooks() {
       </div>
 
       <input
-        value={search}
-        onChange={(e) => onSearch(e.target.value)}
+        value={searchInput}
+        onChange={(e) => setSearchInput(e.target.value)}
         placeholder="Search title or author…"
         className="mt-4 w-full max-w-sm border border-border bg-surface px-3 py-2 font-body text-sm text-text outline-none focus:border-accent"
       />
@@ -208,7 +248,7 @@ export default function AdminBooks() {
           </span>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              onClick={() => goToPage(Math.max(1, page - 1))}
               disabled={page <= 1}
               className="border border-border px-3 py-1.5 uppercase tracking-wide text-text hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border disabled:hover:text-text"
             >
@@ -218,7 +258,7 @@ export default function AdminBooks() {
               Page {page} of {pages}
             </span>
             <button
-              onClick={() => setPage((p) => Math.min(pages, p + 1))}
+              onClick={() => goToPage(Math.min(pages, page + 1))}
               disabled={page >= pages}
               className="border border-border px-3 py-1.5 uppercase tracking-wide text-text hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border disabled:hover:text-text"
             >
