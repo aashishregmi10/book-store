@@ -1,15 +1,29 @@
 import Link from "next/link";
-import { Truck, Banknote, Package } from "lucide-react";
+import { Truck, Banknote, Package, Sparkles, Baby, Landmark, UserRound, TrendingUp, Ghost, Scale } from "lucide-react";
 import { apiGet } from "@/lib/api";
 import type { BookCardData, Genre } from "@/lib/types";
 import { BookRail } from "@/components/books/BookRail";
 import { HeroCovers } from "@/components/home/HeroCovers";
+import { CategoryCircles } from "@/components/home/CategoryCircles";
 
 // Fixed browse sections (separate from the genre silo).
 const SECTION_PILLS = [
   { name: "Manga", href: "/category/manga" },
   { name: "Kids", href: "/category/kids" },
   { name: "Loksewa", href: "/category/loksewa" },
+];
+
+// A curated quick-browse row above the exhaustive text pills — warm, editorial
+// tints (never the generic blue/purple SaaS palette), icon colored a darker
+// shade of the same hue as its circle for contrast.
+const QUICK_BROWSE = [
+  { name: "Manga", href: "/category/manga", icon: Sparkles, bg: "#F3DDD3", fg: "#B14B2C" },
+  { name: "Kids", href: "/category/kids", icon: Baby, bg: "#F2E3C6", fg: "#93691B" },
+  { name: "Loksewa", href: "/category/loksewa", icon: Landmark, bg: "#E1E6D6", fg: "#55672E" },
+  { name: "Biography", href: "/genre/biography", icon: UserRound, bg: "#EDDCE0", fg: "#8B2E44" },
+  { name: "Business", href: "/genre/business", icon: TrendingUp, bg: "#DCE8DE", fg: "#2D5A3D" },
+  { name: "Horror", href: "/genre/horror", icon: Ghost, bg: "#1C1C1C", fg: "#FAF7F2" },
+  { name: "Law", href: "/genre/law", icon: Scale, bg: "#E8DFD3", fg: "#6B5136" },
 ];
 
 // Request-time render: the storefront reads live catalog data from the API.
@@ -86,6 +100,23 @@ export default async function HomePage() {
             <Trust icon={Truck} title="Free delivery over NPR 1,500" sub="Same-day inside the Valley" />
             <Trust icon={Package} title="Carefully packed & delivered" sub="Wrapped well and shipped safely" />
           </div>
+        </div>
+      </section>
+
+      {/* Explore popular categories — icon-forward quick browse, above the
+          exhaustive text pills row (kept unchanged below for the long tail). */}
+      <section className="border-b border-border">
+        <div className="mx-auto max-w-[1600px] px-6 py-6 sm:px-8 lg:px-16 xl:px-24">
+          <div className="mb-5 flex items-end justify-between">
+            <h2 className="font-display text-2xl text-text">Explore popular categories</h2>
+            <Link
+              href="/books"
+              className="font-data text-xs uppercase tracking-wide text-accent hover:underline"
+            >
+              See all →
+            </Link>
+          </div>
+          <CategoryCircles items={QUICK_BROWSE} />
         </div>
       </section>
 
