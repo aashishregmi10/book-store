@@ -11,17 +11,17 @@
 @theme {
   --color-bg: #e8f1fb;        /* pale blue page background */
   --color-surface: #ffffff;   /* cards / raised slips */
-  --color-text: #15233b;      /* deep navy — body + headings */
+  --color-text: #212529;      /* charcoal — body + headings (can-logistic primary-text) */
   --color-accent: #1c5fa6;    /* royal blue — CTAs, links, active states */
   --color-accent-hover: #164d86;
-  --color-muted: #6b7c92;     /* slate blue-grey — captions, placeholders */
+  --color-muted: #64748b;     /* slate grey — captions, placeholders (can-logistic text-secondary) */
   --color-border: #cfe0f1;    /* pale blue hairline dividers, card edges */
   --color-sale: #c0392b;      /* restrained brick red for sale/urgency */
   --color-star: #ffc400;       /* bright gold-yellow — filled rating stars */
   --color-star-empty: #dcdcdc; /* soft grey — empty rating stars */
 
-  --font-display: var(--font-cormorant), Georgia, "Times New Roman", serif;
-  --font-body: var(--font-source-serif), Georgia, serif;
+  --font-display: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 }
 
@@ -42,7 +42,8 @@
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
-    letter-spacing: -0.01em;
+    font-weight: 600;
+    letter-spacing: 0;
     line-height: 1.1;
   }
   /* Prices, ISBN, data → monospace */
@@ -56,10 +57,11 @@
 }
 
 @layer components {
-  /* Small-caps author label used on book cards */
+  /* Uppercase/wide-tracking label used on book cards, badges, chips */
   .label-smallcaps {
-    font-variant: small-caps;
-    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 500;
+    letter-spacing: 0.1em;
     color: var(--color-muted);
   }
 }

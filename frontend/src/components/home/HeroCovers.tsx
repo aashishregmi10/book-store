@@ -3,11 +3,11 @@ import type { BookCardData } from "@/lib/types";
 import { BookCover } from "@/components/books/BookCover";
 
 /**
- * Real book covers in the hero — never a stock photo. Features the strongest
- * pick front-and-center with up to two more flanking it, rotated slightly, for
- * an editorial "stack" feel rather than a uniform product grid. Visible on
- * every breakpoint (unlike the old desktop-only hero photo) so mobile visitors
- * — the large majority of traffic — see real inventory immediately too.
+ * Real book covers in the hero — never a stock photo. Three upright covers,
+ * evenly spaced (no overlap/rotation), the strongest pick slightly larger in
+ * the center. Visible on every breakpoint (unlike the old desktop-only hero
+ * photo) so mobile visitors — the large majority of traffic — see real
+ * inventory immediately too.
  */
 export function HeroCovers({ books }: { books: BookCardData[] }) {
   const items = books.filter((b) => b?.coverImage?.secureUrl).slice(0, 3);
@@ -16,10 +16,10 @@ export function HeroCovers({ books }: { books: BookCardData[] }) {
   const [feature, left, right] = [items[0], items[1], items[2]];
 
   return (
-    <div className="mx-auto flex w-full max-w-[300px] items-center justify-center md:max-w-md">
-      {left && <Cover book={left} className="-mr-3 w-[26%] rotate-[-6deg] md:w-[24%]" />}
-      <Cover book={feature} className="z-10 w-[46%] md:w-[42%]" priority />
-      {right && <Cover book={right} className="-ml-3 w-[26%] rotate-[6deg] md:w-[24%]" />}
+    <div className="mx-auto flex w-full max-w-[340px] items-center justify-center gap-3 md:max-w-md md:gap-4">
+      {left && <Cover book={left} className="w-[28%]" />}
+      <Cover book={feature} className="w-[36%]" priority />
+      {right && <Cover book={right} className="w-[28%]" />}
     </div>
   );
 }

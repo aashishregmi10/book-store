@@ -1,19 +1,13 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Source_Serif_4, JetBrains_Mono } from "next/font/google";
+import { Montserrat, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ChromeGate } from "@/components/layout/ChromeGate";
 import { PWARegister } from "@/components/PWARegister";
 import { SITE } from "@/lib/seo";
 
-// Editorial type stack (see /CLAUDE.md). Inter is banned.
-const cormorant = Cormorant_Garamond({
-  variable: "--font-cormorant",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"], // not a variable font on Google
-  display: "swap",
-});
-const sourceSerif = Source_Serif_4({
-  variable: "--font-source-serif",
+// Single type family for headings + body (matches can-logistic's Montserrat).
+const montserrat = Montserrat({
+  variable: "--font-montserrat",
   subsets: ["latin"],
   display: "swap",
 });
@@ -56,7 +50,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html
       lang="en"
-      className={`${cormorant.variable} ${sourceSerif.variable} ${jetbrains.variable} h-full antialiased`}
+      className={`${montserrat.variable} ${jetbrains.variable} h-full antialiased`}
     >
       <head>
         {/* Speed up the LCP cover image (covers are served from Cloudinary). */}

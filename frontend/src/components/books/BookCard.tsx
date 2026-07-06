@@ -61,7 +61,7 @@ export function BookCard({ book }: { book: BookCardData }) {
       <div className="mt-3 flex flex-1 flex-col">
         <Link href={`/books/${book.slug}`} title={book.title}>
           {/* Reserve two lines so cards with 1- vs 2-line titles stay aligned. */}
-          <h3 className="line-clamp-2 min-h-[3.1rem] font-display text-lg leading-snug text-text transition-colors group-hover:text-accent">
+          <h3 className="line-clamp-2 min-h-[2.6rem] font-display text-base leading-snug text-text transition-colors group-hover:text-accent">
             {book.title}
           </h3>
         </Link>
