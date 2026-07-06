@@ -11,6 +11,7 @@ import { AuthModal } from "../auth/AuthModal";
 import { SideDrawers } from "./SideDrawers";
 import { JsonLd } from "../JsonLd";
 import { organizationLd, websiteLd } from "@/lib/seo";
+import { useCatalogueScroll } from "@/lib/stores/catalogueScroll";
 
 /**
  * Storefront pages get the Header/Footer + site-wide JSON-LD.
@@ -19,6 +20,10 @@ import { organizationLd, websiteLd } from "@/lib/seo";
  */
 export function ChromeGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  // On mobile, hold the footer off-screen while a catalogue grid still has
+  // more pages to infinite-scroll — otherwise it flashes in below the shelf
+  // between load-more batches. Desktop is unaffected (footer always shows).
+  const loadingMore = useCatalogueScroll((s) => s.loadingMore);
   if (pathname?.startsWith("/admin")) return <>{children}</>;
 
   return (
@@ -27,7 +32,9 @@ export function ChromeGate({ children }: { children: React.ReactNode }) {
       <TopBar />
       <Header />
       <main className="flex-1">{children}</main>
-      <Footer />
+      <div className={loadingMore ? "hidden md:block" : ""}>
+        <Footer />
+      </div>
       {/* Spacer so the fixed bottom nav never covers the footer on mobile. */}
       <div className="h-14 md:hidden" aria-hidden />
       <BottomNav />

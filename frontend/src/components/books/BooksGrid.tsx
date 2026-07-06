@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { clientApi } from "@/lib/client-api";
 import type { BookCardData, Paged } from "@/lib/types";
+import { useCatalogueScroll } from "@/lib/stores/catalogueScroll";
 import { BookCard } from "./BookCard";
 
 /**
@@ -35,6 +36,15 @@ export function BooksGrid({
   const hasMore = page < pages;
   // Note: parents pass a `key` derived from the active filters/sort, so this
   // component remounts (fresh initialItems) whenever the query changes.
+
+  // Tell ChromeGate to hold the footer off-screen (mobile) while there's more
+  // to auto-load, so it doesn't flash in between load-more batches. Resets on
+  // unmount so leaving the catalogue never leaves the footer stuck hidden.
+  const setLoadingMore = useCatalogueScroll((s) => s.setLoadingMore);
+  useEffect(() => {
+    setLoadingMore(hasMore);
+    return () => setLoadingMore(false);
+  }, [hasMore, setLoadingMore]);
 
   const loadMore = useCallback(async () => {
     if (loading || page >= pages) return;

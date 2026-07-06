@@ -3,7 +3,7 @@ import { Truck, Banknote, Package } from "lucide-react";
 import { apiGet } from "@/lib/api";
 import type { BookCardData, Genre } from "@/lib/types";
 import { BookRail } from "@/components/books/BookRail";
-import { HeroPhoto } from "@/components/home/HeroPhoto";
+import { HeroCovers } from "@/components/home/HeroCovers";
 
 // Fixed browse sections (separate from the genre silo).
 const SECTION_PILLS = [
@@ -69,19 +69,23 @@ export default async function HomePage() {
             </div>
           </div>
 
-          {/* hero photograph (desktop) */}
-          <div className="hidden md:col-span-5 md:block">
-            <HeroPhoto />
+          {/* Real covers from the catalogue, not a stock photo — shown on every
+              breakpoint (mobile stacks below the text; md+ sits beside it). */}
+          <div className="mt-8 md:col-span-5 md:mt-0">
+            <HeroCovers books={data?.bestsellers ?? []} />
           </div>
         </div>
       </section>
 
-      {/* Trust strip */}
+      {/* Trust strip — a single compact row at every breakpoint (was 3 stacked
+          rows on mobile), so it doesn't eat scroll distance before the books. */}
       <section className="border-b border-border">
-        <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-3 px-6 py-4 sm:grid-cols-3 sm:px-8 lg:px-16 xl:px-24">
-          <Trust icon={Banknote} title="Cash on Delivery" sub="Pay when it arrives — all 7 provinces" />
-          <Trust icon={Truck} title="Free delivery over NPR 1,500" sub="Same-day inside the Valley" />
-          <Trust icon={Package} title="Carefully packed & delivered" sub="Wrapped well and shipped safely" />
+        <div className="mx-auto max-w-[1600px] px-6 py-3 sm:px-8 lg:px-16 xl:px-24">
+          <div className="flex gap-5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible [&::-webkit-scrollbar]:hidden">
+            <Trust icon={Banknote} title="Cash on Delivery" sub="Pay when it arrives — all 7 provinces" />
+            <Trust icon={Truck} title="Free delivery over NPR 1,500" sub="Same-day inside the Valley" />
+            <Trust icon={Package} title="Carefully packed & delivered" sub="Wrapped well and shipped safely" />
+          </div>
         </div>
       </section>
 
@@ -104,7 +108,7 @@ export default async function HomePage() {
         </section>
       )}
 
-      {data ? (
+      {data && (data.bestsellers.length || data.newArrivals.length || data.featured.length) ? (
         <>
           <BookRail title="Bestsellers" books={data.bestsellers} href="/books?sort=popular" />
           <BookRail title="New arrivals" books={data.newArrivals} href="/books?sort=newest" />
@@ -114,7 +118,7 @@ export default async function HomePage() {
         <section className="mx-auto max-w-[1600px] px-6 py-20 text-center sm:px-8 lg:px-16 xl:px-24">
           <h2 className="font-display text-2xl text-text">The shelves are being restocked.</h2>
           <p className="mt-3 font-body text-muted">
-            We couldn’t reach the catalogue just now — give it a moment, or{" "}
+            Nothing to show here just yet — give it a moment, or{" "}
             <Link href="/books" className="text-accent underline-offset-4 hover:underline">browse all books</Link>.
           </p>
         </section>
@@ -125,7 +129,7 @@ export default async function HomePage() {
 
 function Trust({ icon: Icon, title, sub }: { icon: typeof Truck; title: string; sub: string }) {
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex shrink-0 items-center gap-3 whitespace-nowrap sm:whitespace-normal">
       <Icon className="size-5 shrink-0 text-accent" />
       <div>
         <p className="font-data text-sm font-medium text-text">{title}</p>
