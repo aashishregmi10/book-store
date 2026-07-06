@@ -55,8 +55,6 @@ const bookSchema = new mongoose.Schema(
     tags: [{ type: String, trim: true }],
     relatedSlugs: [{ type: String }], // same-silo only
 
-    condition: { type: String, enum: ['new', 'used'], default: 'new' },
-
     price: { type: Number, required: true, min: 0 }, // NPR, integer rupees
     comparePrice: { type: Number, min: 0 },
     costPrice: { type: Number, min: 0, select: false }, // admin-only margin data

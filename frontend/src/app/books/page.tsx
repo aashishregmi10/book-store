@@ -15,7 +15,7 @@ const DEFAULT_SORT = "popular";
 
 const FILTER_PARAMS = [
   "q", "genre", "language", "format", "year", "page", "sort",
-  "minPrice", "maxPrice", "minRating", "condition", "author", "publisher",
+  "minPrice", "maxPrice", "minRating", "author", "publisher",
 ];
 
 // Filtered/sorted/paged catalogue views are consolidated to the clean /books
@@ -57,7 +57,6 @@ export default async function BooksPage({
         minPrice: sp.minPrice,
         maxPrice: sp.maxPrice,
         minRating: sp.minRating,
-        condition: sp.condition,
         author: sp.author,
         publisher: sp.publisher,
         page: sp.page,
@@ -80,7 +79,7 @@ export default async function BooksPage({
   for (const [k, v] of Object.entries({
     search: sp.q, genre: sp.genre, language: sp.language, format: sp.format,
     year: sp.year, minPrice: sp.minPrice, maxPrice: sp.maxPrice, minRating: sp.minRating,
-    condition: sp.condition, author: sp.author, publisher: sp.publisher,
+    author: sp.author, publisher: sp.publisher,
   })) if (v) apiParams[k] = v;
   // Address-bar query (for the crawlable "load more" href), minus page.
   const urlQuery = Object.entries(sp)

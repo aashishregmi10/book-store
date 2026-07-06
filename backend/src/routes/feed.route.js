@@ -33,7 +33,7 @@ function buildItem(b) {
       <g:price>${listPrice}.00 NPR</g:price>
       ${salePrice}
       <g:brand>${esc(b.specifications?.publisher || 'PageTurn Nepal')}</g:brand>
-      <g:condition>${b.condition === 'used' ? 'used' : 'new'}</g:condition>
+      <g:condition>new</g:condition>
       ${idTag}
       <g:google_product_category>${BOOKS_CATEGORY}</g:google_product_category>
       <g:product_type>${esc(b.genre)}</g:product_type>
@@ -46,7 +46,7 @@ router.get('/products.xml', async (_req, res, next) => {
   try {
     const xml = await withCache('product_feed', 3600, async () => {
       const books = await Book.find({ isActive: true })
-        .select('slug title author description price comparePrice stockStatus coverImage isbn condition specifications genre')
+        .select('slug title author description price comparePrice stockStatus coverImage isbn specifications genre')
         .limit(50000)
         .lean();
       const items = books.map(buildItem).join('');

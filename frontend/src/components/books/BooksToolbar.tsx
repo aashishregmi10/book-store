@@ -13,7 +13,7 @@ const SORTS: [string, string][] = [
 
 const MULTI_KEYS = ["genre", "language", "format", "year"] as const;
 // Every filter key the toolbar can clear.
-const ALL_KEYS = [...MULTI_KEYS, "q", "minPrice", "maxPrice", "minRating", "condition", "author", "publisher"];
+const ALL_KEYS = [...MULTI_KEYS, "q", "minPrice", "maxPrice", "minRating", "author", "publisher"];
 
 type Chip = { id: string; kind: "multi" | "single" | "price" | "q"; key: string; value: string; label: string };
 
@@ -33,8 +33,6 @@ export function BooksToolbar({ genres, total }: { genres: { slug: string; name: 
   }
   const minRating = sp.get("minRating");
   if (minRating) chips.push({ id: "minRating", kind: "single", key: "minRating", value: minRating, label: `${minRating}★ & up` });
-  const condition = sp.get("condition");
-  if (condition) chips.push({ id: "condition", kind: "single", key: "condition", value: condition, label: condition === "new" ? "New" : "Used" });
   const author = sp.get("author");
   if (author) chips.push({ id: "author", kind: "single", key: "author", value: author, label: author });
   const publisher = sp.get("publisher");

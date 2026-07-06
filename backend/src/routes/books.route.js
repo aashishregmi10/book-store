@@ -16,7 +16,7 @@ const { ok, created, fail } = require('../utils/apiResponse');
 
 const router = express.Router();
 
-const LIST_FIELDS = 'slug title author price comparePrice coverImage avgRating reviewCount stockStatus stock genre condition isBestseller isNewArrival variants';
+const LIST_FIELDS = 'slug title author price comparePrice coverImage avgRating reviewCount stockStatus stock genre isBestseller isNewArrival variants';
 
 const SORTS = {
   popular: { soldCount: -1 },
@@ -70,7 +70,6 @@ router.get(
         if (genres.length === 1) filter.genre = genres[0];
         else if (genres.length > 1) filter.genre = { $in: genres };
       }
-      if (req.query.condition) filter.condition = req.query.condition;
       // Category section (manga / kids / loksewa).
       if (req.query.category) filter.category = String(req.query.category).toLowerCase();
 
@@ -120,7 +119,7 @@ router.get(
 
       // Cache each distinct query for 60s (busted on admin book mutations via
       // `books_list:*`). The count runs only on a cache miss.
-      const key = `books_list:${page}:${limit}:${req.query.sort || 'newest'}:${req.query.genre || ''}:${req.query.category || ''}:${req.query.condition || ''}:${req.query.format || ''}:${req.query.language || ''}:${req.query.year || ''}:${req.query.minPrice || ''}:${req.query.maxPrice || ''}:${req.query.minRating || ''}:${req.query.author || ''}:${req.query.publisher || ''}:${req.query.search || ''}`;
+      const key = `books_list:${page}:${limit}:${req.query.sort || 'newest'}:${req.query.genre || ''}:${req.query.category || ''}:${req.query.format || ''}:${req.query.language || ''}:${req.query.year || ''}:${req.query.minPrice || ''}:${req.query.maxPrice || ''}:${req.query.minRating || ''}:${req.query.author || ''}:${req.query.publisher || ''}:${req.query.search || ''}`;
       const data = await withCache(key, 60, async () => {
         const [items, total] = await Promise.all([
           Book.find(filter).select(LIST_FIELDS).sort(sort).skip((page - 1) * limit).limit(limit).lean(),
@@ -190,7 +189,6 @@ router.get('/filters/metadata', async (_req, res, next) => {
       return {
         genres,
         priceRange: priceRange[0] ? { min: priceRange[0].min, max: priceRange[0].max } : { min: 0, max: 0 },
-        conditions: ['new', 'used'],
         authors: authors.map((a) => a._id),
         publishers: publishers.map((p) => p._id),
         sorts: Object.keys(SORTS),

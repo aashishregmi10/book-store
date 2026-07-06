@@ -579,7 +579,7 @@ router.put('/books/:slug', validate({ params: slugParams }), async (req, res, ne
     // images were removed once the new values are saved.
     const prevPublicIds = [book.coverImage?.publicId, ...(book.images || []).map((i) => i.publicId)];
     // Whitelist updatable fields.
-    const fields = ['title', 'author', 'isbn', 'genre', 'category', 'subgenre', 'tags', 'condition', 'price', 'comparePrice', 'costPrice', 'stock', 'stockStatus', 'reorderPoint', 'coverImage', 'images', 'description', 'shortDescription', 'specifications', 'variants', 'includedTitles', 'metaTitle', 'metaDescription', 'isBestseller', 'isNewArrival', 'isFeatured', 'isStaffPick', 'staffPickNote', 'isActive'];
+    const fields = ['title', 'author', 'isbn', 'genre', 'category', 'subgenre', 'tags', 'price', 'comparePrice', 'costPrice', 'stock', 'stockStatus', 'reorderPoint', 'coverImage', 'images', 'description', 'shortDescription', 'specifications', 'variants', 'includedTitles', 'metaTitle', 'metaDescription', 'isBestseller', 'isNewArrival', 'isFeatured', 'isStaffPick', 'staffPickNote', 'isActive'];
     for (const f of fields) if (f in req.body) book[f] = req.body[f];
     if ('category' in req.body) book.category = req.body.category || null; // '' → no section
     if ('genre' in req.body) book.genre = req.body.genre ? slugify(req.body.genre) : undefined;

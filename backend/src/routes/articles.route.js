@@ -11,7 +11,7 @@ const { ok, fail } = require('../utils/apiResponse');
 const router = express.Router();
 
 const LIST = 'slug title excerpt coverImage author category tags publishedAt readingTime';
-const BOOK_FIELDS = 'slug title author price comparePrice coverImage avgRating reviewCount stockStatus genre condition isBestseller isNewArrival';
+const BOOK_FIELDS = 'slug title author price comparePrice coverImage avgRating reviewCount stockStatus genre isBestseller isNewArrival';
 
 const pageQuery = z.object({ page: intQuery({ min: 1 }).optional(), limit: intQuery({ min: 1, max: 50 }).optional() });
 const slugParams = z.object({ slug: trimmedString() });

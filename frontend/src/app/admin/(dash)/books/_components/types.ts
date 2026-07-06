@@ -61,7 +61,6 @@ export interface AdminBook {
   images?: BookImage[];
   description: string;
   isbn?: string;
-  condition?: string;
   specifications?: Partial<BookSpecifications>;
   isActive: boolean;
   isFeatured?: boolean;
@@ -99,7 +98,6 @@ export interface BookFormValues {
   coverImage: BookImage | null;
   images: BookImage[];
   description: string;
-  condition: string;
   specifications: BookSpecifications;
   variants: BookVariantInput[];
   isActive: boolean;
@@ -154,7 +152,6 @@ export const EMPTY_BOOK: BookFormValues = {
   coverImage: null,
   images: [],
   description: "",
-  condition: "new",
   specifications: { ...EMPTY_SPECIFICATIONS },
   variants: [],
   isActive: true,

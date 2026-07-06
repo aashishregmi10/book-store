@@ -74,7 +74,6 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
     ["Language", book.specifications?.language],
     ["Publisher", book.specifications?.publisher],
     ["ISBN", book.isbn],
-    ["Condition", book.condition === "used" ? "Used" : "New"],
   ];
 
   return (

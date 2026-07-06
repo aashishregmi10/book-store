@@ -186,15 +186,6 @@ export function BookForm({
                 hint={genres.length ? "Optional if you pick a Section below." : "Add genres under Genres →"}
               />
               <Select
-                label="Condition"
-                value={form.condition}
-                onChange={(v) => set("condition", v)}
-                options={[
-                  { value: "new", label: "New" },
-                  { value: "used", label: "Used" },
-                ]}
-              />
-              <Select
                 label="Section (Manga / Kids / Loksewa)"
                 value={form.category}
                 onChange={(v) => set("category", v)}

@@ -145,7 +145,7 @@ export function bookLd(book: BookDetail, reviews: ReviewData[] = []) {
       price: String(book.price),
       priceValidUntil: validUntil,
       availability: inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-      itemCondition: book.condition === "used" ? "https://schema.org/UsedCondition" : "https://schema.org/NewCondition",
+      itemCondition: "https://schema.org/NewCondition", // the store only ever carries new copies
       seller: { "@id": `${SITE.url}/#organization` },
       shippingDetails: shippingDetails(book.price),
       hasMerchantReturnPolicy: returnPolicy,

@@ -11,7 +11,7 @@ const { ok, fail } = require('../utils/apiResponse');
 
 const router = express.Router();
 
-const LIST_FIELDS = 'slug title author price comparePrice coverImage avgRating reviewCount stockStatus genre condition isBestseller isNewArrival';
+const LIST_FIELDS = 'slug title author price comparePrice coverImage avgRating reviewCount stockStatus genre isBestseller isNewArrival';
 
 const SORTS = {
   popular: { soldCount: -1 },

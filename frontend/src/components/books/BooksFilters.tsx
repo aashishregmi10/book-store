@@ -28,11 +28,6 @@ const RATINGS: Option[] = [
   { value: "2", label: "2★ & up" },
 ];
 
-const CONDITIONS: Option[] = [
-  { value: "new", label: "New" },
-  { value: "used", label: "Used" },
-];
-
 // Multi-select (comma-joined) keys vs. single-value keys.
 const MULTI_KEYS = ["genre", "language", "format"] as const;
 
@@ -96,7 +91,7 @@ export function BooksFilters({
   }
 
   // Single-select toggle (one value; clicking the active one clears it). Used for
-  // rating, condition, author, publisher — the last two can contain commas.
+  // rating, author, publisher — the last two can contain commas.
   function setSingle(key: string, value: string) {
     const params = new URLSearchParams(sp.toString());
     if (sp.get(key) === value) params.delete(key);
@@ -124,7 +119,7 @@ export function BooksFilters({
 
   function clearAll() {
     const params = new URLSearchParams(sp.toString());
-    [...MULTI_KEYS, "minPrice", "maxPrice", "minRating", "condition", "author", "publisher"].forEach((k) =>
+    [...MULTI_KEYS, "minPrice", "maxPrice", "minRating", "author", "publisher"].forEach((k) =>
       params.delete(k)
     );
     setPriceMin("");
@@ -136,7 +131,6 @@ export function BooksFilters({
     MULTI_KEYS.reduce((n, k) => n + selected(k).size, 0) +
     (sp.get("minPrice") || sp.get("maxPrice") ? 1 : 0) +
     (sp.get("minRating") ? 1 : 0) +
-    (sp.get("condition") ? 1 : 0) +
     (sp.get("author") ? 1 : 0) +
     (sp.get("publisher") ? 1 : 0);
 
@@ -222,12 +216,6 @@ export function BooksFilters({
         <Section title="Rating">
           {RATINGS.map((o) => (
             <Check key={o.value} label={o.label} checked={sp.get("minRating") === o.value} onChange={() => setSingle("minRating", o.value)} />
-          ))}
-        </Section>
-
-        <Section title="Condition">
-          {CONDITIONS.map((o) => (
-            <Check key={o.value} label={o.label} checked={sp.get("condition") === o.value} onChange={() => setSingle("condition", o.value)} />
           ))}
         </Section>
 

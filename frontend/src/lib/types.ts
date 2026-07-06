@@ -37,7 +37,6 @@ export interface BookCardData {
   stock?: number; // remaining units — drives the "Only N left" urgency badge
   genre: string;
   category?: "manga" | "kids" | "loksewa" | null;
-  condition?: "new" | "used";
   isBestseller?: boolean;
   isNewArrival?: boolean;
   variants?: BookVariant[]; // present (length > 0) when the title has formats

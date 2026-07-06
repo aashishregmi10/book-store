@@ -141,7 +141,6 @@ export default function BookDetail() {
 
           <dl className="mt-6 max-w-xl border-t border-border pt-5">
             <Row label="Genre" value={book.genre} />
-            <Row label="Condition" value={book.condition || "—"} />
             <Row label="ISBN" value={book.isbn || "—"} mono />
             <Row label="Slug" value={book.slug} mono />
           </dl>

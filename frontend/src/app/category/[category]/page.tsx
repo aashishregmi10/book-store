@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 // Filters relevant to a fixed section page (genre is excluded — the section IS
 // the silo; author/publisher omitted to keep it focused).
-const FILTER_KEYS = ["language", "format", "year", "minPrice", "maxPrice", "minRating", "condition", "sort", "page"] as const;
+const FILTER_KEYS = ["language", "format", "year", "minPrice", "maxPrice", "minRating", "sort", "page"] as const;
 
 // The browse sections (separate from the literary genre silo). Slugs match the
 // backend Book.category enum.
@@ -60,7 +60,6 @@ async function getBooks(slug: Slug, sp: SP) {
       minPrice: sp.minPrice,
       maxPrice: sp.maxPrice,
       minRating: sp.minRating,
-      condition: sp.condition,
       limit: 25,
     },
   }).catch(() => null);
@@ -111,7 +110,7 @@ export default async function CategoryPage({
   const apiParams: Record<string, string> = { category, sort };
   for (const [k, v] of Object.entries({
     language: sp.language, format: sp.format, year: sp.year,
-    minPrice: sp.minPrice, maxPrice: sp.maxPrice, minRating: sp.minRating, condition: sp.condition,
+    minPrice: sp.minPrice, maxPrice: sp.maxPrice, minRating: sp.minRating,
   })) if (v) apiParams[k] = v;
   // Address-bar query (for the crawlable "load more" href), minus page.
   const urlQuery = Object.entries(sp)
