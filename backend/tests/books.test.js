@@ -128,10 +128,16 @@ describe('Auxiliary book endpoints', () => {
     expect(res.body.data.genres.length).toBe(2);
   });
 
-  it('featured/books returns the three rails', async () => {
+  it('featured/books returns the three rails, topped up from the wider catalogue when curated picks are short', async () => {
     const res = await request(app).get('/api/books/featured/books');
     expect(res.body.data.featured.map((b) => b.slug)).toContain('atomic-habits');
-    expect(res.body.data.bestsellers.length).toBe(2);
+    // Only 2 books are curated as bestsellers, but the whole catalogue here is
+    // just 4 books (under the fallback's minimum rail size), so the rail tops
+    // itself up with the rest rather than staying stuck at 2.
+    expect(res.body.data.bestsellers).toHaveLength(4);
+    expect(res.body.data.bestsellers.map((b) => b.slug)).toEqual(
+      expect.arrayContaining(['atomic-habits', 'the-alchemist'])
+    );
     expect(res.body.data.newArrivals.map((b) => b.slug)).toContain('deep-work');
   });
 });
