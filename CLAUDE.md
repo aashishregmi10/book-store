@@ -28,10 +28,8 @@ Nepal's online bookstore. **MERN**: Express 5 + Mongoose 9 API (`/backend`), Nex
 Dominant warm neutrals with sharp forest-green accents. Commit to the palette — no timid, evenly-distributed greys.
 
 ### Typography (load via `next/font/google`, never inline `<link>`)
-- **Headings**: Cormorant Garamond (literary display serif)
-- **Body**: Source Serif 4
+- **Headings + body**: Montserrat
 - **Prices / ISBN / data / monospace**: JetBrains Mono
-- **Inter / Roboto / Arial are BANNED.** They make a bookstore look like a SaaS dashboard.
 
 ### Hard prohibitions (these scream "AI default")
 - ❌ NO purple or blue gradients (especially on white)
@@ -42,7 +40,7 @@ Dominant warm neutrals with sharp forest-green accents. Commit to the palette �
 - ❌ NO three-equal-cards-with-icons feature row
 
 ### Components
-- **Book cards** feel like book jackets, not product tiles: cover-forward, serif title, author in small-caps/muted, price in JetBrains Mono.
+- **Book cards** feel like book jackets, not product tiles: cover-forward, author in small-caps/muted, price in JetBrains Mono.
 - **Cart** reads like a librarian's checkout slip — minimal, monospace prices.
 - **Buttons**: solid `--accent` fill or ghost; restrained radii; no pill gradients.
 - Every book card carries a wishlist heart (top-right), on every surface (home, genre, search, related, account).
