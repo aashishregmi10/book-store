@@ -43,12 +43,16 @@ const isSection = (s: string): s is Slug => s in SECTIONS;
 
 type SP = Record<string, string | undefined>;
 
+// Most-sold-first by default (real Daraz demand data backs soldCount), not
+// "newest" — a category shelf should lead with what actually sells.
+const DEFAULT_SORT = "popular";
+
 async function getBooks(slug: Slug, sp: SP) {
   return apiGet<Paged<BookCardData>>("/books", {
     tags: ["books"],
     searchParams: {
       category: slug,
-      sort: sp.sort,
+      sort: sp.sort || DEFAULT_SORT,
       page: sp.page,
       language: sp.language,
       format: sp.format,
@@ -92,7 +96,7 @@ export default async function CategoryPage({
   const { category } = await params;
   if (!isSection(category)) notFound();
   const sp = await searchParams;
-  const sort = sp.sort;
+  const sort = sp.sort || DEFAULT_SORT;
   const page = Number(sp.page) || 1;
 
   const data = await getBooks(category, sp);
@@ -101,10 +105,12 @@ export default async function CategoryPage({
   const pages = data?.pages ?? 1;
   const s = SECTIONS[category];
 
-  // Params the client re-sends to GET /books when loading more (no page).
-  const apiParams: Record<string, string> = { category };
+  // Params the client re-sends to GET /books when loading more (no page) —
+  // include the resolved default sort so page 2+ stays in the same order as
+  // page 1 instead of silently reverting to the API's own default.
+  const apiParams: Record<string, string> = { category, sort };
   for (const [k, v] of Object.entries({
-    sort: sp.sort, language: sp.language, format: sp.format, year: sp.year,
+    language: sp.language, format: sp.format, year: sp.year,
     minPrice: sp.minPrice, maxPrice: sp.maxPrice, minRating: sp.minRating, condition: sp.condition,
   })) if (v) apiParams[k] = v;
   // Address-bar query (for the crawlable "load more" href), minus page.
