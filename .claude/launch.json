@@ -1,0 +1,47 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ns-frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "D:/learning-platform/frontend", "run", "dev"],
+      "port": 3000,
+      "autoPort": false
+    },
+    {
+      "name": "lp2-frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "D:/learning-platform-2/frontend", "run", "dev", "--", "--port", "5180", "--strictPort"],
+      "port": 5180,
+      "autoPort": false
+    },
+    {
+      "name": "lp2-backend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "D:/learning-platform-2/backend", "run", "dev"],
+      "port": 5000,
+      "autoPort": false
+    },
+    {
+      "name": "pawmart-frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "D:/pawmart/frontend", "run", "dev", "--", "--port", "3010"],
+      "port": 3010,
+      "autoPort": false
+    },
+    {
+      "name": "pageturn-backend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "D:/pageturn-nepal/backend", "run", "dev"],
+      "port": 5000,
+      "autoPort": false
+    },
+    {
+      "name": "pageturn-frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "D:/pageturn-nepal/frontend", "run", "dev"],
+      "port": 3000,
+      "autoPort": false
+    }
+  ]
+}
