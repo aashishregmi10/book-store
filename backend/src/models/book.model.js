@@ -127,6 +127,19 @@ bookSchema.index({ isActive: 1, genre: 1, soldCount: -1 });
 // Category section page (newest within a section).
 bookSchema.index({ isActive: 1, category: 1, createdAt: -1 });
 
+/**
+ * At or below this many copies a title counts as low stock.
+ *
+ * The shop carries a standing 2 copies of every title, so the old threshold of
+ * 3 would have marked the entire catalogue low-stock — drowning the admin's
+ * low-stock alert in 2,000+ entries and making it useless. At a baseline of 2,
+ * "low" means genuinely one copy left.
+ *
+ * This is an internal signal only: no public page surfaces low-stock, because
+ * a scarcity notice true of every title is just noise.
+ */
+const LOW_STOCK_AT = 1;
+
 // Keep top-level price/stock in sync with variants, then derive stockStatus.
 // With variants, top-level price = cheapest variant ("from NPR X") and stock =
 // sum of variant stock — so catalogue queries, sorting and indexes are unchanged.
@@ -138,7 +151,7 @@ bookSchema.pre('validate', function deriveStockAndStatus() {
   }
   if (this.stockStatus !== 'discontinued') {
     if (this.stock === 0) this.stockStatus = 'out-of-stock';
-    else if (this.stock <= 3) this.stockStatus = 'low-stock';
+    else if (this.stock <= LOW_STOCK_AT) this.stockStatus = 'low-stock';
     else this.stockStatus = 'in-stock';
   }
 });

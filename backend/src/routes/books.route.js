@@ -7,9 +7,11 @@ const Genre = require('../models/genre.model');
 const Review = require('../models/review.model');
 const Question = require('../models/question.model');
 const Order = require('../models/order.model');
+const User = require('../models/user.model');
+const RestockRequest = require('../models/restockRequest.model');
 const { validate } = require('../middleware/validate');
-const { authenticate } = require('../middleware/auth');
-const { z, trimmedString, intQuery } = require('../utils/zod');
+const { authenticate, optionalAuth } = require('../middleware/auth');
+const { z, trimmedString, intQuery, email: emailSchema } = require('../utils/zod');
 const { withCache } = require('../utils/cache');
 const { cacheDel } = require('../config/redis');
 const { ok, created, fail } = require('../utils/apiResponse');
@@ -424,6 +426,56 @@ router.post(
       if (!book) return fail(res, 'Book not found', 404, [{ code: 'NOT_FOUND' }]);
       await Question.create({ book: book._id, user: req.userId, question: req.body.question });
       return created(res, null, "Thanks — we'll answer your question soon.");
+    } catch (err) {
+      return next(err);
+    }
+  }
+);
+
+// ── POST /api/books/:slug/restock-request — "tell me when it's back" ──
+// Open to guests: the person most likely to want this is someone who just hit
+// a sold-out page, and forcing a sign-up there loses the demand signal. Signed-in
+// callers don't have to retype their address.
+const restockBody = z.object({ email: emailSchema().optional() });
+
+router.post(
+  '/:slug/restock-request',
+  optionalAuth,
+  validate({ params: slugParams, body: restockBody }),
+  async (req, res, next) => {
+    try {
+      const book = await Book.findOne({ slug: String(req.params.slug).toLowerCase(), isActive: true })
+        .select('_id title slug stock stockStatus');
+      if (!book) return fail(res, 'Book not found', 404, [{ code: 'NOT_FOUND' }]);
+
+      // Only meaningful for something actually unavailable — accepting these
+      // for in-stock titles would pollute the reorder list.
+      const soldOut = book.stock === 0 || ['out-of-stock', 'discontinued'].includes(book.stockStatus);
+      if (!soldOut) return fail(res, 'This book is in stock', 400, [{ code: 'IN_STOCK' }]);
+
+      let addr = req.body.email;
+      if (!addr && req.userId) {
+        const u = await User.findById(req.userId).select('email');
+        addr = u?.email;
+      }
+      if (!addr) return fail(res, 'An email address is required', 400, [{ field: 'email', code: 'REQUIRED' }]);
+
+      // Upsert, so clicking twice is idempotent rather than a duplicate-key error.
+      await RestockRequest.updateOne(
+        { book: book._id, email: String(addr).toLowerCase() },
+        {
+          $setOnInsert: {
+            book: book._id,
+            bookTitle: book.title,
+            bookSlug: book.slug,
+            user: req.userId || null,
+            email: String(addr).toLowerCase(),
+          },
+        },
+        { upsert: true }
+      );
+
+      return created(res, null, "Noted — we'll email you when it's back in stock.");
     } catch (err) {
       return next(err);
     }

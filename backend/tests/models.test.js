@@ -68,9 +68,13 @@ describe("Book model", () => {
     description: "A book about habits and systems.",
   };
 
+  // The shop carries a standing 2 copies of every title, so "low stock" means
+  // one copy left — not the old threshold of 3, which would have flagged the
+  // entire catalogue. See LOW_STOCK_AT in book.model.js.
   it.each([
     [0, "out-of-stock"],
-    [2, "low-stock"],
+    [1, "low-stock"],
+    [2, "in-stock"],
     [50, "in-stock"],
   ])("derives stockStatus for stock=%i → %s", async (stock, expected) => {
     const book = await Book.create({

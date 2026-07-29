@@ -163,11 +163,12 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
                   )}
                 </div>
 
+                {/* Every title is stocked at a fixed 2 copies, so "only a few
+                    left" would be true of the whole catalogue and read as a
+                    fake-urgency tactic. In stock or not, nothing in between. */}
                 <p className="mt-2 font-data text-sm">
                   {soldOut ? (
                     <span className="text-sale">Currently out of stock</span>
-                  ) : book.stockStatus === "low-stock" ? (
-                    <span className="text-sale">Only a few left — order soon</span>
                   ) : (
                     <span className="text-accent">In stock · ships today from Kathmandu</span>
                   )}

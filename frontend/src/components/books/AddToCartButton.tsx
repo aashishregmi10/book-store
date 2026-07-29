@@ -3,7 +3,14 @@
 import { useState } from "react";
 import { ShoppingBag, Check } from "lucide-react";
 import { useCart, type CartItem } from "@/lib/stores/cart";
+import { RestockRequestButton } from "./RestockRequestButton";
 
+/**
+ * `disabled` means sold out — it is the only thing any caller passes it for.
+ * Rather than render a dead button, the sold-out state swaps in the restock
+ * request, so every surface that shows Add to cart (grid card, detail page,
+ * format picker, mobile buy bar) gets the fallback without repeating it.
+ */
 export function AddToCartButton({
   book,
   disabled,
@@ -32,11 +39,7 @@ export function AddToCartButton({
   } ${className}`;
 
   if (disabled) {
-    return (
-      <button disabled className={`${base} border border-border bg-bg text-muted`}>
-        Out of stock
-      </button>
-    );
+    return <RestockRequestButton slug={book.slug} full={full} size={size} className={className} />;
   }
 
   return (

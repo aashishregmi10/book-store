@@ -56,11 +56,11 @@ export function FormatPicker({ book }: { book: BookDetail }) {
         })}
       </div>
 
+      {/* No low-stock tier — see the note on the book detail page: with a fixed
+          2 copies per title it would apply to everything. */}
       <p className="mt-3 font-data text-sm">
         {soldOut ? (
           <span className="text-sale">This format is out of stock</span>
-        ) : v.stock <= 3 ? (
-          <span className="text-sale">Only a few left — order soon</span>
         ) : (
           <span className="text-accent">In stock · ships today from Kathmandu</span>
         )}

@@ -63,7 +63,9 @@ describe('Admin books CRUD', () => {
     expect(create.body.data.genre).toBe('self-help'); // slugified
 
     const slug = create.body.data.slug;
-    const upd = await request(app).put(`/api/admin/books/${slug}`).set(auth(adminToken)).send({ stock: 2 });
+    // 1 copy, not 2 — 2 is the shop's standing stock level and reads as
+    // in-stock (LOW_STOCK_AT in book.model.js).
+    const upd = await request(app).put(`/api/admin/books/${slug}`).set(auth(adminToken)).send({ stock: 1 });
     expect(upd.body.data.stockStatus).toBe('low-stock');
 
     const del = await request(app).delete(`/api/admin/books/${create.body.data._id}`).set(auth(adminToken));

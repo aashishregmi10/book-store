@@ -38,11 +38,9 @@ export function BookCard({ book }: { book: BookCardData }) {
               sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 200px"
               className="object-cover transition duration-500 group-hover:scale-[1.03]"
             />
-            {book.stockStatus === "low-stock" && !soldOut && (
-              <span className="absolute inset-x-0 bottom-0 bg-text/75 px-2 py-1 text-center font-data text-[11px] text-white">
-                {book.stock && book.stock > 0 ? `Only ${book.stock} left` : "Only a few left"}
-              </span>
-            )}
+            {/* No "only N left" badge: the shop stocks a fixed 2 copies of
+                every title, so a scarcity badge would sit on the entire
+                catalogue and mean nothing. Only genuine sold-out is shown. */}
             {soldOut && (
               <span className="absolute inset-x-0 bottom-0 bg-text/80 px-2 py-1 text-center font-data text-[11px] text-white">
                 Out of stock
