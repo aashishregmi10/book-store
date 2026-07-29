@@ -68,7 +68,19 @@ router.post(
   async (req, res, next) => {
     try {
       const { email: emailAddr, password, fullName, referralCode } = req.body;
-      if (await User.exists({ email: emailAddr })) {
+      const existing = await User.findOne({ email: emailAddr }).select('googleId');
+      if (existing) {
+        // Signing up again with the email you already used via Google is the
+        // most common way people arrive here — point them at the right button
+        // instead of a flat duplicate error.
+        if (existing.googleId) {
+          return fail(
+            res,
+            'This email already has an account created through Google — use “Continue with Google” to sign in.',
+            409,
+            [{ field: 'email', code: 'GOOGLE_ONLY_ACCOUNT' }]
+          );
+        }
         return fail(res, 'Email already registered', 409, [{ field: 'email', code: 'DUPLICATE' }]);
       }
 
@@ -160,6 +172,23 @@ router.post(
     try {
       const user = await User.findOne({ email: req.body.email }).select('+password +refreshTokens');
       if (!user || !(await user.comparePassword(req.body.password))) {
+        // An account created through Google has no password at all
+        // (user.model.js comparePassword returns false when it's unset), so
+        // every attempt here fails as "Invalid credentials" and the person has
+        // no way to work out why. Name the actual problem.
+        //
+        // Yes, this confirms the address is registered — but /register already
+        // answers 409 for a known email, so enumeration is possible regardless,
+        // and the cost of leaving people stuck at a wrong-looking password
+        // prompt is real.
+        if (user && !user.password && user.googleId) {
+          return fail(
+            res,
+            'This email is registered through Google. Use “Continue with Google”, or set a password first via “Forgot password”.',
+            401,
+            [{ field: 'email', code: 'GOOGLE_ONLY_ACCOUNT' }]
+          );
+        }
         return fail(res, 'Invalid credentials', 401, [{ code: 'INVALID_CREDENTIALS' }]);
       }
       if (user.isBanned) return fail(res, 'Account suspended. Contact support.', 403, [{ code: 'BANNED' }]);

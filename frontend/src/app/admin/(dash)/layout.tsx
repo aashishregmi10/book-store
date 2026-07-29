@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, BookText, Tags, Newspaper, Package, Users, Star, Heart, MessageCircleQuestion, Store, LogOut } from "lucide-react";
 import { useAuth } from "@/lib/stores/auth";
 import { clientApi } from "@/lib/client-api";
+import { ADMIN_LOGIN_PATH } from "@/lib/admin";
 
 const NAV = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
@@ -28,13 +29,13 @@ export default function AdminDashLayout({ children }: { children: React.ReactNod
   const clear = useAuth((s) => s.clear);
 
   useEffect(() => {
-    if (hydrated && (!token || !user?.isAdmin)) router.replace("/admin/login");
+    if (hydrated && (!token || !user?.isAdmin)) router.replace(ADMIN_LOGIN_PATH);
   }, [hydrated, token, user, router]);
 
   function logout() {
     clientApi.post("/auth/logout").catch(() => {});
     clear();
-    router.replace("/admin/login");
+    router.replace(ADMIN_LOGIN_PATH);
   }
 
   // Block flash of admin content before the guard resolves.
@@ -46,7 +47,7 @@ export default function AdminDashLayout({ children }: { children: React.ReactNod
     <div className="flex min-h-screen bg-bg">
       <aside className="flex w-56 shrink-0 flex-col border-r border-border bg-surface">
         <div className="border-b border-border px-5 py-4">
-          <span className="font-display text-xl font-semibold text-text">PageTurn <span className="text-accent">Admin</span></span>
+          <span className="font-display text-xl font-semibold text-text">Books Temple <span className="text-accent">Admin</span></span>
         </div>
         <nav className="flex-1 p-3">
           {NAV.map((n) => {

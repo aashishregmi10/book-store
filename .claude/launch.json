@@ -37,10 +37,24 @@
       "autoPort": false
     },
     {
+      "name": "ipb-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "D:/international-paper-bag", "run", "dev"],
+      "port": 4321,
+      "autoPort": false
+    },
+    {
       "name": "pageturn-frontend",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "D:/pageturn-nepal/frontend", "run", "dev"],
       "port": 3000,
+      "autoPort": false
+    },
+    {
+      "name": "pageturn-frontend-prod",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "D:/pageturn-nepal/frontend", "run", "start", "--", "--port", "3001"],
+      "port": 3001,
       "autoPort": false
     }
   ]

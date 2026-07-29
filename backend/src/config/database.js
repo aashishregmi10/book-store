@@ -43,13 +43,29 @@ function ensureUsableDnsServers() {
   }
 }
 
+// Vercel sets this on every deployment. On serverless each cold invocation is
+// its own process with its own pool, so the long-lived-server tuning below is
+// actively harmful there — see the pool options in connectMongo.
+const IS_SERVERLESS = Boolean(process.env.VERCEL);
+
+// Reused across invocations. On a warm lambda the module scope survives, so a
+// second call returns the in-flight (or settled) promise instead of dialing
+// Atlas again. Also collapses concurrent callers onto one connect.
+let connectionPromise = null;
+
 /**
  * Connect to MongoDB. Resolves on success; rejects on failure so the
  * caller (server.js) can decide whether to exit. We do NOT auto-exit
  * here — tests use an in-memory server with their own connection.
+ *
+ * Idempotent: safe to call on every request path as a guard.
  */
 async function connectMongo(uri = process.env.MONGODB_URI) {
   if (!uri) throw new Error('MONGODB_URI is not set');
+
+  // 1 = connected, 2 = connecting. Either way there's nothing to do.
+  if (mongoose.connection.readyState === 1) return mongoose.connection;
+  if (connectionPromise) return connectionPromise;
 
   if (uri.startsWith('mongodb+srv://')) ensureUsableDnsServers();
 
@@ -63,16 +79,28 @@ async function connectMongo(uri = process.env.MONGODB_URI) {
   mongoose.connection.on('error', (err) => logger.error({ err: err.message }, 'MongoDB error'));
   mongoose.connection.on('disconnected', () => logger.warn('MongoDB disconnected.'));
 
-  await mongoose.connect(uri, {
-    serverSelectionTimeoutMS: 10000,
-    maxPoolSize: 20,
-    minPoolSize: 5, // keep warm connections so the first request after idle isn't slow
-  });
+  connectionPromise = mongoose
+    .connect(uri, {
+      serverSelectionTimeoutMS: 10000,
+      // On a long-lived server a warm pool makes the first request after idle
+      // fast. On serverless it does the opposite: every cold start pays for
+      // opening minPoolSize sockets (TLS handshake each) before it can answer,
+      // and N concurrent lambdas × that pool will exhaust the Atlas connection
+      // limit. One connection, opened lazily, is what a lambda actually needs.
+      maxPoolSize: IS_SERVERLESS ? 5 : 20,
+      minPoolSize: IS_SERVERLESS ? 0 : 5,
+    })
+    .then(() => mongoose.connection)
+    .catch((err) => {
+      connectionPromise = null; // let the next request retry rather than cache the failure
+      throw err;
+    });
 
-  return mongoose.connection;
+  return connectionPromise;
 }
 
 async function disconnectMongo() {
+  connectionPromise = null;
   await mongoose.connection.close();
 }
 

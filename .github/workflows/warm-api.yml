@@ -1,0 +1,47 @@
+name: Warm API
+
+# The API runs as Vercel serverless functions. A fully cold invocation was
+# measured at ~37s TTFB against ~1.8s warm, because each cold start pays for
+# module load + Mongo Atlas connect before it can answer. Pinging the cheapest
+# endpoint on a schedule keeps an instance resident so real visitors — and in
+# particular the Google sign-in token exchange — land on a warm one.
+#
+# Setup: add a repository *variable* (Settings → Secrets and variables →
+# Actions → Variables) named API_HEALTH_URL, e.g.
+#   https://<your-backend>.vercel.app/api/health
+# Without it the job exits cleanly rather than failing every 5 minutes.
+#
+# Caveat: GitHub's scheduler is best-effort and skips or delays runs when the
+# platform is busy, so this reduces cold starts rather than eliminating them.
+# An external uptime monitor (UptimeRobot, cron-job.org) is more reliable if
+# cold starts stay painful.
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+# A backed-up queue shouldn't stack pings on top of each other.
+concurrency:
+  group: warm-api
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    name: Ping /api/health
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping
+        env:
+          URL: ${{ vars.API_HEALTH_URL }}
+        run: |
+          if [ -z "$URL" ]; then
+            echo "API_HEALTH_URL is not set — skipping. See this file's header for setup."
+            exit 0
+          fi
+          code=$(curl -sS -o /dev/null -m 60 -w '%{http_code} %{time_starttransfer}s' "$URL") || {
+            echo "Ping failed (network/timeout)."
+            exit 0
+          }
+          echo "health -> $code"

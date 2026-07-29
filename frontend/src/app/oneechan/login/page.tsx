@@ -35,7 +35,7 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-sm border border-border bg-surface p-8">
         <div className="flex items-center gap-2 text-accent">
           <Lock className="size-5" />
-          <span className="font-display text-2xl font-semibold text-text">PageTurn Admin</span>
+          <span className="font-display text-2xl font-semibold text-text">Books Temple Admin</span>
         </div>
         <p className="mt-2 font-body text-sm text-muted">Sign in with an administrator account.</p>
 

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth, type AuthUser } from "@/lib/stores/auth";
 import { useAuthModal } from "@/lib/stores/authModal";
 import { clientApi, ClientApiError } from "@/lib/client-api";
+import { Spinner } from "@/components/ui/Spinner";
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 const GIS_SRC = "https://accounts.google.com/gsi/client";
@@ -37,10 +38,16 @@ export function GoogleSignInButton({ onError }: { onError?: (msg: string) => voi
   const router = useRouter();
   const setAuth = useAuth((s) => s.setAuth);
   const [ready, setReady] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   const handleCredential = useCallback(
     async (response: { credential?: string }) => {
       if (!response.credential) return;
+      // Google's popup closes the moment it hands back a credential, but the
+      // token exchange with our API can take seconds on a cold serverless
+      // start. Without this the modal just sits there looking broken and
+      // people click Google again.
+      setBusy(true);
       try {
         const data = await clientApi.post<{ user: AuthUser; accessToken: string }>("/auth/google", {
           credential: response.credential,
@@ -60,6 +67,10 @@ export function GoogleSignInButton({ onError }: { onError?: (msg: string) => voi
         else if (onAuthPage) router.push("/");
         else router.refresh();
       } catch (err) {
+        // Only clear the pending state on failure — on success the modal is
+        // already closing and a navigation is in flight, so dropping the
+        // spinner would flash the button back for a frame.
+        setBusy(false);
         onError?.(err instanceof ClientApiError ? err.message : "Google sign-in failed — try again.");
       }
     },
@@ -108,13 +119,25 @@ export function GoogleSignInButton({ onError }: { onError?: (msg: string) => voi
   // loading; show a quiet skeleton in the meantime.
   return (
     <div className="relative flex min-h-[44px] items-center justify-center">
-      {!ready && (
+      {!ready && !busy && (
         <div
           aria-hidden
           className="absolute inset-0 animate-pulse rounded-md border border-border bg-bg"
         />
       )}
-      <div ref={ref} className="flex justify-center" />
+      {/* Cover the Google button while the exchange runs: it keeps the row's
+          height, blocks a second click, and says what's actually happening. */}
+      {busy && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="absolute inset-0 z-10 flex items-center justify-center gap-2 rounded-md border border-border bg-bg font-body text-sm text-muted"
+        >
+          <Spinner className="size-4 text-accent" />
+          Signing you in…
+        </div>
+      )}
+      <div ref={ref} className={`flex justify-center ${busy ? "pointer-events-none opacity-0" : ""}`} />
     </div>
   );
 }
