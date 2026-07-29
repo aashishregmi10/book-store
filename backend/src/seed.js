@@ -17,7 +17,7 @@ const GENRES = [
     name: "Self-Help",
     color: "#2D5A3D",
     description:
-      "PageTurn Nepal stocks the top-rated self-help and personal-development titles available across Nepal — from habit-building to deep focus — with NPR pricing and Kathmandu delivery in 1–2 days.",
+      "Books Temple Nepal stocks the top-rated self-help and personal-development titles available across Nepal — from habit-building to deep focus — with NPR pricing and Kathmandu delivery in 1–2 days.",
     metaTitle: "Best Self-Help Books in Nepal",
     metaDesc:
       "Buy bestselling self-help books online in Nepal. Fast delivery, NPR prices, cash on delivery.",
@@ -43,12 +43,12 @@ const GENRES = [
       "Buy Nepali literature and novels online in Nepal. Works by leading Nepali authors, delivered nationwide.",
   },
   {
-    slug: "business",
-    name: "Business",
+    slug: "business-economics",
+    name: "Business & Economics",
     color: "#2F4A5A",
     description:
       "Sharp, practical business and economics reading — strategy, money, and big ideas — curated for Nepali readers and entrepreneurs.",
-    metaTitle: "Business Books in Nepal",
+    metaTitle: "Business & Economics Books in Nepal",
     metaDesc:
       "Buy business and economics books online in Nepal. Strategy, finance and entrepreneurship titles.",
   },
@@ -133,7 +133,7 @@ const BOOKS = [
     title: "Sapiens: A Brief History of Humankind",
     author: "Yuval Noah Harari",
     isbn: "9780099590088",
-    genre: "business",
+    genre: "business-economics",
     price: 1190,
     comparePrice: 1400,
     stock: 22,
@@ -149,7 +149,7 @@ const BOOKS = [
     title: "Thinking, Fast and Slow",
     author: "Daniel Kahneman",
     isbn: "9780141033570",
-    genre: "business",
+    genre: "business-economics",
     price: 980,
     stock: 14,
     soldCount: 75,
@@ -190,7 +190,7 @@ async function seed() {
         secureUrl: cover(b.isbn),
         name: b.title,
       },
-      description: `${b.title} by ${b.author}. ${GENRES.find((g) => g.slug === b.genre)?.name} — in stock now at PageTurn Nepal with cash-on-delivery across all seven provinces.`,
+      description: `${b.title} by ${b.author}. ${GENRES.find((g) => g.slug === b.genre)?.name} — in stock now at Books Temple Nepal with cash-on-delivery across all seven provinces.`,
       isActive: true,
     })),
   );
@@ -205,14 +205,14 @@ async function seed() {
   }
 
   // Admin (upsert by email; never delete users).
-  const adminEmail = process.env.SEED_ADMIN_EMAIL || "admin@pageturn.com.np";
+  const adminEmail = process.env.SEED_ADMIN_EMAIL || "admin@bookstemplenepal.com";
   const adminPass = process.env.SEED_ADMIN_PASSWORD || "admin123";
   let admin = await User.findOne({ email: adminEmail });
   if (!admin) {
     admin = new User({
       email: adminEmail,
       password: adminPass,
-      fullName: "PageTurn Admin",
+      fullName: "Books Temple Admin",
       isAdmin: true,
       isEmailVerified: true,
     });
@@ -223,9 +223,9 @@ async function seed() {
   }
 
   // Demo customer.
-  if (!(await User.findOne({ email: "reader@pageturn.com.np" }))) {
+  if (!(await User.findOne({ email: "reader@bookstemplenepal.com" }))) {
     await User.create({
-      email: "reader@pageturn.com.np",
+      email: "reader@bookstemplenepal.com",
       password: "reader123",
       fullName: "Sita Reader",
       isEmailVerified: true,

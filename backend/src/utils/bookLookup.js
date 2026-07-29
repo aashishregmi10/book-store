@@ -48,7 +48,7 @@ function mapOpenLibraryDoc(doc) {
 
 async function openLibrary(queryString) {
   const url = `https://openlibrary.org/search.json?${queryString}&fields=${OL_FIELDS}&limit=1`;
-  const r = await fetchRetry(url, { headers: { 'User-Agent': 'PageTurnNepal/1.0 (hello@pageturn.com.np)' } });
+  const r = await fetchRetry(url, { headers: { 'User-Agent': 'BooksTempleNepal/1.0 (hello@bookstemplenepal.com)' } });
   if (!r.ok) throw new Error(`Open Library ${r.status}`);
   const doc = (await r.json())?.docs?.[0];
   return doc ? mapOpenLibraryDoc(doc) : null;
@@ -59,7 +59,7 @@ async function openLibrary(queryString) {
 // publisher list whose first entry is frequently the wrong edition.
 async function fromOpenLibraryIsbn(isbn) {
   const url = `https://openlibrary.org/isbn/${encodeURIComponent(isbn)}.json`;
-  const r = await fetchRetry(url, { headers: { 'User-Agent': 'PageTurnNepal/1.0 (hello@pageturn.com.np)' } });
+  const r = await fetchRetry(url, { headers: { 'User-Agent': 'BooksTempleNepal/1.0 (hello@bookstemplenepal.com)' } });
   if (r.status === 404) return null;
   if (!r.ok) throw new Error(`Open Library ${r.status}`);
   const ed = await r.json();
@@ -170,4 +170,60 @@ async function lookupBook(query = {}) {
   return race([['openlibrary', fromOpenLibrarySearch], ['google', fromGoogleSearch]], query);
 }
 
-module.exports = { lookupByIsbn, lookupBook };
+/**
+ * Subject/classification lookup, for bulk genre work.
+ *
+ * Deliberately separate from lookupBook: that one prefers the Open Library
+ * *edition* endpoint (/isbn/<isbn>.json) because it gives the right publisher
+ * and page count for a specific printing — but that endpoint carries no
+ * subjects at all, so it returns `categories: []` and is useless for deciding a
+ * genre. The *search* endpoint returns work-level `subject`, which is what
+ * classification actually needs.
+ *
+ * Tries ISBN first (exact), then title+author. Returns up to 25 subjects —
+ * more than the 5 lookupBook keeps, since the extra terms meaningfully improve
+ * scoring. Never throws.
+ *
+ * @returns {{subjects: string[], publisher?: string, title?: string} | null}
+ */
+async function lookupSubjects({ isbn, title, author } = {}) {
+  if (typeof fetch !== 'function') return null;
+
+  const queries = [];
+  if (isbn) queries.push(new URLSearchParams({ isbn: String(isbn) }).toString());
+  if (title) {
+    const p = new URLSearchParams({ title: String(title) });
+    if (author && author !== 'Unknown') p.set('author', String(author));
+    queries.push(p.toString());
+    // Title-only last resort. Catalogue authors are frequently formatted
+    // differently from Open Library's ("Karl Marx and Friedric", "Unknown"),
+    // and a mismatched author filter returns zero docs where the title alone
+    // would have matched. Less precise, so it runs only after the others miss.
+    if (author && author !== 'Unknown') {
+      queries.push(new URLSearchParams({ title: String(title) }).toString());
+    }
+  }
+
+  for (const qs of queries) {
+    try {
+      const url = `https://openlibrary.org/search.json?${qs}&fields=title,author_name,subject,publisher&limit=1`;
+      const r = await fetchRetry(url, {
+        headers: { 'User-Agent': 'BooksTempleNepal/1.0 (hello@bookstemplenepal.com)' },
+      });
+      if (!r.ok) continue;
+      const doc = (await r.json())?.docs?.[0];
+      if (Array.isArray(doc?.subject) && doc.subject.length) {
+        return {
+          subjects: doc.subject.slice(0, 25),
+          publisher: Array.isArray(doc.publisher) ? doc.publisher[0] : undefined,
+          title: doc.title,
+        };
+      }
+    } catch (err) {
+      logger.warn({ err: err.message, provider: 'openlibrary-subjects' }, 'subject lookup failed');
+    }
+  }
+  return null;
+}
+
+module.exports = { lookupByIsbn, lookupBook, lookupSubjects };

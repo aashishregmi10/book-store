@@ -14,6 +14,35 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "lh3.googleusercontent.com" }, // Google profile avatars
     ],
   },
+  // Genre taxonomy restructure (backend/GENRE-TAXONOMY-PROPOSAL.md). Permanent
+  // so search engines transfer the old URLs' equity to the new slugs rather
+  // than treating them as new pages. Every retired slug must land somewhere —
+  // a 404 here throws away whatever ranking the old genre page had.
+  async redirects() {
+    const moved: Record<string, string> = {
+      biography: "biography-memoir",
+      business: "business-economics",
+      politics: "politics-society",
+      spirituality: "spirituality-religion",
+      horror: "mystery-thriller",
+      // Folded: too few titles to sustain their own page.
+      strategy: "business-economics",
+      games: "business-economics",
+      law: "politics-society",
+      educational: "science-technology",
+    };
+
+    return [
+      ...Object.entries(moved).map(([from, to]) => ({
+        source: `/genre/${from}`,
+        destination: `/genre/${to}`,
+        permanent: true,
+      })),
+      // `general` was never a genre — it was the import fallback holding 90% of
+      // the catalogue. The honest destination is the full catalogue.
+      { source: "/genre/general", destination: "/books", permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

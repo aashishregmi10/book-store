@@ -1,7 +1,7 @@
 'use strict';
 
 /*
- * Bulk book importer (PageTurn Nepal).
+ * Bulk book importer (Books Temple Nepal).
  *
  * Reads a CSV of `query,price,image,genre` rows (see scripts/README-import.md),
  * enriches each via Google Books / Open Library, uploads a cover to Cloudinary
@@ -81,7 +81,7 @@ function readRows(csvPath) {
 }
 
 function parseArgs(argv) {
-  const args = { csv: null, genre: 'general', stock: 0, concurrency: 2, limit: Infinity };
+  const args = { csv: null, genre: 'unclassified', stock: 0, concurrency: 2, limit: Infinity };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === '--genre') args.genre = argv[++i];

@@ -1,4 +1,4 @@
-# PageTurn Nepal — Project Guide
+# Books Temple Nepal — Project Guide
 
 Nepal's online bookstore. **MERN**: Express 5 + Mongoose 9 API (`/backend`), Next.js 16 + React 19 + Tailwind 4 storefront (`/frontend`), and a static admin app (`/static-app`, later phase).
 
@@ -55,13 +55,34 @@ Write like a passionate bookseller, not a marketer.
 ## SEO is cross-cutting, not a final phase
 
 Every page ships with its metadata + JSON-LD + a BLUF intro. Non-negotiables:
-- `metadataBase` + title template `'%s | PageTurn Nepal'` in the root layout.
+- `metadataBase` + title template `'%s | Books Temple Nepal'` in the root layout.
 - **Server-render everything that matters for SEO** — no client-side fetch for primary content. Server Components query the API; the HTML must contain the content.
 - JSON-LD per page type (`lib/seo.ts` builders): Book, AggregateRating, Offer (`priceCurrency: 'NPR'`), BreadcrumbList, ItemList (genre), FAQPage, Organization (Nepal signals: `areaServed: 'NP'`, `addressCountry: 'NP'`, Kathmandu), WebSite+SearchAction.
 - **BLUF**: lead each genre/book/blog page with a 40–80 word extractable definition.
 - Book specs go in a `<dl>` (definition list) — far more AI-citable than prose.
 - Self-referencing canonical on every page. `next/image` with width/height everywhere (ESLint enforces; `<img>` is an error).
 - Genre silo: book pages link only within their own genre. Slugs are `lower-kebab` and must match across URL, breadcrumb, and DB.
+
+### Genre taxonomy — closed list, 16 slugs
+
+`fiction` · `sci-fi-fantasy` · `mystery-thriller` · `romance` · `young-adult` ·
+`childrens` · `biography-memoir` · `business-economics` · `self-help` ·
+`psychology` · `spirituality-religion` · `philosophy` · `politics-society` ·
+`science-technology` · `poetry` · `nepali-literature`
+
+**Never invent a new genre slug per book.** Free-text genres are what produced
+the original mess: the import fell back to a catch-all whenever its subject
+mapping failed, and 90% of the catalogue ended up in one bucket. Adding a genre
+means adding it to `backend/scripts/seed-taxonomy.js`, giving `genreMap.js`
+rules that can actually select it, and adding an icon in `app/page.tsx`.
+
+- `kids` / `manga` / `loksewa` are **sections** (`book.category`), a separate
+  axis from genre — a book can be `genre: 'fiction'` *and* `category: 'kids'`.
+- `unclassified` is a hidden holding pen (`isActive: false`) for imports whose
+  subject data was inconclusive. It is deliberately not browsable: an
+  unclassifiable book should read as a backlog item, not fill a public page.
+- Retired slugs redirect permanently in `next.config.ts`. See
+  `backend/GENRE-TAXONOMY-PROPOSAL.md` for the mapping and rationale.
 - Out-of-stock books stay 200 with crawlable alternatives + temporary noindex — never a hard 404/redirect.
 
 ---

@@ -48,7 +48,7 @@ function parseFormat(raw) {
 }
 
 function parseArgs(argv) {
-  const a = { jsonl: 'D:/daraz-scraper/data/books.jsonl', genre: 'general', stock: 4, concurrency: 2, limit: Infinity, enrich: true };
+  const a = { jsonl: 'D:/daraz-scraper/data/books.jsonl', genre: 'unclassified', stock: 4, concurrency: 2, limit: Infinity, enrich: true };
   for (let i = 0; i < argv.length; i += 1) {
     const v = argv[i];
     if (v === '--genre') a.genre = argv[++i];
