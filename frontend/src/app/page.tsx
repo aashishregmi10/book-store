@@ -96,7 +96,7 @@ export default async function HomePage() {
       {/* Asymmetric, typography-led hero — NOT centered-with-one-CTA.
           Full-bleed bookshelf photo with a scrim for text contrast, rather
           than the flat --bg fill + floating cover cards this replaced. */}
-      <section className="relative overflow-hidden rounded-b-3xl">
+      <section className="relative overflow-hidden">
         <Image
           src="/hero-books.jpg"
           alt="Rows of books on a library shelf"
@@ -105,9 +105,12 @@ export default async function HomePage() {
           sizes="100vw"
           className="object-cover"
         />
-        {/* Darkest over the text (left), fading out toward the right so the
-            shelf itself stays visible. */}
-        <div className="absolute inset-0 bg-gradient-to-r from-text/85 via-text/60 to-text/25" />
+        {/* Mobile gets a flat dark scrim: the headline runs the full width on a
+            narrow screen, so a left-to-right fade would leave its right half
+            sitting on the pale end of the gradient and unreadable. From md up
+            the text is confined to the left column, so the directional fade is
+            safe and keeps the shelf visible. */}
+        <div className="absolute inset-0 bg-text/75 md:bg-gradient-to-r md:from-text/85 md:via-text/60 md:to-text/25" />
 
         <div className="relative mx-auto max-w-[1600px] px-6 py-16 sm:px-8 lg:px-16 xl:px-24 md:py-24">
           <div className="max-w-xl">

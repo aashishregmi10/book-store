@@ -105,12 +105,9 @@ export function CategoryMenu({ genres, active }: { genres: Genre[]; active?: boo
                 <Link
                   href={`/genre/${g.slug}`}
                   onClick={() => setOpen(false)}
-                  className="flex items-baseline justify-between gap-3 rounded-sm px-2 py-2 font-body text-sm text-text transition-colors hover:bg-surface hover:text-accent"
+                  className="block truncate rounded-sm px-2 py-2 font-body text-sm text-text transition-colors hover:bg-surface hover:text-accent"
                 >
-                  <span className="truncate">{g.name}</span>
-                  {g.bookCount !== undefined && g.bookCount > 0 && (
-                    <span className="shrink-0 font-data text-xs text-muted">{g.bookCount}</span>
-                  )}
+                  {g.name}
                 </Link>
               </li>
             ))}

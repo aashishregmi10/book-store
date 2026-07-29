@@ -24,7 +24,15 @@ export function CategoryCircles({ items }: { items: CategoryChip[] }) {
       {items.map((item) => {
         const Icon = item.icon;
         return (
-          <Link key={item.href} href={item.href} className="group flex shrink-0 flex-col items-center gap-2">
+          // Fixed width so every chip is the same size regardless of label
+          // length. Without it a name like "Business & Economics" stretches its
+          // own column and the row stops lining up — very visible on mobile
+          // now that the taxonomy uses longer, two-word genre names.
+          <Link
+            key={item.href}
+            href={item.href}
+            className="group flex w-16 shrink-0 flex-col items-center gap-2 sm:w-24"
+          >
             {item.cover ? (
               <span className="relative size-12 shrink-0 overflow-hidden rounded-full border border-border transition-transform group-hover:scale-105 sm:size-14">
                 <BookCover src={item.cover} alt={item.name} title={item.name} sizes="56px" />
@@ -37,7 +45,9 @@ export function CategoryCircles({ items }: { items: CategoryChip[] }) {
                 <Icon className="size-5 sm:size-6" style={{ color: item.fg }} strokeWidth={1.75} />
               </span>
             )}
-            <span className="font-data text-[11px] uppercase tracking-wide text-text transition-colors group-hover:text-accent">
+            {/* Two lines max, centred — long genre names wrap instead of
+                forcing the column wider. */}
+            <span className="line-clamp-2 text-center font-data text-[11px] leading-tight uppercase tracking-wide text-text transition-colors group-hover:text-accent">
               {item.name}
             </span>
           </Link>
