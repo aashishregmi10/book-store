@@ -17,6 +17,7 @@ import { FormatPicker } from "@/components/books/FormatPicker";
 import { WishlistButton } from "@/components/books/WishlistButton";
 import { AskQuestion } from "@/components/books/AskQuestion";
 import { ReviewForm } from "@/components/books/ReviewForm";
+import { BookTabs } from "@/components/books/BookTabs";
 
 // Section labels for breadcrumb + related heading on category books.
 const CATEGORY_LABEL: Record<string, string> = { manga: "Manga", kids: "Kids", loksewa: "Loksewa" };
@@ -193,54 +194,79 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
           </div>
         </div>
 
-        {/* Description — full width */}
-        <section className="mt-12 border-t border-border pt-8">
-          <h2 className="font-display text-2xl text-text">About this book</h2>
-          <p className="mt-3 whitespace-pre-line font-body text-[1.0625rem] leading-relaxed text-text">{book.description}</p>
-        </section>
-
-        {/* Reviews */}
-        <section className="mt-12 max-w-3xl">
-          <h2 className="font-display text-2xl text-text">Reader reviews</h2>
-          {reviews.length > 0 ? (
-            <ul className="mt-4 space-y-5">
-              {reviews.map((r) => (
-                <li key={r._id} className="border-b border-border pb-5">
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1 font-data text-sm text-text">
-                      <Star className="size-3.5 fill-star text-star" /> {r.rating}.0
-                    </span>
-                    {r.isVerifiedPurchase && <span className="font-data text-xs uppercase tracking-wide text-accent">Verified</span>}
-                  </div>
-                  {r.title && <p className="mt-1 font-display text-lg text-text">{r.title}</p>}
-                  <p className="mt-1 font-body text-text">{r.body}</p>
-                  <p className="label-smallcaps mt-1 text-xs">{r.user?.fullName || "A reader"}</p>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-3 font-body text-muted">No reviews yet — be the first to share your thoughts.</p>
-          )}
-          <ReviewForm slug={book.slug} />
-        </section>
-
-        {/* Questions & answers (QAPage) */}
-        <section className="mt-12 max-w-3xl">
-          <h2 className="font-display text-2xl text-text">Questions &amp; answers</h2>
-          {questions.length > 0 ? (
-            <dl className="mt-4 space-y-5">
-              {questions.map((q) => (
-                <div key={q._id} className="border-b border-border pb-5">
-                  <dt className="font-display text-lg text-text">{q.question}</dt>
-                  <dd className="mt-1 font-body leading-relaxed text-muted">{q.answer}</dd>
+        {/* Description, reviews and Q&A share one tab strip. Every panel is
+            still server-rendered into the HTML — BookTabs hides the inactive
+            ones rather than dropping them, so the description and Q&A stay
+            crawlable and keep matching the JSON-LD emitted above. */}
+        <BookTabs
+          tabs={[
+            {
+              id: "about",
+              label: "About this book",
+              panel: (
+                <div>
+                  <h2 className="sr-only">About this book</h2>
+                  <p className="max-w-3xl whitespace-pre-line font-body text-[1.0625rem] leading-relaxed text-text">
+                    {book.description}
+                  </p>
                 </div>
-              ))}
-            </dl>
-          ) : (
-            <p className="mt-3 font-body text-muted">No questions yet — be the first to ask about this book.</p>
-          )}
-          <AskQuestion slug={book.slug} />
-        </section>
+              ),
+            },
+            {
+              id: "reviews",
+              label: "Reader reviews",
+              count: reviews.length,
+              panel: (
+                <div className="max-w-3xl">
+                  <h2 className="sr-only">Reader reviews</h2>
+                  {reviews.length > 0 ? (
+                    <ul className="space-y-5">
+                      {reviews.map((r) => (
+                        <li key={r._id} className="border-b border-border pb-5">
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1 font-data text-sm text-text">
+                              <Star className="size-3.5 fill-star text-star" /> {r.rating}.0
+                            </span>
+                            {r.isVerifiedPurchase && <span className="font-data text-xs uppercase tracking-wide text-accent">Verified</span>}
+                          </div>
+                          {r.title && <p className="mt-1 font-display text-lg text-text">{r.title}</p>}
+                          <p className="mt-1 font-body text-text">{r.body}</p>
+                          <p className="label-smallcaps mt-1 text-xs">{r.user?.fullName || "A reader"}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="font-body text-muted">No reviews yet — be the first to share your thoughts.</p>
+                  )}
+                  <ReviewForm slug={book.slug} />
+                </div>
+              ),
+            },
+            {
+              id: "questions",
+              label: "Questions & answers",
+              count: questions.length,
+              panel: (
+                <div className="max-w-3xl">
+                  <h2 className="sr-only">Questions &amp; answers</h2>
+                  {questions.length > 0 ? (
+                    <dl className="space-y-5">
+                      {questions.map((q) => (
+                        <div key={q._id} className="border-b border-border pb-5">
+                          <dt className="font-display text-lg text-text">{q.question}</dt>
+                          <dd className="mt-1 font-body leading-relaxed text-muted">{q.answer}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  ) : (
+                    <p className="font-body text-muted">No questions yet — be the first to ask about this book.</p>
+                  )}
+                  <AskQuestion slug={book.slug} />
+                </div>
+              ),
+            },
+          ]}
+        />
 
         {/* Same-silo related */}
         {related.length > 0 && (
