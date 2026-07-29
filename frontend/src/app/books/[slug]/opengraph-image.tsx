@@ -5,7 +5,7 @@ import { npr } from "@/lib/format";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = "Book at PageTurn Nepal";
+export const alt = "Book at Books Temple Nepal";
 
 interface BookResp {
   book: BookDetail;
@@ -41,7 +41,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
         )}
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1 }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-            <span style={{ fontSize: 32, fontWeight: 700, color: "#1c5fa6" }}>PageTurn</span>
+            <span style={{ fontSize: 32, fontWeight: 700, color: "#1c5fa6" }}>Books Temple</span>
             <span style={{ fontSize: 18, letterSpacing: 6, color: "#6b7c92" }}>NEPAL</span>
           </div>
           <div style={{ display: "flex", flexDirection: "column" }}>

@@ -1,17 +1,17 @@
 import type { BookDetail, BookCardData, Genre, ReviewData } from "./types";
 
 export const SITE = {
-  name: "PageTurn Nepal",
-  url: process.env.NEXT_PUBLIC_SITE_URL || "https://pageturn.com.np",
+  name: "Books Temple Nepal",
+  url: process.env.NEXT_PUBLIC_SITE_URL || "https://bookstemplenepal.com",
   description: "Nepal's online bookstore — books worth reading, delivered across all seven provinces. NPR prices, cash on delivery.",
   locale: "en_NP",
-  twitter: "@pageturnnp",
-  email: "hello@pageturn.com.np",
+  twitter: "@bookstemplenp",
+  email: "hello@bookstemplenepal.com",
   // Social/profile URLs strengthen the entity in Google's & AI engines' knowledge graphs.
   sameAs: [
-    "https://www.facebook.com/pageturnnepal",
-    "https://www.instagram.com/pageturnnepal",
-    "https://twitter.com/pageturnnp",
+    "https://www.facebook.com/bookstemplenepal",
+    "https://www.instagram.com/bookstemplenepal",
+    "https://twitter.com/bookstemplenp",
   ],
 };
 
@@ -236,7 +236,7 @@ export function articleLd(article: {
     headline: article.title,
     description: article.excerpt,
     ...(article.coverImage ? { image: article.coverImage } : {}),
-    author: { "@type": "Person", name: article.author || "PageTurn Editors" },
+    author: { "@type": "Person", name: article.author || "Books Temple Editors" },
     publisher: { "@id": `${SITE.url}/#organization` },
     ...(article.publishedAt ? { datePublished: article.publishedAt } : {}),
     ...(article.updatedAt ? { dateModified: article.updatedAt } : {}),

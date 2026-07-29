@@ -5,7 +5,7 @@ import Image from "next/image";
 export const metadata: Metadata = {
   title: "Our Story",
   description:
-    "PageTurn Nepal is a small, opinionated bookshop in Kathmandu - handpicked titles, honest NPR prices, and cash on delivery to all seven provinces.",
+    "Books Temple Nepal is a small, opinionated bookshop in Kathmandu - handpicked titles, honest NPR prices, and cash on delivery to all seven provinces.",
   alternates: { canonical: "/about" },
 };
 
@@ -36,7 +36,7 @@ export default function AboutPage() {
             <span className="text-accent">with a long memory.</span>
           </h1>
           <p className="mt-6 max-w-xl font-body text-lg leading-relaxed text-muted">
-            PageTurn Nepal started with a simple frustration: it was too hard to buy a good book, at a fair price,
+            Books Temple Nepal started with a simple frustration: it was too hard to buy a good book, at a fair price,
             delivered to your door — wherever in Nepal that door happens to be. So we built the shop we wanted to buy
             from.
           </p>
@@ -58,7 +58,7 @@ export default function AboutPage() {
             stopped looking.
           </p>
           <p>
-            We think a country of readers deserves better. PageTurn is our answer: a tightly curated catalogue of fiction,
+            We think a country of readers deserves better. Books Temple is our answer: a tightly curated catalogue of fiction,
             Nepali literature, business, and the books people actually ask for — priced honestly in rupees and carried to
             every province by people who care whether the corners arrive bent.
           </p>

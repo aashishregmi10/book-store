@@ -2,6 +2,11 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { renameStorageKey } from "./renameStorageKey";
+
+// Carry any pre-rebrand cart across before persist reads storage below,
+// so the rename doesn't silently empty saved carts.
+renameStorageKey("pageturn-cart", "bookstemple-cart");
 
 export interface CartItem {
   bookId: string;
@@ -93,7 +98,7 @@ export const useCart = create<CartState>()(
       clear: () => set({ items: [] }),
     }),
     {
-      name: "pageturn-cart",
+      name: "bookstemple-cart",
       partialize: (s) => ({ items: s.items }),
       onRehydrateStorage: () => (state) => {
         if (state) state.hydrated = true;

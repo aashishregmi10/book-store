@@ -42,7 +42,7 @@ export default function EditArticle() {
           excerpt: a.excerpt || "",
           body: a.body || "",
           coverImage: a.coverImage || null,
-          author: a.author || "PageTurn Editors",
+          author: a.author || "Books Temple Editors",
           category: a.category || "Reading guides",
           tags: (a.tags || []).join(", "),
           status: a.status === "published" ? "published" : "draft",

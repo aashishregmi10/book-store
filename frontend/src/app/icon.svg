@@ -1,5 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="#E8F1FB"/>
-  <rect x="118" y="132" width="220" height="52" rx="14" fill="#2D5A3D"/>
-  <rect x="200" y="132" width="52" height="248" rx="14" fill="#2D5A3D"/>
-  <path d="M252 205 A64 64 0 0 1 252 333 Z" fill="#2D5A3D"/>
-  <path d="M252 227 A42 42 0 0 1 252 311 Z" fill="#E8F1FB"/></svg>
+  <text x="256" y="256"
+        font-family="Montserrat, 'Segoe UI', Arial, Helvetica, sans-serif"
+        font-size="248" font-weight="700" letter-spacing="-6"
+        textLength="300" lengthAdjust="spacingAndGlyphs"
+        text-anchor="middle" dominant-baseline="central"
+        fill="#2D5A3D" stroke="#2D5A3D" stroke-width="8"
+        paint-order="stroke">BT</text></svg>

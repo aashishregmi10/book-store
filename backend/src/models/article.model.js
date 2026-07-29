@@ -13,7 +13,7 @@ const articleSchema = new mongoose.Schema(
     excerpt: { type: String, trim: true, maxlength: 300 },
     body: { type: String, required: true }, // lightweight markdown
     coverImage: imageSchema,
-    author: { type: String, default: 'PageTurn Editors', trim: true },
+    author: { type: String, default: 'Books Temple Editors', trim: true },
     category: { type: String, trim: true, default: 'Reading guides' },
     tags: [{ type: String, trim: true }],
     status: { type: String, enum: ['draft', 'published'], default: 'draft', index: true },

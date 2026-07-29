@@ -8,7 +8,7 @@ export function Footer() {
     >
       <div className="mx-auto grid max-w-[1600px] gap-12 px-6 py-16 sm:px-8 lg:px-16 xl:px-24 md:grid-cols-4">
         <div className="md:col-span-2">
-          <div className="font-display text-3xl font-semibold text-accent">PageTurn Nepal</div>
+          <div className="font-display text-3xl font-semibold text-accent">Books Temple Nepal</div>
           <p className="mt-4 max-w-md font-body text-sm leading-relaxed text-muted">
             A bookshop for Nepali readers. Fifty thousand titles in English and Nepali, same-day delivery in
             Kathmandu, careful packaging to all 77 districts.
@@ -33,14 +33,14 @@ export function Footer() {
             <li><Link href="/contact" className="hover:text-accent">Contact</Link></li>
             <li><Link href="/faq" className="hover:text-accent">FAQ</Link></li>
             <li><Link href="/account" className="hover:text-accent">Rewards &amp; tiers</Link></li>
-            <li><a href="mailto:hello@pageturn.com.np" className="hover:text-accent">hello@pageturn.com.np</a></li>
+            <li><a href="mailto:hello@bookstemplenepal.com" className="hover:text-accent">hello@bookstemplenepal.com</a></li>
           </ul>
         </div>
       </div>
 
       <div className="border-t border-border/60">
         <div className="mx-auto flex max-w-[1600px] flex-col items-start justify-between gap-2 px-6 py-6 font-body text-xs text-muted sm:px-8 lg:px-16 xl:px-24 md:flex-row md:items-center">
-          <span>© {new Date().getFullYear()} PageTurn Nepal Pvt. Ltd.</span>
+          <span>© {new Date().getFullYear()} Books Temple Nepal Pvt. Ltd.</span>
           <span>NPR pricing · Cash on Delivery across all 77 districts</span>
         </div>
       </div>

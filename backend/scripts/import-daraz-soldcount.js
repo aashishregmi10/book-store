@@ -1,8 +1,8 @@
 'use strict';
 
 /*
- * Populate each PageTurn book's `soldCount` from the Daraz "New Book House"
- * sold-count scrape (D:\daraz-scraper\data\sold-counts.csv). PageTurn is a
+ * Populate each Books Temple book's `soldCount` from the Daraz "New Book House"
+ * sold-count scrape (D:\daraz-scraper\data\sold-counts.csv). Books Temple is a
  * brand-new store — every book's own soldCount is currently 0 — so the
  * existing "popular" sort (soldCount desc) is meaningless until this runs.
  * The Daraz sold-count is the best real-world demand signal we have for a
@@ -53,7 +53,7 @@ const normTitle = (s) =>
 // Air...", would otherwise strip to "" — and an empty query string against a
 // substring-style match trivially "matches" everything, since
 // "anything".includes("") is true in JS. Applied symmetrically to both the
-// PageTurn title and the raw Daraz card title so a book differing only by
+// Books Temple title and the raw Daraz card title so a book differing only by
 // that suffix still gets a clean exact match.)
 function stripByAuthor(s) {
   const raw = String(s || '');
@@ -103,7 +103,7 @@ function readSoldCounts(file) {
 
   await connectMongo();
   const books = await Book.find({}).select('slug title soldCount').lean();
-  console.log(`Checking ${books.length} PageTurn books against the scrape...\n`);
+  console.log(`Checking ${books.length} Books Temple books against the scrape...\n`);
 
   const toUpdate = [];
   let ambiguous = 0;

@@ -5,7 +5,7 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
-  // PageTurn house rules (CLAUDE.md): enforce next/image + alt text for SEO/CWV.
+  // Books Temple house rules (CLAUDE.md): enforce next/image + alt text for SEO/CWV.
   {
     rules: {
       "@next/next/no-img-element": "error",

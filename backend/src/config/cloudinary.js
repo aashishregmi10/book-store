@@ -30,7 +30,7 @@ function getCloudinary() {
  * Upload an in-memory image buffer to Cloudinary. Resolves with the result
  * (secure_url, public_id, dimensions). Rejects on transport/credential errors.
  */
-function uploadBuffer(buffer, { folder = 'pageturn/books' } = {}) {
+function uploadBuffer(buffer, { folder = 'bookstemple/books' } = {}) {
   return new Promise((resolve, reject) => {
     const stream = getCloudinary().uploader.upload_stream(
       { folder, resource_type: 'image' },

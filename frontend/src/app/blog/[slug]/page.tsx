@@ -69,7 +69,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
         {a.category && <p className="mt-6 font-data text-xs uppercase tracking-wide text-accent">{a.category}</p>}
         <h1 className="mt-2 font-display text-4xl leading-tight text-text sm:text-5xl">{a.title}</h1>
         <p className="mt-3 font-data text-sm text-muted">
-          By {a.author || "PageTurn Editors"}
+          By {a.author || "Books Temple Editors"}
           {a.publishedAt ? ` · ${new Date(a.publishedAt).toLocaleDateString()}` : ""}
           {a.readingTime ? ` · ${a.readingTime} min read` : ""}
         </p>

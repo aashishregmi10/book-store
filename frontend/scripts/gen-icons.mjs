@@ -2,25 +2,33 @@
 // brand mark never drifts between sizes. Re-run after editing the glyph below:
 //   node scripts/gen-icons.mjs
 //
-// Mark: a "PT" monogram (Page Turn) where P and T share one vertical stem — the
-// T's crossbar runs across the top, the P's bowl hangs off the stem's upper
-// right. Forest-green letters (#2D5A3D, brand accent from /CLAUDE.md) on a pale
-// blue tile (#E8F1FB, chosen by the owner for this mark). The tile is opaque so
-// the mark renders consistently across browser chrome.
+// Mark: a "BT" monogram (Books Temple) where B and T share one vertical stem —
+// the T's crossbar runs across the top, the B's two bowls stack down the stem's
+// right side. Forest-green letters (#2D5A3D, brand accent from /CLAUDE.md) on a
+// pale blue tile (#E8F1FB, chosen by the owner for this mark). The tile is
+// opaque so the mark renders consistently across browser chrome.
 import sharp from "sharp";
 import { writeFileSync } from "node:fs";
 
 const GREEN = "#2D5A3D"; // letterforms
 const BLUE = "#E8F1FB"; // tile background
 
-// Shared-stem PT, authored in a 512×512 canvas: T crossbar across the top, one
-// shared vertical stem, and the P's bowl as a solid D (with a punched counter)
-// dropped just below the crossbar so the two letters stay legible at 16px.
+// "BT" set as type rather than hand-drawn paths. The previous mark shared one
+// vertical stem between the letters, which worked for PT but turns a B into two
+// thin crescents hanging off a T — illegible by 16px. Two separate letterforms
+// read cleanly at every size.
+//
+// textLength pins the advance width so the mark can't reflow if the resolved
+// font differs between machines, and the paint-order stroke thickens the
+// letterforms slightly so they hold up in a 16px favicon.
 const glyph = `
-  <rect x="118" y="132" width="220" height="52" rx="14" fill="${GREEN}"/>
-  <rect x="200" y="132" width="52" height="248" rx="14" fill="${GREEN}"/>
-  <path d="M252 205 A64 64 0 0 1 252 333 Z" fill="${GREEN}"/>
-  <path d="M252 227 A42 42 0 0 1 252 311 Z" fill="${BLUE}"/>`;
+  <text x="256" y="256"
+        font-family="Montserrat, 'Segoe UI', Arial, Helvetica, sans-serif"
+        font-size="248" font-weight="700" letter-spacing="-6"
+        textLength="300" lengthAdjust="spacingAndGlyphs"
+        text-anchor="middle" dominant-baseline="central"
+        fill="${GREEN}" stroke="${GREEN}" stroke-width="8"
+        paint-order="stroke">BT</text>`;
 
 // rx 112 → rounded tile for the in-tab favicon; rx 0 → full-bleed square for
 // Apple touch (Apple masks corners) and Android maskable (safe zone is centred).
@@ -68,6 +76,11 @@ const run = async () => {
   writeFileSync("public/icon-180.png", await png(fleed, 180)); // apple touch size
   writeFileSync("public/icon-512-maskable.png", await png(fleed, 512)); // Android maskable
 
+  // schema.org Organization.logo / .image point at /logo.png. That file did not
+  // exist before the rebrand, so the structured-data logo resolved to a 404 —
+  // Google drops the logo property entirely when it can't fetch it.
+  writeFileSync("public/logo.png", await png(rounded, 512));
+
   // Next metadata files: apple-icon.png + favicon.ico (16 + 32 frames).
   writeFileSync("src/app/apple-icon.png", await png(fleed, 180));
   writeFileSync(
@@ -78,7 +91,9 @@ const run = async () => {
     ])
   );
 
-  console.log("icons generated: icon.svg, apple-icon.png, favicon.ico, public/icon-{16,32,180,192,512,512-maskable}.png");
+  console.log(
+    "icons generated: icon.svg, apple-icon.png, favicon.ico, public/logo.png, public/icon-{16,32,180,192,512,512-maskable}.png"
+  );
 };
 
 run().catch((e) => {

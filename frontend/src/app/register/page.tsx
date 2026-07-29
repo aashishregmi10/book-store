@@ -67,7 +67,7 @@ function RegisterForm() {
         </Link>
 
         <h1 className="mt-5 font-display text-3xl text-text">Signup</h1>
-        <p className="mt-1 font-body text-muted">Hi there! Welcome to PageTurn Nepal.</p>
+        <p className="mt-1 font-body text-muted">Hi there! Welcome to Books Temple Nepal.</p>
 
         {hasSocialSignIn && (
           <>

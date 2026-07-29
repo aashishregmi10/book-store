@@ -4,7 +4,7 @@ import { SITE } from "@/lib/seo";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: SITE.name,
-    short_name: "PageTurn",
+    short_name: "Books Temple",
     description: SITE.description,
     start_url: "/",
     display: "standalone",

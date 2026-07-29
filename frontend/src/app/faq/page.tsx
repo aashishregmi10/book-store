@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 const FAQS: { q: string; a: string }[] = [
   {
     q: "How do I order books online in Nepal?",
-    a: "Browse the catalogue at PageTurn Nepal, add books to your cart, and check out with your delivery address. You can pay cash on delivery, so no card or online payment is needed to place an order.",
+    a: "Browse the catalogue at Books Temple Nepal, add books to your cart, and check out with your delivery address. You can pay cash on delivery, so no card or online payment is needed to place an order.",
   },
   {
     q: "Do you deliver across all of Nepal?",
@@ -34,7 +34,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "What if my book arrives damaged or wrong?",
-    a: "Every order is carefully checked and packed before it ships. If a book arrives damaged or you received the wrong title, email us at hello@pageturn.com.np with a photo and we'll make it right with a replacement.",
+    a: "Every order is carefully checked and packed before it ships. If a book arrives damaged or you received the wrong title, email us at hello@bookstemplenepal.com with a photo and we'll make it right with a replacement.",
   },
   {
     q: "Are the books new or used?",
@@ -60,7 +60,7 @@ export default function FaqPage() {
           {
             "@context": "https://schema.org",
             "@type": "WebPage",
-            name: "PageTurn Nepal — FAQ",
+            name: "Books Temple Nepal — FAQ",
             url: `${SITE.url}/faq`,
             speakable: speakable(".faq-q", ".faq-a"),
           },

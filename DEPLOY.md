@@ -1,4 +1,4 @@
-# Deploying PageTurn Nepal
+# Deploying Books Temple Nepal
 
 This is a monorepo with two independently-deployed apps:
 
@@ -40,7 +40,7 @@ Set these on the **backend** project (copy from `backend/.env.example`):
 - `REDIS_URL=…` (optional — the app degrades gracefully without it)
 - `RATE_LIMIT_WINDOW_MS` / `RATE_LIMIT_MAX` / `INDEXNOW_KEY` (optional)
 - `GOOGLE_CLIENT_ID=…` (for Google sign-in — the public Web client ID)
-- `NEW_RELIC_LICENSE_KEY=…` / `NEW_RELIC_APP_NAME=PageTurn Nepal API` (optional APM; only runs when `NODE_ENV=production`)
+- `NEW_RELIC_LICENSE_KEY=…` / `NEW_RELIC_APP_NAME=Books Temple Nepal API` (optional APM; only runs when `NODE_ENV=production`)
 - `FRONTEND_URL=https://<your-frontend-domain>`   ← fill after first deploy
 - `PORT` — **do not set**; Vercel injects it (server.js already reads `process.env.PORT`)
 
@@ -56,6 +56,12 @@ Set these on the **frontend** project:
 - `NEXT_PUBLIC_API_URL=https://<your-backend-domain>/api` (browser fetches)
 - `NEXT_PUBLIC_GOOGLE_CLIENT_ID=…` (public Google Web client ID — must match the backend's `GOOGLE_CLIENT_ID`)
 - `NEXT_PUBLIC_GSC_VERIFICATION=…` / `NEXT_PUBLIC_BING_VERIFICATION=…` (optional)
+- `NEXT_PUBLIC_GA_MEASUREMENT_ID=G-…` (GA4 measurement ID — **Production environment only**)
+
+> **Analytics:** set `NEXT_PUBLIC_GA_MEASUREMENT_ID` on the *Production* environment
+> only. Leaving it unset for Preview/Development keeps branch deploys and local
+> work out of the property — `components/Analytics.tsx` renders nothing without it,
+> so there is no tag to fire.
 
 > **Google sign-in in production:** add your deployed frontend domain to the
 > OAuth client's **Authorized JavaScript origins** in Google Cloud Console

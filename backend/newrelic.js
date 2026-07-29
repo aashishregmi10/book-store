@@ -6,7 +6,7 @@
  * so dev and tests never connect to New Relic.
  */
 exports.config = {
-  app_name: [process.env.NEW_RELIC_APP_NAME || 'PageTurn Nepal API'],
+  app_name: [process.env.NEW_RELIC_APP_NAME || 'Books Temple Nepal API'],
   license_key: process.env.NEW_RELIC_LICENSE_KEY,
   distributed_tracing: { enabled: true },
   logging: { level: process.env.NEW_RELIC_LOG_LEVEL || 'info' },

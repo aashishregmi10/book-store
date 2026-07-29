@@ -56,7 +56,7 @@ export default function WishlistPage() {
   async function shareList() {
     const url = typeof window !== "undefined" ? window.location.href : "";
     try {
-      if (navigator.share) await navigator.share({ title: "My PageTurn wishlist", url });
+      if (navigator.share) await navigator.share({ title: "My Books Temple wishlist", url });
       else await navigator.clipboard.writeText(url);
       setShared(true);
       setTimeout(() => setShared(false), 1800);

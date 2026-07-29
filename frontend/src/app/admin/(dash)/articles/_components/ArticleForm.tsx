@@ -27,7 +27,7 @@ export const EMPTY_ARTICLE: ArticleFormValues = {
   excerpt: "",
   body: "",
   coverImage: null,
-  author: "PageTurn Editors",
+  author: "Books Temple Editors",
   category: "Reading guides",
   tags: "",
   status: "draft",

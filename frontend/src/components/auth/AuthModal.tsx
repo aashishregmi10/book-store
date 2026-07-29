@@ -122,7 +122,7 @@ function AuthModalBody({
 
       <h2 className="font-display text-3xl text-text">{isLogin ? "Login" : "Signup"}</h2>
       <p className="mt-1 font-body text-muted">
-        {isLogin ? "Hi, welcome back! Please login to your account." : "Hi there! Welcome to PageTurn Nepal."}
+        {isLogin ? "Hi, welcome back! Please login to your account." : "Hi there! Welcome to Books Temple Nepal."}
       </p>
 
       {hasSocialSignIn && (

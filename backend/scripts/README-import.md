@@ -1,6 +1,6 @@
 # Bulk book import
 
-Import a large catalogue (e.g. a Daraz seller's listings) into PageTurn Nepal. Every book is created
+Import a large catalogue (e.g. a Daraz seller's listings) into Books Temple Nepal. Every book is created
 as a **draft** (`isActive:false`) — hidden from the storefront until an admin reviews and publishes it.
 
 The pipeline has two stages:
@@ -111,6 +111,6 @@ written to `daraz-books.failures.csv` (`query,reason`) — fix or re-run just th
 ## Step 3 — Review & publish
 
 In the admin (`/admin/books`), the imported drafts are hidden from the store. For each: correct any
-wrong title match, rewrite the (publisher-blurb) description into the PageTurn bookseller voice, confirm
+wrong title match, rewrite the (publisher-blurb) description into the Books Temple bookseller voice, confirm
 the genre/section, set stock, then toggle **Active** to publish. Books flagged with the fallback genre
 in the import log should be triaged first.

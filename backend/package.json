@@ -1,7 +1,7 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "PageTurn Nepal — backend API (Express 5 + Mongoose 9)",
+  "description": "Books Temple Nepal — backend API (Express 5 + Mongoose 9)",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",

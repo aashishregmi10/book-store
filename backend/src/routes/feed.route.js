@@ -32,7 +32,7 @@ function buildItem(b) {
       <g:availability>${soldOut ? 'out_of_stock' : 'in_stock'}</g:availability>
       <g:price>${listPrice}.00 NPR</g:price>
       ${salePrice}
-      <g:brand>${esc(b.specifications?.publisher || 'PageTurn Nepal')}</g:brand>
+      <g:brand>${esc(b.specifications?.publisher || 'Books Temple Nepal')}</g:brand>
       <g:condition>new</g:condition>
       ${idTag}
       <g:google_product_category>${BOOKS_CATEGORY}</g:google_product_category>
@@ -53,9 +53,9 @@ router.get('/products.xml', async (_req, res, next) => {
       return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
   <channel>
-    <title>PageTurn Nepal — Books</title>
+    <title>Books Temple Nepal — Books</title>
     <link>${FRONTEND}</link>
-    <description>Books available at PageTurn Nepal, with NPR pricing and cash on delivery across Nepal.</description>${items}
+    <description>Books available at Books Temple Nepal, with NPR pricing and cash on delivery across Nepal.</description>${items}
   </channel>
 </rss>`;
     });

@@ -2,7 +2,7 @@
 
 const { uploadBuffer } = require('../config/cloudinary');
 
-// Download a single image URL and store it in Cloudinary (pageturn/books).
+// Download a single image URL and store it in Cloudinary (bookstemple/books).
 // Returns the image subdocument { publicId, secureUrl, name } or null on any
 // failure (bad URL, non-image, tiny/empty body, upload error). Never throws.
 async function uploadCoverFromUrl(url, name) {
@@ -12,7 +12,7 @@ async function uploadCoverFromUrl(url, name) {
     if (!img.ok) return null;
     const buf = Buffer.from(await img.arrayBuffer());
     if (buf.length <= 1024) return null; // guard against 1px/placeholder responses
-    const up = await uploadBuffer(buf, { folder: 'pageturn/books' });
+    const up = await uploadBuffer(buf, { folder: 'bookstemple/books' });
     return { publicId: up.public_id, secureUrl: up.secure_url, name: `${name || 'cover'}.jpg` };
   } catch {
     return null;

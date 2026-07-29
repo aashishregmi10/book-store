@@ -3,7 +3,7 @@
 const nodemailer = require('nodemailer');
 const logger = require('../config/logger');
 
-const FROM = process.env.EMAIL_FROM || 'PageTurn Nepal <noreply@pageturn.com.np>';
+const FROM = process.env.EMAIL_FROM || 'Books Temple Nepal <noreply@bookstemplenepal.com>';
 const FRONTEND = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 // Configured only when a real SMTP password is present (not the template placeholder).
@@ -25,7 +25,7 @@ if (isConfigured) {
 function shell(heading, bodyHtml, accent = '#2D5A3D') {
   return `<!doctype html><html><body style="margin:0;background:#FAF7F2;font-family:Georgia,'Times New Roman',serif;color:#1C1C1C;">
   <div style="max-width:560px;margin:0 auto;padding:32px 24px;">
-    <div style="font-size:22px;font-weight:bold;color:${accent};letter-spacing:0.5px;">PageTurn Nepal</div>
+    <div style="font-size:22px;font-weight:bold;color:${accent};letter-spacing:0.5px;">Books Temple Nepal</div>
     <div style="height:1px;background:#E7E0D4;margin:16px 0 24px;"></div>
     <h1 style="font-size:24px;margin:0 0 16px;">${heading}</h1>
     ${bodyHtml}
@@ -63,7 +63,7 @@ function sendWelcomeEmail(user) {
     `<p>You've got <strong>${user.points} points</strong> in your account already — a little something to start your shelf.</p>
      <p>${button('Browse the shop', FRONTEND)}</p>`
   );
-  return send({ to: user.email, subject: 'Welcome to PageTurn Nepal', html });
+  return send({ to: user.email, subject: 'Welcome to Books Temple Nepal', html });
 }
 
 function sendOrderConfirmation(user, order) {
@@ -99,7 +99,7 @@ function sendPasswordReset(user, rawToken) {
      <p>${button('Choose a new password', link)}</p>
      <p style="font-size:12px;color:#8C7B6B;">If you didn't request this, you can safely ignore this email.</p>`
   );
-  return send({ to: user.email, subject: 'Reset your PageTurn password', html });
+  return send({ to: user.email, subject: 'Reset your Books Temple password', html });
 }
 
 function sendLowStockAlert(adminEmail, books) {

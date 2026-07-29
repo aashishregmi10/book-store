@@ -1,7 +1,7 @@
 'use strict';
 
 /*
- * Reconcile existing PageTurn books against the authoritative Daraz "New Book
+ * Reconcile existing Books Temple books against the authoritative Daraz "New Book
  * House" scrape (D:\daraz-scraper\data\books.jsonl). Earlier imports (Google
  * Books/title-matched) left some books with the WRONG ISBN and a stale price
  * that doesn't match what the seller actually charges.
@@ -9,7 +9,7 @@
  * The seller reuses a single book's ISBN on unrelated "combo"/bundle listings
  * (its own ISBN pasted onto a 4-in-1 offer), so a naive ISBN lookup can pick
  * up a bundle's price for a single title. Combo/bundle listings are excluded
- * from candidate pools unless the PageTurn book is itself a combo listing.
+ * from candidate pools unless the Books Temple book is itself a combo listing.
  *
  * Matching, in order of confidence:
  *   1. Exact ISBN-13 match (non-combo candidates only) -> price fixed if it
@@ -74,7 +74,7 @@ function readScrape(file) {
     .filter(Boolean);
 }
 
-// Narrow a candidate pool to non-combo listings unless the PageTurn book
+// Narrow a candidate pool to non-combo listings unless the Books Temple book
 // itself is a combo (in which case keep only combo candidates).
 function filterByComboMatch(candidates, bookIsCombo) {
   return candidates.filter((c) => isCombo(c.title) === bookIsCombo);
@@ -102,7 +102,7 @@ function filterByComboMatch(candidates, bookIsCombo) {
   await connectMongo();
 
   const books = await Book.find({}).select('slug title author isbn price supplier');
-  console.log(`Checking ${books.length} PageTurn books against the scrape...\n`);
+  console.log(`Checking ${books.length} Books Temple books against the scrape...\n`);
 
   const isbnPriceFix = []; // ISBN already correct, price differs
   const titleMatchFix = []; // wrong/missing ISBN, single unambiguous Daraz candidate

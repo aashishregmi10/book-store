@@ -1,10 +1,10 @@
-/* PageTurn Nepal service worker — installability + lightweight offline support.
+/* Books Temple Nepal service worker — installability + lightweight offline support.
  * Strategy:
  *   • navigations  → network-first, fall back to /offline.html when offline
  *   • static assets/images/fonts (same-origin) → cache-first (stale-while-revalidate)
  *   • API + cross-origin (Cloudinary/Google) → left to the network, never cached
  */
-const CACHE = "pageturn-v1";
+const CACHE = "bookstemple-v1";
 const OFFLINE_URL = "/offline.html";
 const PRECACHE = [OFFLINE_URL, "/icon-192.png", "/manifest.webmanifest"];
 
@@ -62,7 +62,7 @@ self.addEventListener("push", (event) => {
   let data = {};
   try { data = event.data.json(); } catch { return; }
   event.waitUntil(
-    self.registration.showNotification(data.title || "PageTurn Nepal", {
+    self.registration.showNotification(data.title || "Books Temple Nepal", {
       body: data.body || "",
       icon: data.icon || "/icon-192.png",
     })

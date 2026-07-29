@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Reading Guides & Articles",
   description:
-    "Book recommendations, reading guides, and buying advice for readers in Nepal — from the booksellers at PageTurn Nepal.",
+    "Book recommendations, reading guides, and buying advice for readers in Nepal — from the booksellers at Books Temple Nepal.",
   alternates: { canonical: "/blog" },
 };
 
@@ -54,7 +54,7 @@ export default async function BlogPage() {
                 </Link>
                 {a.excerpt && <p className="mt-2 font-body text-sm leading-relaxed text-muted">{a.excerpt}</p>}
                 <p className="mt-3 font-data text-xs text-muted">
-                  {a.author || "PageTurn Editors"}
+                  {a.author || "Books Temple Editors"}
                   {a.readingTime ? ` · ${a.readingTime} min read` : ""}
                 </p>
               </div>

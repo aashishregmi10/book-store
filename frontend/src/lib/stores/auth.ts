@@ -2,6 +2,11 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { renameStorageKey } from "./renameStorageKey";
+
+// Carry any pre-rebrand session across before persist reads storage below,
+// so the rename doesn't sign every existing customer out.
+renameStorageKey("pageturn-auth", "bookstemple-auth");
 
 export interface AuthUser {
   id: string;
@@ -33,7 +38,7 @@ export const useAuth = create<AuthState>()(
       clear: () => set({ user: null, token: null }),
     }),
     {
-      name: "pageturn-auth",
+      name: "bookstemple-auth",
       partialize: (s) => ({ user: s.user, token: s.token }),
       onRehydrateStorage: () => (state) => {
         if (state) state.hydrated = true;

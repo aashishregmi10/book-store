@@ -22,7 +22,7 @@ export async function GET() {
 
 > ${SITE.description}
 
-PageTurn Nepal is an online-only bookstore serving all seven provinces of Nepal.
+Books Temple Nepal is an online-only bookstore serving all seven provinces of Nepal.
 Prices are in Nepali Rupees (NPR). Cash on delivery is available nationwide, with
 same-day delivery inside the Kathmandu Valley and 3–5 day delivery elsewhere.
 

@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = "PageTurn Nepal — buy books online in Nepal";
+export const alt = "Books Temple Nepal — buy books online in Nepal";
 
 // Branded default social/AI preview card. Per-page (book/genre/article) OG
 // images can be added later with their own opengraph-image files.
@@ -22,7 +22,7 @@ export default function OpengraphImage() {
         }}
       >
         <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
-          <span style={{ fontSize: 40, fontWeight: 700, color: "#1c5fa6" }}>PageTurn</span>
+          <span style={{ fontSize: 40, fontWeight: 700, color: "#1c5fa6" }}>Books Temple</span>
           <span style={{ fontSize: 22, letterSpacing: 8, color: "#6b7c92" }}>NEPAL</span>
         </div>
         <div style={{ display: "flex", flexDirection: "column" }}>

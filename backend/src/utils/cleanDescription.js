@@ -48,7 +48,7 @@ function isMeaningful(text, title = '') {
 }
 
 /**
- * Last-resort description composed from the book's own fields, in the PageTurn
+ * Last-resort description composed from the book's own fields, in the Books Temple
  * bookseller voice (BLUF-style opening sentence). Always returns ≥ 40 chars.
  */
 function templateDescription({ title, author, pages, format, language }) {
@@ -59,7 +59,7 @@ function templateDescription({ title, author, pages, format, language }) {
   const edition = bits.length ? ` This ${bits.join(', ')} edition` : ' This edition';
   const pagePart = pages ? ` runs ${pages} pages and` : '';
   return (
-    `${title}${by} is available now at PageTurn Nepal.${edition}${pagePart} ships across Nepal with cash on delivery. ` +
+    `${title}${by} is available now at Books Temple Nepal.${edition}${pagePart} ships across Nepal with cash on delivery. ` +
     `A fuller description is on the way — in the meantime, tap through for price, format, and availability.`
   ).trim();
 }

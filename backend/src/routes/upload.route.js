@@ -23,7 +23,7 @@ const upload = multer({
   },
 });
 
-const FOLDERS = { books: 'pageturn/books', avatars: 'pageturn/avatars' };
+const FOLDERS = { books: 'bookstemple/books', avatars: 'bookstemple/avatars' };
 
 // POST /api/upload  (admin only) — multipart form field "image"
 router.post('/', authenticate, requireAdmin, (req, res, next) => {

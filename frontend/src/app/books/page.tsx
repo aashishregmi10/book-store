@@ -30,7 +30,7 @@ export async function generateMetadata({
   const filtered = FILTER_PARAMS.some((k) => sp[k]);
   return {
     title: sp.q ? `Search: ${sp.q}` : "All Books",
-    description: "Browse every title at PageTurn Nepal — NPR prices, cash on delivery across all seven provinces.",
+    description: "Browse every title at Books Temple Nepal — NPR prices, cash on delivery across all seven provinces.",
     alternates: { canonical: "/books" },
     ...(filtered ? { robots: { index: false, follow: true } } : {}),
   };

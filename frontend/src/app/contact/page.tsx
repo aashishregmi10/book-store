@@ -5,7 +5,7 @@ import { ContactForm } from "@/components/contact/ContactForm";
 export const metadata: Metadata = {
   title: "Contact",
   description:
-    "Get in touch with PageTurn Nepal — an online bookshop. Email or message us about an order, a book request, or trade enquiries. Cash on delivery across all seven provinces.",
+    "Get in touch with Books Temple Nepal — an online bookshop. Email or message us about an order, a book request, or trade enquiries. Cash on delivery across all seven provinces.",
   alternates: { canonical: "/contact" },
 };
 
@@ -17,7 +17,7 @@ export default function ContactPage() {
       <div className="mt-8 grid gap-6 md:grid-cols-2">
         {/* Ways to reach us */}
         <div className="space-y-3">
-          <Channel icon={Mail} title="Email" detail="hello@pageturn.com.np" href="mailto:hello@pageturn.com.np" />
+          <Channel icon={Mail} title="Email" detail="hello@bookstemplenepal.com" href="mailto:hello@bookstemplenepal.com" />
           <Channel icon={MessageCircle} title="Phone / WhatsApp" detail="+977 1-4XXXXXX" href="tel:+97714XXXXXX" />
           <Channel icon={Clock} title="Reply time" detail="Within a day, Sun–Fri" />
           <Channel icon={Truck} title="Delivery" detail="All 77 districts · same-day in the Valley" />

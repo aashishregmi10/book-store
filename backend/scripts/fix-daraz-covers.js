@@ -1,7 +1,7 @@
 'use strict';
 
 /*
- * Replace each PageTurn book's cover image with the ACTUAL Daraz/New Book House
+ * Replace each Books Temple book's cover image with the ACTUAL Daraz/New Book House
  * product photo. Many books currently show a metadata-provider cover (Google
  * Books / Open Library), which is often a DIFFERENT PRINTING/EDITION than what
  * the wholesaler physically ships — customers receive a book that looks
@@ -142,7 +142,7 @@ function resolveMatch(b, byIsbn13, byTitle) {
   await connectMongo();
 
   let books = await Book.find({}).select('slug title author isbn coverImage');
-  console.log(`Checking ${books.length} PageTurn books against the scrape...\n`);
+  console.log(`Checking ${books.length} Books Temple books against the scrape...\n`);
 
   const toFix = [];
   let ambiguousOrNoMatch = 0;

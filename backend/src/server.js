@@ -41,7 +41,7 @@ async function start() {
     logger.error({ err: err.message }, 'Initial MongoDB connection failed — API up, DB-backed routes will error until fixed.');
   }
 
-  server.listen(PORT, () => logger.info(`PageTurn API listening on :${PORT}`));
+  server.listen(PORT, () => logger.info(`Books Temple API listening on :${PORT}`));
 }
 
 // ── Graceful shutdown ────────────────────────────────────

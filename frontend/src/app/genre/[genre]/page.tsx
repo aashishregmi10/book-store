@@ -98,7 +98,7 @@ export default async function GenrePage({
         {/* BLUF — extractable 40–80 word definition */}
         <p className="mt-4 max-w-3xl font-body text-lg leading-relaxed text-muted">
           {genre.description ||
-            `PageTurn Nepal stocks the top-rated ${genre.name.toLowerCase()} titles available across Nepal, with NPR pricing and cash on delivery to all seven provinces.`}
+            `Books Temple Nepal stocks the top-rated ${genre.name.toLowerCase()} titles available across Nepal, with NPR pricing and cash on delivery to all seven provinces.`}
         </p>
 
         {genre.curatorNote && (
