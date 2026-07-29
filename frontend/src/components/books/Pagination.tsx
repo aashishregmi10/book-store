@@ -5,15 +5,20 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
  * Shared catalogue pagination — compact page window with prev/next.
  * `hrefFor(n)` builds the URL for page n (callers preserve their own filters/sort).
  * Renders nothing for a single page.
+ *
+ * `className` replaces the wrapper layout so the same control can sit centred
+ * under a storefront grid (the default) or inline in an admin toolbar.
  */
 export function Pagination({
   page,
   pages,
   hrefFor,
+  className = "mt-12 flex flex-wrap items-center justify-center gap-2",
 }: {
   page: number;
   pages: number;
   hrefFor: (n: number) => string;
+  className?: string;
 }) {
   // Coerce defensively — query params arrive as strings, and "5" + 2 = "52"
   // would otherwise blow up the window. Number() keeps the maths correct.
@@ -21,7 +26,7 @@ export function Pagination({
   const total = Number(pages) || 1;
   if (total <= 1) return null;
   return (
-    <nav className="mt-12 flex flex-wrap items-center justify-center gap-2" aria-label="Pagination">
+    <nav className={className} aria-label="Pagination">
       <PageLink href={hrefFor(current - 1)} disabled={current <= 1} aria-label="Previous page">
         <ChevronLeft className="size-4" />
       </PageLink>

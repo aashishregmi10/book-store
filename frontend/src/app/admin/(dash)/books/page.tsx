@@ -7,10 +7,51 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import { clientApi } from "@/lib/client-api";
 import { npr } from "@/lib/format";
 import { TableSkeleton } from "@/components/ui/Skeleton";
+import { Pagination } from "@/components/books/Pagination";
 import type { AdminBook } from "./_components/types";
 
 const PAGE_SIZE = 10;
 const SEARCH_DEBOUNCE_MS = 400;
+
+/** Type a page number and jump straight there — for hops the numbered
+ *  window can't reach (page 2 → 8). Clamps out-of-range input rather than
+ *  requesting a page the API would return empty. */
+function JumpToPage({ pages, onJump }: { pages: number; onJump: (n: number) => void }) {
+  const [value, setValue] = useState("");
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const n = Number(value);
+    if (!Number.isInteger(n) || n < 1) return;
+    onJump(Math.min(n, pages));
+    setValue("");
+  }
+
+  return (
+    <form onSubmit={submit} className="flex items-center gap-1.5">
+      <label htmlFor="jump-to-page" className="uppercase tracking-wide">
+        Go to
+      </label>
+      <input
+        id="jump-to-page"
+        type="number"
+        min={1}
+        max={pages}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder={String(pages)}
+        aria-label={`Jump to a page, 1 to ${pages}`}
+        className="w-16 border border-border bg-surface px-2 py-1.5 text-center tabular-nums text-text outline-none focus:border-accent"
+      />
+      <button
+        type="submit"
+        className="border border-border px-2.5 py-1.5 uppercase tracking-wide text-text hover:border-accent hover:text-accent"
+      >
+        Go
+      </button>
+    </form>
+  );
+}
 
 const TABS = [
   { key: "all", label: "All" },
@@ -118,6 +159,16 @@ function AdminBooksContent() {
 
   function goToPage(next: number) {
     updateParams({ page: next === 1 ? null : String(next) });
+  }
+
+  // Same URL shape goToPage produces, as an href — lets <Pagination> render
+  // real links (middle-click, open-in-new-tab) instead of click handlers.
+  function hrefForPage(n: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (n === 1) params.delete("page");
+    else params.set("page", String(n));
+    const qs = params.toString();
+    return qs ? `${pathname}?${qs}` : pathname;
   }
 
   async function del(e: React.MouseEvent, b: AdminBook) {
@@ -242,28 +293,21 @@ function AdminBooksContent() {
       )}
 
       {!loading && total > 0 && (
-        <div className="mt-4 flex items-center justify-between font-data text-xs text-muted">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 font-data text-xs text-muted">
           <span>
             {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total}
           </span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => goToPage(Math.max(1, page - 1))}
-              disabled={page <= 1}
-              className="border border-border px-3 py-1.5 uppercase tracking-wide text-text hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border disabled:hover:text-text"
-            >
-              Prev
-            </button>
-            <span className="tabular-nums">
-              Page {page} of {pages}
-            </span>
-            <button
-              onClick={() => goToPage(Math.min(pages, page + 1))}
-              disabled={page >= pages}
-              className="border border-border px-3 py-1.5 uppercase tracking-wide text-text hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border disabled:hover:text-text"
-            >
-              Next
-            </button>
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Numbered window (1 … 6 7 8 9 10 … 25) for nearby pages. */}
+            <Pagination
+              page={page}
+              pages={pages}
+              hrefFor={hrefForPage}
+              className="flex flex-wrap items-center gap-1.5"
+            />
+            {/* The window only ever reaches current ±2, so a long list still
+                needs a way to reach page 8 from page 2 in one move. */}
+            {pages > 7 && <JumpToPage pages={pages} onJump={goToPage} />}
           </div>
         </div>
       )}

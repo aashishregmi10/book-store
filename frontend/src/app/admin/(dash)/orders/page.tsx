@@ -5,6 +5,7 @@ import Image from "next/image";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { clientApi } from "@/lib/client-api";
 import { npr } from "@/lib/format";
+import { OrderTimeline, type StatusEntry } from "./_components/OrderTimeline";
 
 interface AdminOrder {
   _id: string;
@@ -28,6 +29,7 @@ interface OrderItem {
 }
 interface AdminOrderDetail extends AdminOrder {
   items: OrderItem[];
+  statusHistory?: StatusEntry[];
   subtotal: number;
   deliveryFee: number;
   discount: number;
@@ -60,6 +62,9 @@ export default function AdminOrders() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [details, setDetails] = useState<Record<string, AdminOrderDetail>>({});
   const [detailLoading, setDetailLoading] = useState<string | null>(null);
+  // Which tab each expanded row is showing, keyed by order id (defaults to
+  // "details") so reopening a row remembers where you were.
+  const [detailTab, setDetailTab] = useState<Record<string, "details" | "timeline">>({});
 
   useEffect(() => {
     let active = true;
@@ -177,6 +182,28 @@ export default function AdminOrders() {
                         {detailLoading === o._id && !detail ? (
                           <p className="font-body text-sm text-muted">Loading order details…</p>
                         ) : detail ? (
+                          <>
+                          <div className="mb-4 flex gap-1 border-b border-border">
+                            {(["details", "timeline"] as const).map((t) => (
+                              <button
+                                key={t}
+                                onClick={() => setDetailTab((m) => ({ ...m, [o._id]: t }))}
+                                className={`-mb-px border-b-2 px-3.5 py-2 font-data text-xs uppercase tracking-wide transition-colors ${
+                                  (detailTab[o._id] ?? "details") === t
+                                    ? "border-accent text-accent"
+                                    : "border-transparent text-muted hover:text-text"
+                                }`}
+                              >
+                                {t === "details" ? "Details" : `Timeline (${detail.statusHistory?.length ?? 0})`}
+                              </button>
+                            ))}
+                          </div>
+
+                          {(detailTab[o._id] ?? "details") === "timeline" ? (
+                            <div className="max-w-xl">
+                              <OrderTimeline history={detail.statusHistory ?? []} current={detail.status} />
+                            </div>
+                          ) : (
                           <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
                             {/* Line items */}
                             <div>
@@ -234,6 +261,8 @@ export default function AdminOrders() {
                               )}
                             </div>
                           </div>
+                          )}
+                          </>
                         ) : (
                           <p className="font-body text-sm text-sale">Couldn&apos;t load order details.</p>
                         )}

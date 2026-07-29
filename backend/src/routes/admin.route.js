@@ -770,7 +770,13 @@ router.get('/orders', async (req, res, next) => {
 
 router.get('/orders/:id', validate({ params: idParams }), async (req, res, next) => {
   try {
-    const order = await Order.findById(req.params.id).populate('user', 'fullName email phone').lean();
+    const order = await Order.findById(req.params.id)
+      .populate('user', 'fullName email phone')
+      // Who moved the order to each status — the timeline names them rather
+      // than showing a raw id. Guest-placed orders have no updatedBy on the
+      // first entry, so the UI falls back to "Customer".
+      .populate('statusHistory.updatedBy', 'fullName email isAdmin')
+      .lean();
     if (!order) return fail(res, 'Order not found', 404, [{ code: 'NOT_FOUND' }]);
     return ok(res, order, 'Order');
   } catch (err) {
