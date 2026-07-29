@@ -65,7 +65,12 @@ async function connectMongo(uri = process.env.MONGODB_URI) {
 
   // 1 = connected, 2 = connecting. Either way there's nothing to do.
   if (mongoose.connection.readyState === 1) return mongoose.connection;
-  if (connectionPromise) return connectionPromise;
+  // Only reuse an in-flight promise while it is genuinely still connecting.
+  // A settled promise from a connection that has since dropped (an Atlas
+  // failover, say) would otherwise be handed back forever and no reconnect
+  // would ever be attempted — queries then pile up until they buffer-timeout.
+  if (connectionPromise && mongoose.connection.readyState === 2) return connectionPromise;
+  connectionPromise = null;
 
   if (uri.startsWith('mongodb+srv://')) ensureUsableDnsServers();
 
@@ -77,7 +82,12 @@ async function connectMongo(uri = process.env.MONGODB_URI) {
 
   mongoose.connection.on('connected', () => logger.info('MongoDB connected.'));
   mongoose.connection.on('error', (err) => logger.error({ err: err.message }, 'MongoDB error'));
-  mongoose.connection.on('disconnected', () => logger.warn('MongoDB disconnected.'));
+  mongoose.connection.on('disconnected', () => {
+    // Drop the cached promise so the next connectMongo() actually redials
+    // instead of resolving against a dead connection.
+    connectionPromise = null;
+    logger.warn('MongoDB disconnected.');
+  });
 
   connectionPromise = mongoose
     .connect(uri, {
