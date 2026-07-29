@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 
 import { apiGetOrNull } from "@/lib/api";
 import type { Genre, BookCardData, Paged } from "@/lib/types";
-import { itemListLd, breadcrumbLd, faqLd } from "@/lib/seo";
+import { itemListLd, breadcrumbLd } from "@/lib/seo";
 import { JsonLd } from "@/components/JsonLd";
 import { BooksGrid } from "@/components/books/BooksGrid";
 
@@ -57,33 +57,12 @@ export default async function GenrePage({
   if (sort) apiParams.sort = sort;
   const urlQuery = sort ? `sort=${encodeURIComponent(sort)}` : "";
 
-  const g = genre.name.toLowerCase();
-  const faqs = [
-    {
-      q: `How long does delivery take for ${g} books in Nepal?`,
-      a: "We deliver within Kathmandu Valley in 1–2 days and to the rest of Nepal in 3–5 business days, with cash on delivery available everywhere.",
-    },
-    {
-      q: `Can I pay cash on delivery for ${g} books?`,
-      a: "Yes. Cash on delivery is available across all seven provinces — you pay when your order arrives.",
-    },
-    {
-      q: `How much does delivery cost for ${g} books?`,
-      a: "Delivery is free on orders over NPR 1,500; below that a flat NPR 120 applies anywhere in Nepal.",
-    },
-    {
-      q: `Are these ${g} books new?`,
-      a: "Almost all titles are brand new. Any used copy is clearly labelled 'Used' on its product page.",
-    },
-  ];
-
   return (
     <>
       <JsonLd
         data={[
           itemListLd(genre, items),
           breadcrumbLd([{ name: "Home", path: "/" }, { name: genre.name, path: `/genre/${genre.slug}` }]),
-          faqLd(faqs),
         ]}
       />
 
@@ -126,19 +105,6 @@ export default async function GenrePage({
             urlQuery={urlQuery}
           />
         )}
-
-        {/* Visible FAQ mirrors the FAQPage schema */}
-        <section className="mt-16 max-w-3xl">
-          <h2 className="font-display text-2xl text-text">Frequently asked</h2>
-          <dl className="mt-4 space-y-5">
-            {faqs.map((f) => (
-              <div key={f.q}>
-                <dt className="font-display text-lg text-text">{f.q}</dt>
-                <dd className="mt-1 font-body text-muted">{f.a}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
       </div>
     </>
   );

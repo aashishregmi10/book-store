@@ -17,7 +17,7 @@ const PRINCIPLES: [string, string][] = [
 ];
 
 const STATS: [string, string][] = [
-  ["50,000+", "Titles in English & Nepali"],
+  ["3,000+", "Titles in English & Nepali"],
   ["77 / 77", "Districts we deliver to"],
   ["1–2 days", "Inside the Kathmandu Valley"],
   ["4.8★", "Average reader rating"],

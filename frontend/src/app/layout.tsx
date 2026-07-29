@@ -47,7 +47,9 @@ export const metadata: Metadata = {
     title: "Buy Books Online in Nepal | Books Temple Nepal",
     description: SITE.description,
   },
-  twitter: { card: "summary_large_image", site: SITE.twitter },
+  // Card type only — there is no X/Twitter account to attribute to, and a
+  // `site` handle that isn't ours would credit someone else's profile.
+  twitter: { card: "summary_large_image" },
   robots: {
     index: true,
     follow: true,

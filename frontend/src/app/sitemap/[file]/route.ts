@@ -26,7 +26,6 @@ function staticUrls(): SitemapUrl[] {
     { loc: `${base}/books`, lastmod, changefreq: "daily", priority: 0.9 },
     { loc: `${base}/about`, lastmod, changefreq: "monthly", priority: 0.5 },
     { loc: `${base}/contact`, lastmod, changefreq: "monthly", priority: 0.4 },
-    { loc: `${base}/faq`, lastmod, changefreq: "monthly", priority: 0.5 },
     { loc: `${base}/blog`, lastmod, changefreq: "weekly", priority: 0.6 },
   ];
 }

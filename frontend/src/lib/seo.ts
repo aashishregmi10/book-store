@@ -5,15 +5,19 @@ export const SITE = {
   url: process.env.NEXT_PUBLIC_SITE_URL || "https://bookstemplenepal.com",
   description: "Nepal's online bookstore — books worth reading, delivered across all seven provinces. NPR prices, cash on delivery.",
   locale: "en_NP",
-  twitter: "@bookstemplenp",
   email: "hello@bookstemplenepal.com",
-  // Social/profile URLs strengthen the entity in Google's & AI engines' knowledge graphs.
-  sameAs: [
-    "https://www.facebook.com/bookstemplenepal",
-    "https://www.instagram.com/bookstemplenepal",
-    "https://twitter.com/bookstemplenp",
-  ],
+  // Social/profile URLs strengthen the entity in Google's & AI engines' knowledge
+  // graphs. These are the real, live accounts — an unclaimed handle here is worse
+  // than no entry, since it points the graph at someone else's page.
+  social: {
+    facebook: "https://www.facebook.com/profile.php?id=61591817207908",
+    instagram: "https://www.instagram.com/bookstemplenepal/",
+    tiktok: "https://www.tiktok.com/@bookstemple",
+  },
 };
+
+/** Profile URLs for schema.org `sameAs`. */
+export const SAME_AS = Object.values(SITE.social);
 
 const abs = (path: string) => `${SITE.url}${path}`;
 
@@ -30,7 +34,7 @@ export function organizationLd() {
     description: SITE.description,
     email: SITE.email,
     foundingDate: "2026",
-    sameAs: SITE.sameAs,
+    sameAs: SAME_AS,
     areaServed: { "@type": "Country", name: "Nepal" },
     currenciesAccepted: "NPR",
     paymentAccepted: "Cash on Delivery",
@@ -183,19 +187,6 @@ export function itemListLd(genre: Genre, books: BookCardData[]) {
   };
 }
 
-// ── FAQPage (genre / faq pages) ─────────────────────────
-export function faqLd(qas: { q: string; a: string }[]) {
-  return {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: qas.map((qa) => ({
-      "@type": "Question",
-      name: qa.q,
-      acceptedAnswer: { "@type": "Answer", text: qa.a },
-    })),
-  };
-}
-
 // ── QAPage (customer Q&A on a book) — strong for answer engines ──
 export function qaPageLd(
   book: { title: string; slug: string },
@@ -242,9 +233,4 @@ export function articleLd(article: {
     ...(article.updatedAt ? { dateModified: article.updatedAt } : {}),
     mainEntityOfPage: abs(`/blog/${article.slug}`),
   };
-}
-
-// Marks a CSS selector as voice-assistant readable (AEO).
-export function speakable(...cssSelectors: string[]) {
-  return { "@type": "SpeakableSpecification", cssSelector: cssSelectors };
 }
