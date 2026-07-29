@@ -9,7 +9,6 @@ import { useAuth } from "@/lib/stores/auth";
 import { useAuthModal } from "@/lib/stores/authModal";
 import { useDrawer } from "@/lib/stores/uiDrawer";
 import { useWishlist } from "@/lib/stores/wishlist";
-import { useSearchOverlay } from "@/lib/stores/searchOverlay";
 import { useSuggestions } from "@/lib/hooks/useSuggestions";
 import { SearchSuggestions } from "@/components/books/SearchSuggestions";
 import type { Genre } from "@/lib/types";
@@ -34,7 +33,6 @@ export function Header({ genres = [] }: { genres?: Genre[] }) {
   const openCart = useDrawer((s) => s.openCart);
   const openWishlist = useDrawer((s) => s.openWishlist);
   const wishlistCount = useWishlist((s) => s.ids.size);
-  const openSearch = useSearchOverlay((s) => s.openSearch);
 
   // Load the wishlist once the session is known; drop it on sign-out.
   useEffect(() => {
@@ -52,7 +50,11 @@ export function Header({ genres = [] }: { genres?: Genre[] }) {
       <div className="mx-auto flex max-w-[1600px] items-center gap-6 px-6 py-3.5 sm:px-8 lg:px-16 xl:px-24">
         <Link href="/" className="flex shrink-0 items-baseline gap-2">
           <span className="font-display text-2xl font-semibold tracking-tight text-accent">Books Temple</span>
-          <span className="text-xs uppercase tracking-[0.3em] text-muted">Nepal</span>
+          {/* The widely-tracked "NEPAL" subtitle is real width, not a nice-to-have,
+              on a header this narrow — dropped below sm so the mobile wordmark is
+              just "Books Temple". Combined with the icon-cluster fix below, this
+              is what stops the row from overflowing on phone-width screens. */}
+          <span className="hidden text-xs uppercase tracking-[0.3em] text-muted sm:inline">Nepal</span>
         </Link>
 
         {/* Primary nav — beside the logo */}
@@ -76,12 +78,15 @@ export function Header({ genres = [] }: { genres?: Genre[] }) {
           <HeaderSearch />
         </Suspense>
 
+        {/* On mobile this row plus the shrink-0 logo don't both fit at once —
+            Search and Cart are dropped below md because BottomNav (also
+            md:hidden, so it's live on exactly the same screens) already gives
+            one-tap access to both from a fixed bottom tab. Wishlist stays: it
+            has no bottom-nav equivalent. Without this the row overflowed its
+            container and — because nothing here clips overflow-x — that
+            pushed the whole page wider than the viewport, showing as dead
+            space down the right edge with the sign-in control stranded at it. */}
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
-          {/* Mobile search icon — opens the search overlay */}
-          <button onClick={openSearch} aria-label="Search" className="p-2 text-text hover:text-accent md:hidden">
-            <Search className="size-5" />
-          </button>
-
           {/* Wishlist — icon only with count badge (opens drawer) */}
           <button onClick={openWishlist} aria-label={`Wishlist, ${wishCount} saved`} className="relative p-2 text-text transition-colors hover:text-[#e3534c]">
             <Heart className="size-5" />
@@ -92,8 +97,12 @@ export function Header({ genres = [] }: { genres?: Genre[] }) {
             )}
           </button>
 
-          {/* Cart icon + count badge (opens drawer) */}
-          <button onClick={openCart} aria-label={`Cart, ${cartCount} items`} className="relative p-2 text-text hover:text-accent">
+          {/* Cart icon + count badge (opens drawer) — md+ only, see above */}
+          <button
+            onClick={openCart}
+            aria-label={`Cart, ${cartCount} items`}
+            className="relative hidden p-2 text-text hover:text-accent md:inline-flex"
+          >
             <ShoppingCart className="size-5" />
             {cartCount > 0 && (
               <span className="absolute -right-0.5 -top-0.5 grid min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-semibold leading-4 text-white">
