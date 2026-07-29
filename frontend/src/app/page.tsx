@@ -1,56 +1,47 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
-  Sparkles,
-  Baby,
-  Landmark,
   UserRound,
   TrendingUp,
   Ghost,
-  Scale,
   GraduationCap,
   BookOpen,
-  Gamepad2,
-  LayoutGrid,
   Feather,
   Brain,
   PenTool,
   Megaphone,
   Compass,
   Flower2,
-  Target,
+  Baby,
+  Heart,
+  Sparkles,
+  FlaskConical,
   type LucideIcon,
 } from "lucide-react";
 import { apiGet } from "@/lib/api";
 import type { BookCardData, Genre, Paged } from "@/lib/types";
 import { BookRail } from "@/components/books/BookRail";
-import { HeroCovers } from "@/components/home/HeroCovers";
 import { CategoryCircles } from "@/components/home/CategoryCircles";
-
-// Fixed browse sections (separate from the genre silo).
-const FIXED_CATEGORIES = [
-  { name: "Manga", href: "/category/manga", filter: { category: "manga" }, icon: Sparkles },
-  { name: "Kids", href: "/category/kids", filter: { category: "kids" }, icon: Baby },
-  { name: "Loksewa", href: "/category/loksewa", filter: { category: "loksewa" }, icon: Landmark },
-];
 
 // Icon per genre slug — BookOpen is the fallback for any genre added later
 // without a dedicated icon here.
 const GENRE_ICONS: Record<string, LucideIcon> = {
-  biography: UserRound,
-  business: TrendingUp,
-  educational: GraduationCap,
+  "biography-memoir": UserRound,
+  "business-economics": TrendingUp,
+  childrens: Baby,
   fiction: BookOpen,
-  games: Gamepad2,
-  general: LayoutGrid,
-  horror: Ghost,
-  law: Scale,
+  "mystery-thriller": Ghost,
   "nepali-literature": Feather,
   philosophy: Brain,
   poetry: PenTool,
-  politics: Megaphone,
+  "politics-society": Megaphone,
+  psychology: Brain,
+  romance: Heart,
+  "sci-fi-fantasy": Sparkles,
+  "science-technology": FlaskConical,
   "self-help": Compass,
-  spirituality: Flower2,
-  strategy: Target,
+  "spirituality-religion": Flower2,
+  "young-adult": GraduationCap,
 };
 
 // Request-time render: the storefront reads live catalog data from the API.
@@ -70,20 +61,21 @@ async function getFeatured(): Promise<Featured | null> {
   }
 }
 
-// Every genre gets a circle too (not just a hand-picked few), so new genres
-// show up here automatically instead of needing this page edited each time.
+// Every genre gets a circle (not just a hand-picked few), so new genres show
+// up here automatically instead of needing this page edited each time. The row
+// is genres only — the fixed Manga/Kids/Loksewa sections still have their own
+// /category pages, they just don't take the first three slots here any more.
 async function getQuickBrowseCovers() {
   const genres = await apiGet<Genre[]>("/genres", { tags: ["genres"] }).catch(() => [] as Genre[]);
 
-  const items = [
-    ...FIXED_CATEGORIES,
-    ...genres.map((g) => ({
+  const items = genres
+    .map((g) => ({
       name: g.name,
       href: `/genre/${g.slug}`,
       filter: { genre: g.slug },
       icon: GENRE_ICONS[g.slug] ?? BookOpen,
-    })),
-  ].map((item) => ({ ...item, bg: "color-mix(in srgb, var(--color-accent) 12%, white)", fg: "var(--color-accent)" }));
+    }))
+    .map((item) => ({ ...item, bg: "color-mix(in srgb, var(--color-accent) 12%, white)", fg: "var(--color-accent)" }));
 
   const results = await Promise.all(
     items.map((item) =>
@@ -101,16 +93,30 @@ export default async function HomePage() {
 
   return (
     <>
-      {/* Asymmetric, typography-led hero — NOT centered-with-one-CTA */}
-      <section className="rounded-b-3xl bg-bg">
-        <div className="mx-auto grid max-w-[1600px] items-center gap-8 px-6 py-10 sm:px-8 lg:px-16 xl:px-24 md:grid-cols-12 md:py-14">
-          <div className="md:col-span-7">
-            <h1 className="font-display text-4xl leading-[1.1] text-text sm:text-5xl md:text-6xl">
+      {/* Asymmetric, typography-led hero — NOT centered-with-one-CTA.
+          Full-bleed bookshelf photo with a scrim for text contrast, rather
+          than the flat --bg fill + floating cover cards this replaced. */}
+      <section className="relative overflow-hidden rounded-b-3xl">
+        <Image
+          src="/hero-books.jpg"
+          alt="Rows of books on a library shelf"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover"
+        />
+        {/* Darkest over the text (left), fading out toward the right so the
+            shelf itself stays visible. */}
+        <div className="absolute inset-0 bg-gradient-to-r from-text/85 via-text/60 to-text/25" />
+
+        <div className="relative mx-auto max-w-[1600px] px-6 py-16 sm:px-8 lg:px-16 xl:px-24 md:py-24">
+          <div className="max-w-xl">
+            <h1 className="font-display text-4xl leading-[1.1] text-white sm:text-5xl md:text-6xl">
               Books worth reading,
               <br />
               delivered across Nepal.
             </h1>
-            <p className="mt-4 max-w-md font-body text-base leading-relaxed text-muted">
+            <p className="mt-4 max-w-md font-body text-base leading-relaxed text-white/80">
               Handpicked titles, honest prices, cash on delivery to all seven provinces.
             </p>
             <div className="mt-7">
@@ -121,12 +127,6 @@ export default async function HomePage() {
                 Shop now →
               </Link>
             </div>
-          </div>
-
-          {/* Real covers from the catalogue, not a stock photo — shown on every
-              breakpoint (mobile stacks below the text; md+ sits beside it). */}
-          <div className="mt-2 md:col-span-5 md:mt-0">
-            <HeroCovers books={data?.bestsellers ?? []} />
           </div>
         </div>
       </section>
