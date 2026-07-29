@@ -12,17 +12,19 @@ import { useWishlist } from "@/lib/stores/wishlist";
 import { useSearchOverlay } from "@/lib/stores/searchOverlay";
 import { useSuggestions } from "@/lib/hooks/useSuggestions";
 import { SearchSuggestions } from "@/components/books/SearchSuggestions";
+import type { Genre } from "@/lib/types";
 import { AccountMenu } from "./AccountMenu";
+import { CategoryMenu } from "./CategoryMenu";
 
+// "Category" is handled separately — it opens the genre mega-menu.
 const NAV = [
-  { to: "/books", label: "Category" },
   { to: "/blog", label: "Articles" },
   { to: "/about", label: "Our Story" },
   { to: "/contact", label: "Contact" },
   { to: "/account", label: "Rewards" },
 ];
 
-export function Header() {
+export function Header({ genres = [] }: { genres?: Genre[] }) {
   const pathname = usePathname();
   const count = useCart(selectCount);
   const cartHydrated = useCart((s) => s.hydrated);
@@ -49,12 +51,13 @@ export function Header() {
     <header className="sticky top-0 z-50 border-b border-border/70 bg-bg/85 backdrop-blur">
       <div className="mx-auto flex max-w-[1600px] items-center gap-6 px-6 py-3.5 sm:px-8 lg:px-16 xl:px-24">
         <Link href="/" className="flex shrink-0 items-baseline gap-2">
-          <span className="font-display text-2xl font-semibold tracking-tight text-accent">PageTurn</span>
+          <span className="font-display text-2xl font-semibold tracking-tight text-accent">Books Temple</span>
           <span className="text-xs uppercase tracking-[0.3em] text-muted">Nepal</span>
         </Link>
 
         {/* Primary nav — beside the logo */}
         <nav className="hidden items-center gap-5 lg:flex" aria-label="Primary">
+          <CategoryMenu genres={genres} active={isActive("/books")} />
           {NAV.map((n) => (
             <Link
               key={n.to}
