@@ -22,6 +22,21 @@ import { BookTabs } from "@/components/books/BookTabs";
 // Section labels for breadcrumb + related heading on category books.
 const CATEGORY_LABEL: Record<string, string> = { manga: "Manga", kids: "Kids", loksewa: "Loksewa" };
 
+// Internal holding genre for books whose subject data was inconclusive. It's
+// isActive:false, so /genre/unclassified 404s — a breadcrumb (and its matching
+// JSON-LD) must never point there. These books stay fully buyable; they just
+// hang off the catalogue rather than a genre page until someone shelves them.
+const HOLDING_GENRE = "unclassified";
+
+/** Where a book's breadcrumb parent points, and what it's called. */
+function breadcrumbParent(book: { category?: string | null; genre: string }) {
+  if (book.category) {
+    return { name: CATEGORY_LABEL[book.category] ?? book.category, path: `/category/${book.category}` };
+  }
+  if (book.genre === HOLDING_GENRE) return { name: "All books", path: "/books" };
+  return { name: book.genre.replace(/-/g, " "), path: `/genre/${book.genre}` };
+}
+
 export const dynamic = "force-dynamic";
 
 interface BookResponse {
@@ -84,9 +99,7 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
           bookLd(book, reviews),
           breadcrumbLd([
             { name: "Home", path: "/" },
-            book.category
-              ? { name: CATEGORY_LABEL[book.category], path: `/category/${book.category}` }
-              : { name: book.genre, path: `/genre/${book.genre}` },
+            breadcrumbParent(book),
             { name: book.title, path: `/books/${book.slug}` },
           ]),
           ...(questions.length ? [qaPageLd({ title: book.title, slug: book.slug }, questions)] : []),
@@ -98,11 +111,9 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
         <nav aria-label="Breadcrumb" className="font-data text-xs uppercase tracking-wide text-muted">
           <Link href="/" className="hover:text-accent">Home</Link>
           <span className="px-2">/</span>
-          {book.category ? (
-            <Link href={`/category/${book.category}`} className="hover:text-accent">{CATEGORY_LABEL[book.category]}</Link>
-          ) : (
-            <Link href={`/genre/${book.genre}`} className="hover:text-accent">{book.genre.replace(/-/g, " ")}</Link>
-          )}
+          <Link href={breadcrumbParent(book).path} className="hover:text-accent">
+            {breadcrumbParent(book).name}
+          </Link>
           <span className="px-2">/</span>
           <span className="text-text">{book.title}</span>
         </nav>
@@ -272,7 +283,9 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
         {related.length > 0 && (
           <section className="mt-14">
             <h2 className="font-display text-2xl text-text">
-              More in {book.category ? CATEGORY_LABEL[book.category] : book.genre.replace(/-/g, " ")}
+              {book.genre === HOLDING_GENRE && !book.category
+                ? "More books"
+                : `More in ${breadcrumbParent(book).name}`}
             </h2>
             <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {related.map((b) => (

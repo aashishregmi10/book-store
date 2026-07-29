@@ -15,3 +15,7 @@ coverage/
 
 # Uploads (local dev)
 uploads/tmp/
+
+# Generated classification reports (timestamped; regenerate with the scripts)
+genre-review-*.csv
+general-assignment-*.csv
