@@ -126,26 +126,22 @@ export default async function GenrePage({
           <span className="text-text">{genre.name}</span>
         </nav>
 
-        {/* Genre masthead. The heading is just the shelf name — "Best <Genre>
-            Books in Nepal" reads as keyword stuffing at this size. That phrase
-            still carries the search weight from the <title> tag and the ItemList
-            JSON-LD, which is where it counts and where nobody has to look at it. */}
+        {/* Genre masthead — the shelf name alone. "Best <Genre> Books in Nepal"
+            reads as keyword stuffing at display size, and the blurb beneath it
+            was the same sentence with one word swapped on most genres. Search
+            still gets the phrase from the <title> tag, the meta description and
+            the ItemList JSON-LD, none of which a visitor has to read past. */}
         <header className="mt-4 border-l-2 border-accent bg-surface py-7 pl-6 pr-6 sm:py-9 sm:pl-9">
-          {/* No count here — the toolbar directly below the header already
-              reports how many books are showing, and it tracks the active
-              filters, which a shelf total can't. */}
+          {/* No count here — the toolbar directly below already reports how many
+              books are showing, and it tracks the active filters. */}
           <h1 className="max-w-4xl font-display text-4xl leading-[1.12] text-text sm:text-5xl lg:text-[3.25rem]">
             {genre.name}
           </h1>
 
-          {/* BLUF — extractable 40–80 word definition */}
-          <p className="mt-5 max-w-3xl font-body text-lg leading-relaxed text-muted">
-            {genre.description ||
-              `Books Temple Nepal stocks the top-rated ${genre.name.toLowerCase()} titles available across Nepal, with NPR pricing and cash on delivery to all seven provinces.`}
-          </p>
-
+          {/* Kept: unlike the generic blurb, a curator note is written per genre
+              and only renders where someone actually wrote one. */}
           {genre.curatorNote && (
-            <p className="mt-5 max-w-3xl border-t border-border pt-5 font-body italic leading-relaxed text-text">
+            <p className="mt-5 max-w-3xl font-body italic leading-relaxed text-text">
               {genre.curatorNote}
             </p>
           )}
