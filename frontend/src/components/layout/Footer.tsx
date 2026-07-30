@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { SITE } from "@/lib/seo";
 
@@ -46,7 +47,15 @@ export function Footer() {
     >
       <div className="mx-auto grid max-w-[1600px] gap-12 px-6 py-16 sm:px-8 lg:px-16 xl:px-24 md:grid-cols-4">
         <div className="md:col-span-2">
-          <div className="font-display text-3xl font-semibold text-accent">Books Temple Nepal</div>
+          {/* Full lockup here — the footer has room for the "Online Bookstore"
+              subtitle that has to be cropped out of the header at 32px. */}
+          <Image
+            src="/logo-full.png"
+            alt="Books Temple Nepal — online bookstore"
+            width={1200}
+            height={427}
+            className="h-16 w-auto sm:h-20"
+          />
           <p className="mt-4 max-w-md font-body text-sm leading-relaxed text-muted">
             A bookshop for Nepali readers. Over 3,000 titles in English and Nepali, same-day delivery in
             Kathmandu, careful packaging to all 77 districts.
@@ -68,7 +77,7 @@ export function Footer() {
             ))}
           </ul>
 
-          <p className="mt-6 text-xs uppercase tracking-[0.3em] text-muted">Thapathali · Kathmandu · 44600</p>
+          <p className="mt-6 text-xs uppercase tracking-[0.3em] text-muted">Kathmandu · Nepal</p>
         </div>
 
         <div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Search, ShoppingCart, Heart, LogIn } from "lucide-react";
@@ -48,13 +49,19 @@ export function Header({ genres = [] }: { genres?: Genre[] }) {
   return (
     <header className="sticky top-0 z-50 border-b border-border/70 bg-bg/85 backdrop-blur">
       <div className="mx-auto flex max-w-[1600px] items-center gap-6 px-6 py-3.5 sm:px-8 lg:px-16 xl:px-24">
-        <Link href="/" className="flex shrink-0 items-baseline gap-2">
-          <span className="font-display text-2xl font-semibold tracking-tight text-accent">Books Temple</span>
-          {/* The widely-tracked "NEPAL" subtitle is real width, not a nice-to-have,
-              on a header this narrow — dropped below sm so the mobile wordmark is
-              just "Books Temple". Combined with the icon-cluster fix below, this
-              is what stops the row from overflowing on phone-width screens. */}
-          <span className="hidden text-xs uppercase tracking-[0.3em] text-muted sm:inline">Nepal</span>
+        {/* Brand lockup. Sized by height with width:auto so the aspect ratio is
+            never distorted; the source PNG is trimmed to its ink so there's no
+            dead margin to compensate for. Deliberately smaller on mobile — this
+            row previously overflowed the viewport on phone widths. */}
+        <Link href="/" className="flex shrink-0 items-center" aria-label="Books Temple Nepal — home">
+          <Image
+            src="/logo-wordmark.png"
+            alt="Books Temple Nepal"
+            width={900}
+            height={278}
+            priority
+            className="h-8 w-auto sm:h-10"
+          />
         </Link>
 
         {/* Primary nav — beside the logo */}
