@@ -131,14 +131,10 @@ export default async function GenrePage({
             still carries the search weight from the <title> tag and the ItemList
             JSON-LD, which is where it counts and where nobody has to look at it. */}
         <header className="mt-4 border-l-2 border-accent bg-surface py-7 pl-6 pr-6 sm:py-9 sm:pl-9">
-          <p className="font-data text-xs uppercase tracking-[0.22em] text-muted">
-            {/* The shelf's own size, not the filtered result count — the toolbar
-                below already reports that, and repeating it here would print the
-                same number twice. */}
-            {genre.bookCount ?? total} on this shelf
-          </p>
-
-          <h1 className="mt-3 max-w-4xl font-display text-4xl leading-[1.12] text-text sm:text-5xl lg:text-[3.25rem]">
+          {/* No count here — the toolbar directly below the header already
+              reports how many books are showing, and it tracks the active
+              filters, which a shelf total can't. */}
+          <h1 className="max-w-4xl font-display text-4xl leading-[1.12] text-text sm:text-5xl lg:text-[3.25rem]">
             {genre.name}
           </h1>
 
