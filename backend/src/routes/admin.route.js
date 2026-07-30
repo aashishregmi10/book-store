@@ -11,6 +11,7 @@ const Review = require('../models/review.model');
 const Question = require('../models/question.model');
 const Article = require('../models/article.model');
 const Activity = require('../models/activity.model');
+const Coupon = require('../models/coupon.model');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const { z, objectId, trimmedString, intQuery } = require('../utils/zod');
@@ -78,6 +79,43 @@ const articleBody = z
   })
   .catchall(z.unknown());
 const answerBody = z.object({ answer: z.string().trim().min(2).max(2000) }).catchall(z.unknown());
+// HTML number/date inputs post "" for "not set", which would otherwise coerce to
+// NaN / Invalid Date and fail validation for a field the admin left blank.
+const optional = (schema) => z.preprocess((v) => (v === '' || v === null ? undefined : v), schema.optional());
+// Not z.coerce.boolean(): that is Boolean(v), so the string "false" arrives as
+// true — which would quietly publish a coupon the admin had switched off.
+const flag = () => z.preprocess((v) => (typeof v === 'string' ? v !== 'false' && v !== '' : v), z.boolean().optional());
+const couponBody = z
+  .object({
+    code: z.string().trim().toUpperCase().min(3, 'Coupon code must be at least 3 characters').max(24),
+    description: optional(z.string().trim().max(200)),
+    type: z.enum(['percentage', 'fixed', 'free_shipping']),
+    value: z.coerce.number().min(0),
+    minOrderAmount: optional(z.coerce.number().int().min(0)),
+    maxDiscount: optional(z.coerce.number().int().min(1)),
+    usageLimit: optional(z.coerce.number().int().min(1)),
+    perUserLimit: optional(z.coerce.number().int().min(1)),
+    startDate: optional(z.coerce.date()),
+    endDate: optional(z.coerce.date()),
+    isActive: flag(),
+    newUserOnly: flag(),
+    applicableGenres: z.array(z.string().trim()).optional(),
+  })
+  .refine((c) => c.type !== 'percentage' || c.value <= 100, {
+    message: 'A percentage coupon cannot exceed 100%',
+    path: ['value'],
+  })
+  .refine((c) => !c.startDate || !c.endDate || c.endDate > c.startDate, {
+    message: 'The end date must be after the start date',
+    path: ['endDate'],
+  });
+// Writable coupon fields. usageCount/usedBy are ledger state owned by checkout —
+// never let a form payload overwrite how many times a code has been redeemed.
+const COUPON_FIELDS = [
+  'code', 'description', 'type', 'value', 'minOrderAmount', 'maxDiscount',
+  'usageLimit', 'perUserLimit', 'startDate', 'endDate', 'isActive',
+  'newUserOnly', 'applicableGenres',
+];
 // Lookup accepts any combination of identifiers; at least one is required.
 const lookupQuery = z
   .object({
@@ -760,6 +798,69 @@ router.delete('/articles/:id', validate({ params: idParams }), async (req, res, 
       await invalidateArticleCaches(article.slug);
     }
     return ok(res, null, 'Article deleted');
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ══ COUPONS ══════════════════════════════════════════════
+// Redemption rules live in services/pricing.evaluateCoupon — these routes only
+// own the record. Keep them dumb so the cart and the admin can never disagree
+// about what a code is worth.
+router.get('/coupons', async (_req, res, next) => {
+  try {
+    const coupons = await Coupon.find().select('-usedBy').sort({ createdAt: -1 }).limit(200).lean();
+    return ok(res, coupons, 'Coupons');
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.get('/coupons/:id', validate({ params: idParams }), async (req, res, next) => {
+  try {
+    const coupon = await Coupon.findById(req.params.id).select('-usedBy').lean();
+    if (!coupon) return fail(res, 'Coupon not found', 404, [{ code: 'NOT_FOUND' }]);
+    return ok(res, coupon, 'Coupon');
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.post('/coupons', validate({ body: couponBody }), async (req, res, next) => {
+  try {
+    const payload = {};
+    for (const f of COUPON_FIELDS) if (f in req.body) payload[f] = req.body[f];
+    if (await Coupon.exists({ code: payload.code })) {
+      return fail(res, 'A coupon with that code already exists', 409, [{ field: 'code', code: 'DUPLICATE' }]);
+    }
+    const coupon = await Coupon.create(payload);
+    return created(res, coupon, 'Coupon created');
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.put('/coupons/:id', validate({ params: idParams, body: couponBody }), async (req, res, next) => {
+  try {
+    const coupon = await Coupon.findById(req.params.id);
+    if (!coupon) return fail(res, 'Coupon not found', 404, [{ code: 'NOT_FOUND' }]);
+    // A code is the customer-facing handle; renaming onto an existing one would
+    // make two records claim the same redemption ledger.
+    if (req.body.code !== coupon.code && (await Coupon.exists({ code: req.body.code }))) {
+      return fail(res, 'A coupon with that code already exists', 409, [{ field: 'code', code: 'DUPLICATE' }]);
+    }
+    for (const f of COUPON_FIELDS) if (f in req.body) coupon[f] = req.body[f];
+    await coupon.save();
+    return ok(res, coupon, 'Coupon updated');
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.delete('/coupons/:id', validate({ params: idParams }), async (req, res, next) => {
+  try {
+    await Coupon.findByIdAndDelete(req.params.id);
+    return ok(res, null, 'Coupon deleted');
   } catch (err) {
     return next(err);
   }

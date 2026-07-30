@@ -36,12 +36,20 @@ export function BooksFilters({
   authors = [],
   publishers = [],
   hideGenre = false,
+  currentGenre,
 }: {
   genres: { slug: string; name: string }[];
   authors?: string[];
   publishers?: string[];
   /** Hide the Genre filter (e.g. on a fixed section page like Manga/Kids). */
   hideGenre?: boolean;
+  /**
+   * Slug of the genre silo this page already represents (/genre/[slug]). There
+   * the genre lives in the path, not the query, so it can't be a comma-joined
+   * checkbox set: Genre becomes single-select and picking one navigates between
+   * genre pages, which keeps each silo's own canonical + ItemList intact.
+   */
+  currentGenre?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -117,6 +125,18 @@ export function BooksFilters({
     commit(params);
   }
 
+  // On a genre silo the genre is the page itself, so it behaves as single-select:
+  // another genre swaps silo, and unticking the current one widens to the full
+  // catalogue. Other filters ride along either way.
+  function chooseGenre(slug: string) {
+    const params = new URLSearchParams(sp.toString());
+    params.delete("page");
+    params.delete("genre");
+    const query = params.toString();
+    const base = currentGenre === slug ? "/books" : `/genre/${slug}`;
+    router.push(query ? `${base}?${query}` : base, { scroll: false });
+  }
+
   function clearAll() {
     const params = new URLSearchParams(sp.toString());
     [...MULTI_KEYS, "minPrice", "maxPrice", "minRating", "author", "publisher"].forEach((k) =>
@@ -127,6 +147,8 @@ export function BooksFilters({
     commit(params);
   }
 
+  // The silo's own genre isn't a removable filter, so it must not inflate the
+  // count — "Clear all (1)" that clears nothing visible reads as broken.
   const activeCount =
     MULTI_KEYS.reduce((n, k) => n + selected(k).size, 0) +
     (sp.get("minPrice") || sp.get("maxPrice") ? 1 : 0) +
@@ -174,7 +196,12 @@ export function BooksFilters({
                 <p className="font-body text-sm text-muted">No matching genres.</p>
               ) : (
                 genreOptions.map((o) => (
-                  <Check key={o.value} label={o.label} checked={selected("genre").has(o.value)} onChange={() => toggle("genre", o.value)} />
+                  <Check
+                    key={o.value}
+                    label={o.label}
+                    checked={currentGenre ? currentGenre === o.value : selected("genre").has(o.value)}
+                    onChange={() => (currentGenre ? chooseGenre(o.value) : toggle("genre", o.value))}
+                  />
                 ))
               )}
             </div>

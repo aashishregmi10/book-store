@@ -20,6 +20,9 @@ interface Priced {
   deliveryFee: number;
   total: number;
   pointsEarned: number;
+  couponCode: string | null;
+  couponDiscount: number;
+  couponError: string | null;
   issues: { message: string }[];
 }
 
@@ -34,6 +37,13 @@ export default function CheckoutPage() {
   const [error, setError] = useState("");
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
 
+  // Two states, not one: `codeInput` is what's being typed, `appliedCode` is
+  // what the server has been asked to price. Re-pricing on every keystroke
+  // would fire a request per character and flash "Invalid coupon" at someone
+  // halfway through typing a valid one.
+  const [codeInput, setCodeInput] = useState("");
+  const [appliedCode, setAppliedCode] = useState("");
+
   const [addr, setAddr] = useState({ fullName: "", phone: "", address1: "", address2: "", city: "", province: "Bagmati" });
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof typeof addr, string>>>({});
   const set = (k: keyof typeof addr) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -44,9 +54,13 @@ export default function CheckoutPage() {
   // Authoritative pricing from the server whenever items / method change.
   useEffect(() => {
     if (items.length === 0) return;
-    const payload = { items: items.map((i) => ({ bookId: i.bookId, variantId: i.variantId, quantity: i.quantity })), deliveryMethod: method };
+    const payload = {
+      items: items.map((i) => ({ bookId: i.bookId, variantId: i.variantId, quantity: i.quantity })),
+      deliveryMethod: method,
+      couponCode: appliedCode || undefined,
+    };
     clientApi.post<Priced>("/cart/validate", payload).then(setPriced).catch(() => setPriced(null));
-  }, [items, method]);
+  }, [items, method, appliedCode]);
 
   if (orderNumber) {
     return (
@@ -94,6 +108,9 @@ export default function CheckoutPage() {
         deliveryAddress: addr,
         deliveryMethod: method,
         paymentMethod: "cod",
+        // Only send a code the server has already accepted, so a rejected one
+        // can't fail the whole order at the last step.
+        couponCode: priced?.couponCode || undefined,
       });
       clear();
       setOrderNumber(data.order.orderNumber);
@@ -140,12 +157,59 @@ export default function CheckoutPage() {
               </label>
             ))}
           </div>
+
+          <h2 className="pt-2 font-display text-xl text-text">Have a coupon?</h2>
+          {priced?.couponCode ? (
+            <div className="flex items-center justify-between border border-accent bg-accent/5 px-4 py-3">
+              <span className="font-data text-sm uppercase tracking-[0.12em] text-accent">{priced.couponCode} applied</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setAppliedCode("");
+                  setCodeInput("");
+                }}
+                className="font-data text-xs uppercase tracking-wide text-muted hover:text-sale"
+              >
+                Remove
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <input
+                value={codeInput}
+                onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+                onKeyDown={(e) => {
+                  // The coupon box lives inside the checkout form, so a bare
+                  // Enter here would submit the order instead of applying.
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    setAppliedCode(codeInput.trim());
+                  }
+                }}
+                placeholder="Enter code"
+                aria-label="Coupon code"
+                className="min-w-0 flex-1 border border-border bg-surface px-3 py-2.5 font-data uppercase tracking-[0.12em] text-text outline-none focus:border-accent"
+              />
+              <button
+                type="button"
+                onClick={() => setAppliedCode(codeInput.trim())}
+                disabled={!codeInput.trim()}
+                className="border border-accent px-5 py-2.5 font-data text-sm uppercase tracking-wide text-accent hover:bg-accent hover:text-white disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-accent"
+              >
+                Apply
+              </button>
+            </div>
+          )}
+          {priced?.couponError && <p className="font-body text-sm text-sale">{priced.couponError}</p>}
         </div>
 
         <aside className="h-fit border border-border bg-surface p-6">
           <h2 className="font-display text-xl text-text">Order summary</h2>
           <dl className="mt-4 space-y-2 font-data text-sm">
             <div className="flex justify-between"><dt className="text-muted">Subtotal</dt><dd className="text-text">{priced ? npr(priced.subtotal) : "…"}</dd></div>
+            {priced && priced.couponDiscount > 0 && (
+              <div className="flex justify-between text-accent"><dt>Discount ({priced.couponCode})</dt><dd>−{npr(priced.couponDiscount)}</dd></div>
+            )}
             <div className="flex justify-between"><dt className="text-muted">Delivery</dt><dd className="text-text">{priced ? (priced.deliveryFee === 0 ? "Free" : npr(priced.deliveryFee)) : "…"}</dd></div>
             <div className="flex justify-between border-t border-border pt-2 text-base"><dt className="font-semibold text-text">Total</dt><dd className="font-semibold text-text">{priced ? npr(priced.total) : "…"}</dd></div>
           </dl>
