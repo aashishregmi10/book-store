@@ -126,22 +126,20 @@ export default async function GenrePage({
           <span className="text-text">{genre.name}</span>
         </nav>
 
-        {/* Genre masthead. The H1 has to stay literally "Best <Genre> Books in
-            Nepal" for search, which is a mouthful to lead a page with — so it
-            sits inside a proper header band with the shelf name as an eyebrow
-            and the count beside it, rather than as a bare line of text. */}
+        {/* Genre masthead. The heading is just the shelf name — "Best <Genre>
+            Books in Nepal" reads as keyword stuffing at this size. That phrase
+            still carries the search weight from the <title> tag and the ItemList
+            JSON-LD, which is where it counts and where nobody has to look at it. */}
         <header className="mt-4 border-l-2 border-accent bg-surface py-7 pl-6 pr-6 sm:py-9 sm:pl-9">
-          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-data text-xs uppercase tracking-[0.22em] text-accent">
-            {genre.name}
-            <span aria-hidden className="text-border">|</span>
+          <p className="font-data text-xs uppercase tracking-[0.22em] text-muted">
             {/* The shelf's own size, not the filtered result count — the toolbar
                 below already reports that, and repeating it here would print the
                 same number twice. */}
-            <span className="text-muted">{genre.bookCount ?? total} on this shelf</span>
+            {genre.bookCount ?? total} on this shelf
           </p>
 
           <h1 className="mt-3 max-w-4xl font-display text-4xl leading-[1.12] text-text sm:text-5xl lg:text-[3.25rem]">
-            Best {genre.name} Books in Nepal
+            {genre.name}
           </h1>
 
           {/* BLUF — extractable 40–80 word definition */}
