@@ -7,7 +7,7 @@ const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/user.model');
 const { validate } = require('../middleware/validate');
 const { authenticate, loginLimiter, registerLimiter, forgotPasswordLimiter } = require('../middleware/auth');
-const { generateTokens, verify, refreshCookieOptions, newFamilyId, hashToken, REFRESH_TTL_MS } = require('../utils/token');
+const { generateTokens, verify, refreshCookieOptions, refreshCookieFor, refreshTtlMs, newFamilyId, hashToken } = require('../utils/token');
 const { z, trimmedString, email: emailSchema } = require('../utils/zod');
 const { ok, created, fail, ApiError } = require('../utils/apiResponse');
 const email = require('../utils/emailService');
@@ -43,10 +43,10 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 // Returns the access token to hand back in the JSON body.
 async function issueSession(res, user) {
   const familyId = newFamilyId();
-  const { accessToken, refreshToken } = generateTokens(user._id, familyId);
-  user.startRefreshSession(familyId, hashToken(refreshToken), new Date(Date.now() + REFRESH_TTL_MS));
+  const { accessToken, refreshToken } = generateTokens(user._id, familyId, user.isAdmin);
+  user.startRefreshSession(familyId, hashToken(refreshToken), new Date(Date.now() + refreshTtlMs(user.isAdmin)));
   await user.save();
-  res.cookie('refreshToken', refreshToken, refreshCookieOptions);
+  res.cookie('refreshToken', refreshToken, refreshCookieFor(user.isAdmin));
   return accessToken;
 }
 
@@ -232,7 +232,9 @@ router.post(
 // to the family's *current* stored hash; if it doesn't (an old, already-rotated
 // token was replayed) the whole family is revoked and the caller must sign in
 // again. On success the family's hash is advanced and a new cookie is set.
-const clearRefreshCookie = (res) => res.clearCookie('refreshToken', { ...refreshCookieOptions, maxAge: undefined });
+// refreshCookieOptions carries attributes only, which is exactly what
+// clearCookie needs — the flags must match how the cookie was set.
+const clearRefreshCookie = (res) => res.clearCookie('refreshToken', refreshCookieOptions);
 
 router.post('/refresh', async (req, res, next) => {
   try {
@@ -260,12 +262,14 @@ router.post('/refresh', async (req, res, next) => {
       return fail(res, 'Account suspended. Contact support.', 403, [{ code: 'BANNED' }]);
     }
 
-    const rotated = generateTokens(user._id, decoded.fid);
+    // Rotation re-stamps the full window, so the session slides forward for as
+    // long as someone keeps using the site.
+    const rotated = generateTokens(user._id, decoded.fid, user.isAdmin);
     const result = user.rotateRefreshSession(
       decoded.fid,
       hashToken(token),
       hashToken(rotated.refreshToken),
-      new Date(Date.now() + REFRESH_TTL_MS)
+      new Date(Date.now() + refreshTtlMs(user.isAdmin))
     );
 
     if (result === 'reuse') {
@@ -281,7 +285,7 @@ router.post('/refresh', async (req, res, next) => {
     }
 
     await user.save();
-    res.cookie('refreshToken', rotated.refreshToken, refreshCookieOptions);
+    res.cookie('refreshToken', rotated.refreshToken, refreshCookieFor(user.isAdmin));
     return ok(res, { accessToken: rotated.accessToken }, 'Token refreshed');
   } catch (err) {
     return next(err);

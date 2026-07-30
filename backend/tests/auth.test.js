@@ -208,3 +208,40 @@ describe('GET /api/auth/points', () => {
     expect((await request(app).get('/api/auth/points')).status).toBe(401);
   });
 });
+
+describe('Session lifetime', () => {
+  const maxAge = (res) => {
+    const m = /Max-Age=(\d+)/i.exec(res.headers['set-cookie'][0]);
+    return m ? Number(m[1]) : null;
+  };
+  const DAY = 24 * 60 * 60;
+
+  it('gives a shopper a six-month window', async () => {
+    const res = await request(app).post('/api/auth/register').send(REG);
+    expect(maxAge(res)).toBe(180 * DAY);
+  });
+
+  it('caps an admin session far shorter than a shopper one', async () => {
+    await User.create({ ...REG, email: 'boss@test.com', isAdmin: true });
+    const res = await request(app).post('/api/auth/login').send({ email: 'boss@test.com', password: REG.password });
+    expect(res.status).toBe(200);
+    expect(maxAge(res)).toBe(7 * DAY);
+  });
+
+  it('slides the window forward on refresh instead of counting down from login', async () => {
+    const reg = await request(app).post('/api/auth/register').send(REG);
+    const cookie = reg.headers['set-cookie'][0].split(';')[0];
+
+    // Wind the stored session close to expiry; a refresh should re-stamp it to
+    // the full window rather than inheriting what was left.
+    const nearlyDone = new Date(Date.now() + 60 * 1000);
+    await User.updateOne({ email: REG.email }, { $set: { 'refreshTokens.0.expiresAt': nearlyDone } });
+
+    const res = await request(app).post('/api/auth/refresh').set('Cookie', cookie);
+    expect(res.status).toBe(200);
+    expect(maxAge(res)).toBe(180 * DAY);
+
+    const user = await User.findOne({ email: REG.email }).select('+refreshTokens');
+    expect(user.refreshTokens[0].expiresAt.getTime()).toBeGreaterThan(Date.now() + 179 * DAY * 1000);
+  });
+});
