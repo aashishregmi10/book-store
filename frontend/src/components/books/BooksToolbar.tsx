@@ -107,15 +107,27 @@ export function BooksToolbar({ genres, total }: { genres: { slug: string; name: 
             <button
               key={c.id}
               onClick={() => removeChip(c)}
-              className="inline-flex items-center gap-1.5 rounded-full bg-accent/10 px-3 py-1 font-data text-xs text-accent transition-colors hover:bg-accent/20"
+              aria-label={`Remove filter: ${c.label}`}
+              className="group inline-flex items-center gap-2 rounded-full border border-accent/25 bg-accent/5 py-1.5 pl-3.5 pr-2 font-body text-sm text-accent transition-colors hover:border-accent/50 hover:bg-accent/10"
             >
               {c.label}
-              <X className="size-3" />
+              {/* The × gets its own puck so it reads as the thing you press,
+                  rather than decoration sitting next to the label. */}
+              <span className="grid size-4 place-items-center rounded-full bg-accent/15 text-accent transition-colors group-hover:bg-accent group-hover:text-white">
+                <X className="size-2.5" strokeWidth={3} />
+              </span>
             </button>
           ))}
-          <button onClick={clearAll} className="font-data text-xs uppercase tracking-wide text-muted hover:text-sale">
-            Clear all
-          </button>
+          {/* With a single filter its own × already clears everything, so a
+              second control beside it is just noise. */}
+          {chips.length > 1 && (
+            <button
+              onClick={clearAll}
+              className="ml-1 font-body text-sm text-muted underline-offset-4 transition-colors hover:text-sale hover:underline"
+            >
+              Clear all
+            </button>
+          )}
         </div>
       )}
     </div>

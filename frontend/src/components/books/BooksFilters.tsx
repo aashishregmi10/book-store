@@ -137,18 +137,9 @@ export function BooksFilters({
     router.push(query ? `${base}?${query}` : base, { scroll: false });
   }
 
-  function clearAll() {
-    const params = new URLSearchParams(sp.toString());
-    [...MULTI_KEYS, "minPrice", "maxPrice", "minRating", "author", "publisher"].forEach((k) =>
-      params.delete(k)
-    );
-    setPriceMin("");
-    setPriceMax("");
-    commit(params);
-  }
-
-  // The silo's own genre isn't a removable filter, so it must not inflate the
-  // count — "Clear all (1)" that clears nothing visible reads as broken.
+  // Badge on the mobile Filters toggle. The silo's own genre isn't a removable
+  // filter, so it must not inflate this — a count that includes something the
+  // panel can't clear reads as broken.
   const activeCount =
     MULTI_KEYS.reduce((n, k) => n + selected(k).size, 0) +
     (sp.get("minPrice") || sp.get("maxPrice") ? 1 : 0) +
@@ -176,12 +167,10 @@ export function BooksFilters({
         {mobileOpen ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
       </button>
 
+      {/* No "Clear all" here: the toolbar's removable chips sit above the grid
+          on every screen this renders on, so a second clearing control in the
+          sidebar was a duplicate of a control the shopper can already see. */}
       <div className={`${mobileOpen ? "block" : "hidden"} lg:block`}>
-        {activeCount > 0 && (
-          <button onClick={clearAll} className="mb-3 font-data text-xs uppercase tracking-wide text-accent hover:underline">
-            Clear all ({activeCount})
-          </button>
-        )}
 
         {!hideGenre && (
           <Section title="Genre">

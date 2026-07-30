@@ -126,18 +126,36 @@ export default async function GenrePage({
           <span className="text-text">{genre.name}</span>
         </nav>
 
-        <h1 className="mt-4 font-display text-4xl text-text sm:text-5xl">Best {genre.name} Books in Nepal</h1>
-        {/* BLUF — extractable 40–80 word definition */}
-        <p className="mt-4 max-w-3xl font-body text-lg leading-relaxed text-muted">
-          {genre.description ||
-            `Books Temple Nepal stocks the top-rated ${genre.name.toLowerCase()} titles available across Nepal, with NPR pricing and cash on delivery to all seven provinces.`}
-        </p>
-
-        {genre.curatorNote && (
-          <p className="mt-4 max-w-3xl border-l-2 border-accent pl-4 font-body italic leading-relaxed text-text">
-            {genre.curatorNote}
+        {/* Genre masthead. The H1 has to stay literally "Best <Genre> Books in
+            Nepal" for search, which is a mouthful to lead a page with — so it
+            sits inside a proper header band with the shelf name as an eyebrow
+            and the count beside it, rather than as a bare line of text. */}
+        <header className="mt-4 border-l-2 border-accent bg-surface py-7 pl-6 pr-6 sm:py-9 sm:pl-9">
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-data text-xs uppercase tracking-[0.22em] text-accent">
+            {genre.name}
+            <span aria-hidden className="text-border">|</span>
+            {/* The shelf's own size, not the filtered result count — the toolbar
+                below already reports that, and repeating it here would print the
+                same number twice. */}
+            <span className="text-muted">{genre.bookCount ?? total} on this shelf</span>
           </p>
-        )}
+
+          <h1 className="mt-3 max-w-4xl font-display text-4xl leading-[1.12] text-text sm:text-5xl lg:text-[3.25rem]">
+            Best {genre.name} Books in Nepal
+          </h1>
+
+          {/* BLUF — extractable 40–80 word definition */}
+          <p className="mt-5 max-w-3xl font-body text-lg leading-relaxed text-muted">
+            {genre.description ||
+              `Books Temple Nepal stocks the top-rated ${genre.name.toLowerCase()} titles available across Nepal, with NPR pricing and cash on delivery to all seven provinces.`}
+          </p>
+
+          {genre.curatorNote && (
+            <p className="mt-5 max-w-3xl border-t border-border pt-5 font-body italic leading-relaxed text-text">
+              {genre.curatorNote}
+            </p>
+          )}
+        </header>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[16rem_1fr]">
           <BooksFilters
