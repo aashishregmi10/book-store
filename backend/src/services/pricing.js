@@ -7,7 +7,7 @@ const Order = require('../models/order.model');
 // Tunable commerce rules (Nepal store).
 const DELIVERY_FEES = { standard: 120, express: 300, 'same-day': 500 };
 const FREE_DELIVERY_THRESHOLD = 1500; // NPR — free delivery at/above this subtotal
-const POINTS_EARN_RATE = 0.05; // earn 5% of subtotal as points
+const POINTS_EARN_RATE = 0.02; // 1 point per NPR 50 spent
 const POINTS_REDEEM_VALUE = 1; // 1 point == NPR 1 at checkout
 
 /**

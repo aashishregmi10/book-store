@@ -7,8 +7,13 @@ const Book = require('../src/models/book.model');
 const User = require('../src/models/user.model');
 const Coupon = require('../src/models/coupon.model');
 const Activity = require('../src/models/activity.model');
+// Read the rate rather than restating it — these assertions silently encoded
+// 0.05 and would have kept passing against a changed rate only by coincidence.
+const { POINTS_EARN_RATE } = require('../src/services/pricing');
+const emailService = require('../src/utils/emailService');
 
 const ADDR = { fullName: 'Bookworm Buyer', phone: '+9779800000000', address1: 'Thamel Marg', city: 'Kathmandu', province: 'Bagmati' };
+const earned = (subtotal) => Math.floor(subtotal * POINTS_EARN_RATE);
 
 let bookA; // 899, stock 10
 let bookB; // 500, stock 1
@@ -44,7 +49,7 @@ describe('POST /api/orders (COD)', () => {
     expect(order.subtotal).toBe(2298);
     expect(order.deliveryFee).toBe(0); // free over NPR 1500
     expect(order.total).toBe(2298);
-    expect(order.pointsEarned).toBe(Math.floor(2298 * 0.05));
+    expect(order.pointsEarned).toBe(earned(2298));
     expect(order.paymentMethod).toBe('cod');
 
     const a = await Book.findById(bookA.id);
@@ -54,7 +59,7 @@ describe('POST /api/orders (COD)', () => {
     expect(b.stockStatus).toBe('out-of-stock'); // recomputed atomically
 
     const user = await User.findById((await User.findOne({ email: 'buyer@test.com' }))._id);
-    expect(user.points).toBe(65 + Math.floor(2298 * 0.05));
+    expect(user.points).toBe(65 + earned(2298));
 
     const activities = await Activity.find({ type: 'purchase' });
     expect(activities).toHaveLength(2);
@@ -103,25 +108,50 @@ describe('POST /api/orders (COD)', () => {
     expect(order.pointsUsed).toBe(100);
     expect(order.total).toBe(899 + 120 - 100);
     const user = await User.findById(userId);
-    expect(user.points).toBe(500 - 100 + Math.floor(899 * 0.05));
+    expect(user.points).toBe(500 - 100 + earned(899));
   });
 
   it('pays the referrer 100 points on the referred friend\'s first purchase, once only', async () => {
+    const notify = jest.spyOn(emailService, 'sendReferralBonus').mockResolvedValue(undefined);
     const ref = await User.create({ email: 'ref@test.com', password: 'supersecret', fullName: 'Ref Errer' });
     const reg = await request(app).post('/api/auth/register').send({ email: 'friend@test.com', password: 'supersecret', fullName: 'New Friend', referralCode: ref.referralCode });
     const token = reg.body.data.accessToken;
 
+    // The friend's NPR 50 welcome credit lands at signup, on top of the 65.
+    expect((await User.findOne({ email: 'friend@test.com' })).points).toBe(115);
+
     // No payout yet at signup.
     expect((await User.findById(ref._id)).points).toBe(65);
 
-    // First purchase → referrer gets +100.
+    // First purchase → referrer gets +100, and is actually told about it.
     await request(app).post('/api/orders').set('Authorization', `Bearer ${token}`).send({ items: [{ bookId: bookA.id, quantity: 1 }], deliveryAddress: ADDR });
     expect((await User.findById(ref._id)).points).toBe(165);
     expect((await User.findOne({ email: 'friend@test.com' })).referralRewarded).toBe(true);
+    expect(notify).toHaveBeenCalledTimes(1);
+    expect(notify.mock.calls[0][1]).toBe(100);
 
-    // Second purchase → no further payout.
+    // Second purchase → no further payout, and no second email.
     await request(app).post('/api/orders').set('Authorization', `Bearer ${token}`).send({ items: [{ bookId: bookA.id, quantity: 1 }], deliveryAddress: ADDR });
     expect((await User.findById(ref._id)).points).toBe(165);
+    expect(notify).toHaveBeenCalledTimes(1);
+    notify.mockRestore();
+  });
+
+  it('lets the friend spend their referral credit on that first order', async () => {
+    jest.spyOn(emailService, 'sendReferralBonus').mockResolvedValue(undefined);
+    const ref = await User.create({ email: 'ref2@test.com', password: 'supersecret', fullName: 'Ref Errer' });
+    const reg = await request(app).post('/api/auth/register').send({ email: 'friend2@test.com', password: 'supersecret', fullName: 'New Friend', referralCode: ref.referralCode });
+
+    // 115 points on hand, but only the 50 promised by the referral is what the
+    // invite advertises — spending them has to actually come off the total.
+    const res = await request(app)
+      .post('/api/orders')
+      .set('Authorization', `Bearer ${reg.body.data.accessToken}`)
+      .send({ items: [{ bookId: bookA.id, quantity: 1 }], deliveryAddress: ADDR, pointsUsed: 50 });
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.order.pointsUsed).toBe(50);
+    expect(res.body.data.order.total).toBe(899 + 120 - 50);
   });
 
   it('applies a percentage coupon', async () => {

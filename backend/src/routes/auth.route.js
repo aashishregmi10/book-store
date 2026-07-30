@@ -322,6 +322,23 @@ router.get('/me', authenticate, async (req, res, next) => {
   }
 });
 
+// ── POINTS LEDGER ────────────────────────────────────────
+// Every points movement was already being recorded on the user, but nothing
+// ever read it back — so a shopper had a balance with no way to see what
+// changed it, and a referral bonus landed completely silently.
+router.get('/points', authenticate, async (req, res, next) => {
+  try {
+    const user = await User.findById(req.userId).select('points tier pointsHistory').lean();
+    if (!user) return fail(res, 'User not found', 404, [{ code: 'NOT_FOUND' }]);
+    const history = [...(user.pointsHistory || [])]
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+      .slice(0, 50);
+    return ok(res, { points: user.points, tier: user.tier, history }, 'Points');
+  } catch (err) {
+    return next(err);
+  }
+});
+
 // ── UPDATE PROFILE ───────────────────────────────────────
 router.put(
   '/profile',

@@ -9,17 +9,17 @@ import { clientApi, ClientApiError } from "@/lib/client-api";
 import { npr } from "@/lib/format";
 
 const PROVINCES = ["Koshi", "Madhesh", "Bagmati", "Gandaki", "Lumbini", "Karnali", "Sudurpashchim"];
-const METHODS = [
-  { id: "standard", label: "Standard (3–5 days)" },
-  { id: "express", label: "Express (1–2 days, Valley)" },
-  { id: "same-day", label: "Same-day (Valley, order by 2pm)" },
-];
+// Only one delivery speed is offered right now, so there's nothing for a
+// shopper to choose — "standard" is sent as a fixed value, not a picked one.
+const DELIVERY_METHOD = "standard";
 
 interface Priced {
   subtotal: number;
   deliveryFee: number;
   total: number;
   pointsEarned: number;
+  pointsUsed: number;
+  pointsDiscount: number;
   couponCode: string | null;
   couponDiscount: number;
   couponError: string | null;
@@ -31,7 +31,6 @@ export default function CheckoutPage() {
   const clear = useCart((s) => s.clear);
   const user = useAuth((s) => s.user);
 
-  const [method, setMethod] = useState("standard");
   const [priced, setPriced] = useState<Priced | null>(null);
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState("");
@@ -44,6 +43,11 @@ export default function CheckoutPage() {
   const [codeInput, setCodeInput] = useState("");
   const [appliedCode, setAppliedCode] = useState("");
 
+  // Points are opt-in: a shopper saving them for a bigger book shouldn't have
+  // the balance spent for them. The server clamps whatever we send.
+  const [usePoints, setUsePoints] = useState(false);
+  const balance = user?.points ?? 0;
+
   const [addr, setAddr] = useState({ fullName: "", phone: "", address1: "", address2: "", city: "", province: "Bagmati" });
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof typeof addr, string>>>({});
   const set = (k: keyof typeof addr) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -51,16 +55,17 @@ export default function CheckoutPage() {
     setFieldErrors((fe) => (fe[k] ? { ...fe, [k]: undefined } : fe));
   };
 
-  // Authoritative pricing from the server whenever items / method change.
+  // Authoritative pricing from the server whenever items / coupon change.
   useEffect(() => {
     if (items.length === 0) return;
     const payload = {
       items: items.map((i) => ({ bookId: i.bookId, variantId: i.variantId, quantity: i.quantity })),
-      deliveryMethod: method,
+      deliveryMethod: DELIVERY_METHOD,
       couponCode: appliedCode || undefined,
+      pointsUsed: usePoints ? balance : 0,
     };
     clientApi.post<Priced>("/cart/validate", payload).then(setPriced).catch(() => setPriced(null));
-  }, [items, method, appliedCode]);
+  }, [items, appliedCode, usePoints, balance]);
 
   if (orderNumber) {
     return (
@@ -106,11 +111,12 @@ export default function CheckoutPage() {
       const data = await clientApi.post<{ order: { orderNumber: string } }>("/orders", {
         items: items.map((i) => ({ bookId: i.bookId, variantId: i.variantId, quantity: i.quantity })),
         deliveryAddress: addr,
-        deliveryMethod: method,
+        deliveryMethod: DELIVERY_METHOD,
         paymentMethod: "cod",
         // Only send a code the server has already accepted, so a rejected one
         // can't fail the whole order at the last step.
         couponCode: priced?.couponCode || undefined,
+        pointsUsed: usePoints ? balance : 0,
       });
       clear();
       setOrderNumber(data.order.orderNumber);
@@ -146,16 +152,6 @@ export default function CheckoutPage() {
                 {PROVINCES.map((p) => <option key={p} value={p}>{p}</option>)}
               </select>
             </label>
-          </div>
-
-          <h2 className="pt-2 font-display text-xl text-text">Delivery method</h2>
-          <div className="space-y-2">
-            {METHODS.map((m) => (
-              <label key={m.id} className={`flex cursor-pointer items-center gap-3 border px-4 py-3 ${method === m.id ? "border-accent" : "border-border"}`}>
-                <input type="radio" name="method" checked={method === m.id} onChange={() => setMethod(m.id)} className="accent-[var(--color-accent)]" />
-                <span className="font-body text-sm text-text">{m.label}</span>
-              </label>
-            ))}
           </div>
 
           <h2 className="pt-2 font-display text-xl text-text">Have a coupon?</h2>
@@ -201,6 +197,28 @@ export default function CheckoutPage() {
             </div>
           )}
           {priced?.couponError && <p className="font-body text-sm text-sale">{priced.couponError}</p>}
+
+          {user && balance > 0 && (
+            <>
+              <h2 className="pt-2 font-display text-xl text-text">Your points</h2>
+              <label className="flex cursor-pointer items-start gap-3 border border-border px-4 py-3 has-[:checked]:border-accent">
+                <input
+                  type="checkbox"
+                  checked={usePoints}
+                  onChange={(e) => setUsePoints(e.target.checked)}
+                  className="mt-0.5 size-4 accent-[var(--color-accent)]"
+                />
+                <span>
+                  <span className="block font-body text-sm text-text">
+                    Put my {balance} points towards this order
+                  </span>
+                  <span className="block font-body text-xs text-muted">
+                    Worth {npr(balance)}. Whatever you don&apos;t spend stays on your account.
+                  </span>
+                </span>
+              </label>
+            </>
+          )}
         </div>
 
         <aside className="h-fit border border-border bg-surface p-6">
@@ -209,6 +227,9 @@ export default function CheckoutPage() {
             <div className="flex justify-between"><dt className="text-muted">Subtotal</dt><dd className="text-text">{priced ? npr(priced.subtotal) : "…"}</dd></div>
             {priced && priced.couponDiscount > 0 && (
               <div className="flex justify-between text-accent"><dt>Discount ({priced.couponCode})</dt><dd>−{npr(priced.couponDiscount)}</dd></div>
+            )}
+            {priced && priced.pointsDiscount > 0 && (
+              <div className="flex justify-between text-accent"><dt>Points ({priced.pointsUsed})</dt><dd>−{npr(priced.pointsDiscount)}</dd></div>
             )}
             <div className="flex justify-between"><dt className="text-muted">Delivery</dt><dd className="text-text">{priced ? (priced.deliveryFee === 0 ? "Free" : npr(priced.deliveryFee)) : "…"}</dd></div>
             <div className="flex justify-between border-t border-border pt-2 text-base"><dt className="font-semibold text-text">Total</dt><dd className="font-semibold text-text">{priced ? npr(priced.total) : "…"}</dd></div>
@@ -219,7 +240,9 @@ export default function CheckoutPage() {
             </ul>
           ) : null}
           {user && priced && priced.pointsEarned > 0 && (
-            <p className="mt-3 font-body text-xs text-accent">You’ll earn {priced.pointsEarned} points.</p>
+            <p className="mt-3 font-body text-xs text-accent">
+              You’ll earn {priced.pointsEarned} points on this order — {npr(priced.pointsEarned)} off a future one.
+            </p>
           )}
           <button type="submit" disabled={placing || !!priced?.issues?.length} className="mt-5 w-full bg-accent px-5 py-3 font-data text-sm uppercase tracking-wide text-white hover:bg-accent-hover disabled:opacity-50">
             {placing ? "Placing order…" : "Place order (COD)"}

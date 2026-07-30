@@ -140,9 +140,24 @@ function sendPointsEarned(user, points) {
     `You earned ${points} points 🎉`,
     `<p style="font-size:32px;font-weight:bold;color:#2D5A3D;">+${points}</p>
      <p>Your balance is now <strong>${user.points}</strong> points.</p>
-     <p>${button('See your rewards', `${FRONTEND}/account/points`)}</p>`
+     <p>${button('See your rewards', `${FRONTEND}/account`)}</p>`
   );
   return send({ to: user.email, subject: `You earned ${points} points`, html });
+}
+
+// Sent when a friend the shopper invited places their first order. Without
+// this the bonus lands silently and the referral programme looks broken to the
+// one person it's meant to reward.
+function sendReferralBonus(referrer, points, friendName) {
+  const who = friendName ? friendName.split(' ')[0] : 'A friend';
+  const html = shell(
+    `${who} placed their first order`,
+    `<p style="font-size:32px;font-weight:bold;color:#2D5A3D;">+${points} points</p>
+     <p>That's ${nf(points)} off your next book — your balance is now <strong>${referrer.points}</strong> points.</p>
+     <p>Thanks for sending them our way.</p>
+     <p>${button('See your rewards', `${FRONTEND}/account`)}</p>`
+  );
+  return send({ to: referrer.email, subject: `You earned ${points} points — ${who} ordered`, html });
 }
 
 module.exports = {
@@ -153,5 +168,6 @@ module.exports = {
   sendPasswordReset,
   sendLowStockAlert,
   sendPointsEarned,
+  sendReferralBonus,
   sendPriceDrop,
 };

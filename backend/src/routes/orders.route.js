@@ -205,6 +205,9 @@ router.post(
             referrer.points += 100;
             referrer.pointsHistory.push({ amount: 100, reason: 'Referral bonus — friend made first purchase', orderId: order._id });
             await referrer.save();
+            // Tell them. The bonus used to land silently, so the one person the
+            // programme rewards had no idea it had paid out.
+            email.sendReferralBonus(referrer, 100, user.fullName).catch(() => {});
           }
           user.referralRewarded = true; // mark even if the referrer is gone, so we don't retry every order
         }

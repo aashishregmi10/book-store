@@ -176,3 +176,35 @@ describe('Password reset flow', () => {
     expect(spy).not.toHaveBeenCalled();
   });
 });
+
+describe('GET /api/auth/points', () => {
+  it('returns the balance, tier and a dated ledger of every movement', async () => {
+    const reg = await request(app).post('/api/auth/register').send(REG);
+    const token = reg.body.data.accessToken;
+
+    const res = await request(app).get('/api/auth/points').set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.data.points).toBe(65);
+    expect(res.body.data.tier).toBe('Bronze');
+    expect(res.body.data.history).toHaveLength(1);
+    expect(res.body.data.history[0]).toMatchObject({ amount: 65, reason: 'Signup bonus' });
+    expect(res.body.data.history[0].createdAt).toBeTruthy();
+  });
+
+  it('puts the most recent movement first', async () => {
+    const reg = await request(app).post('/api/auth/register').send(REG);
+    const user = await User.findOne({ email: REG.email });
+    user.points += 100;
+    user.pointsHistory.push({ amount: 100, reason: 'Referral bonus — friend made first purchase', createdAt: new Date(Date.now() + 1000) });
+    await user.save();
+
+    const res = await request(app).get('/api/auth/points').set('Authorization', `Bearer ${reg.body.data.accessToken}`);
+    expect(res.body.data.points).toBe(165);
+    expect(res.body.data.history[0].reason).toMatch(/Referral bonus/);
+    expect(res.body.data.history[1].reason).toBe('Signup bonus');
+  });
+
+  it('requires auth', async () => {
+    expect((await request(app).get('/api/auth/points')).status).toBe(401);
+  });
+});
