@@ -732,11 +732,18 @@ router.put('/articles/:slug', validate({ params: slugParams }), async (req, res,
   try {
     const article = await Article.findOne({ slug: req.params.slug });
     if (!article) return fail(res, 'Article not found', 404, [{ code: 'NOT_FOUND' }]);
+    // Remember the outgoing cover before it's overwritten — books already do
+    // this on update, articles did not, so every replaced article cover leaked
+    // an orphaned Cloudinary asset that nothing would ever reference again.
+    const previousCoverId = article.coverImage?.publicId;
     const fields = ['title', 'excerpt', 'body', 'coverImage', 'author', 'category', 'tags', 'status', 'metaTitle', 'metaDesc', 'relatedBooks'];
     for (const f of fields) if (f in req.body) article[f] = req.body[f];
     if ('body' in req.body) article.readingTime = readingTime(article.body);
     if (article.status === 'published' && !article.publishedAt) article.publishedAt = new Date();
     await article.save();
+    if (previousCoverId && previousCoverId !== article.coverImage?.publicId) {
+      cleanupImages([previousCoverId], article.slug);
+    }
     await invalidateArticleCaches(article.slug);
     if (article.status === 'published') pingIndexNow([`/blog/${article.slug}`, '/blog']);
     return ok(res, article, 'Article updated');
@@ -748,7 +755,10 @@ router.put('/articles/:slug', validate({ params: slugParams }), async (req, res,
 router.delete('/articles/:id', validate({ params: idParams }), async (req, res, next) => {
   try {
     const article = await Article.findByIdAndDelete(req.params.id);
-    if (article) await invalidateArticleCaches(article.slug);
+    if (article) {
+      cleanupImages([article.coverImage?.publicId], article.slug);
+      await invalidateArticleCaches(article.slug);
+    }
     return ok(res, null, 'Article deleted');
   } catch (err) {
     return next(err);

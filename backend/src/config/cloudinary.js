@@ -47,7 +47,9 @@ function uploadBuffer(buffer, { folder = 'bookstemple/books' } = {}) {
  */
 async function deleteImage(publicId) {
   if (!publicId) return;
-  await getCloudinary().uploader.destroy(publicId);
+  // invalidate also purges the CDN edge. Without it Cloudinary keeps serving
+  // the deleted image from cache for hours, so the delete looks like it failed.
+  await getCloudinary().uploader.destroy(publicId, { invalidate: true });
 }
 
 module.exports = { getCloudinary, uploadBuffer, deleteImage };
