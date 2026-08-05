@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { apiGet } from "@/lib/api";
+import { apiGet, CACHE_TTL } from "@/lib/api";
 import { ArticleCover } from "@/components/blog/ArticleCover";
 import type { ArticleCard, Paged } from "@/lib/types";
 
-export const dynamic = "force-dynamic";
+// ISR — see app/blog/[slug]/page.tsx.
+export const revalidate = 900;
 
 export const metadata: Metadata = {
   title: "Reading Guides & Articles",
@@ -14,11 +15,11 @@ export const metadata: Metadata = {
 };
 
 export default async function BlogPage() {
-  const data = await apiGet<Paged<ArticleCard>>("/articles", { tags: ["articles"] }).catch(() => null);
+  const data = await apiGet<Paged<ArticleCard>>("/articles", { tags: ["articles"], revalidate: CACHE_TTL.articles }).catch(() => null);
   const articles = data?.items ?? [];
 
   return (
-    <div className="mx-auto max-w-[1600px] px-6 py-12 sm:px-8 lg:px-16 xl:px-24">
+    <div className="shell py-12">
       <header className="max-w-3xl">
         <p className="label-smallcaps font-data text-xs">The reading room</p>
         <h1 className="mt-2 font-display text-4xl text-text sm:text-5xl">Reading guides &amp; articles</h1>

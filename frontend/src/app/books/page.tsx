@@ -1,13 +1,16 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { apiGet } from "@/lib/api";
+import { apiGet, CACHE_TTL } from "@/lib/api";
 import type { BookCardData, Genre, Paged } from "@/lib/types";
 import { BooksFilters } from "@/components/books/BooksFilters";
 import { BooksToolbar } from "@/components/books/BooksToolbar";
 import { BooksGrid } from "@/components/books/BooksGrid";
 import { CategoryChips } from "@/components/books/CategoryChips";
 
-export const dynamic = "force-dynamic";
+// No segment config: this page reads `searchParams` (filters, sort, page), so
+// it renders per request regardless. What it must NOT do is force every fetch
+// to `no-store` — the catalogue reads below are shared across visitors and are
+// served from the Data Cache, which is where the latency actually went.
 
 // Most-sold-first by default (real Daraz demand data backs soldCount), not
 // "newest" — matches the category pages' default.
@@ -62,8 +65,8 @@ export default async function BooksPage({
         page: sp.page,
       },
     }).catch(() => null),
-    apiGet<Genre[]>("/genres", { tags: ["genres"] }).catch(() => [] as Genre[]),
-    apiGet<{ authors: string[]; publishers: string[] }>("/books/filters/metadata", { tags: ["books"] }).catch(() => ({
+    apiGet<Genre[]>("/genres", { tags: ["genres"], revalidate: CACHE_TTL.genres }).catch(() => [] as Genre[]),
+    apiGet<{ authors: string[]; publishers: string[] }>("/books/filters/metadata", { tags: ["books"], revalidate: CACHE_TTL.genres }).catch(() => ({
       authors: [],
       publishers: [],
     })),
@@ -88,7 +91,7 @@ export default async function BooksPage({
     .join("&");
 
   return (
-    <div className="mx-auto max-w-[1600px] px-6 py-10 sm:px-8 lg:px-16 xl:px-24">
+    <div className="shell py-10">
       {/* Quick genre chips — mobile-first browse without opening the filter panel */}
       <CategoryChips genres={genres.map((g) => ({ slug: g.slug, name: g.name }))} className="mb-5 lg:hidden" />
 

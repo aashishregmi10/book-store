@@ -9,7 +9,8 @@ import { JsonLd } from "@/components/JsonLd";
 import { BooksFilters } from "@/components/books/BooksFilters";
 import { BooksGrid } from "@/components/books/BooksGrid";
 
-export const dynamic = "force-dynamic";
+// Reads `searchParams`, so it renders per request — but its catalogue fetches
+// are shared and cached. See the note in app/books/page.tsx.
 
 // Filters relevant to a fixed section page (genre is excluded — the section IS
 // the silo; author/publisher omitted to keep it focused).
@@ -130,7 +131,7 @@ export default async function CategoryPage({
         ]}
       />
 
-      <div className="mx-auto max-w-[1600px] px-6 py-10 sm:px-8 lg:px-16 xl:px-24">
+      <div className="shell py-10">
         <nav aria-label="Breadcrumb" className="font-data text-xs uppercase tracking-wide text-muted">
           <Link href="/" className="hover:text-accent">Home</Link>
           <span className="px-2">/</span>

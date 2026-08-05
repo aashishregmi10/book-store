@@ -28,7 +28,7 @@ const genreListQuery = z.object({
   sort: z.enum(Object.keys(SORTS)).optional(),
 });
 
-// ── GET /api/genres — all active genres (nav + footer) ──
+// ── GET /api/genres — all active genres (nav + footer + homepage row) ──
 router.get('/', async (_req, res, next) => {
   try {
     const data = await withCache('genres_list', 3600, () =>

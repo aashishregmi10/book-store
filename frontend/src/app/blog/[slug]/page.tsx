@@ -5,7 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 
-import { apiGetOrNull } from "@/lib/api";
+import { apiGetOrNull, CACHE_TTL } from "@/lib/api";
 import { npr } from "@/lib/format";
 import type { ArticleDetail } from "@/lib/types";
 import { articleLd, breadcrumbLd } from "@/lib/seo";
@@ -14,10 +14,11 @@ import { MarkdownLite } from "@/components/MarkdownLite";
 import { BookCard } from "@/components/books/BookCard";
 import { ArticleCover } from "@/components/blog/ArticleCover";
 
-export const dynamic = "force-dynamic";
+// ISR — articles are published once and rarely edited afterwards.
+export const revalidate = 900;
 
 const getArticle = cache((slug: string) =>
-  apiGetOrNull<ArticleDetail>(`/articles/${slug}`, { tags: [`article:${slug}`] })
+  apiGetOrNull<ArticleDetail>(`/articles/${slug}`, { tags: [`article:${slug}`], revalidate: CACHE_TTL.articles })
 );
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {

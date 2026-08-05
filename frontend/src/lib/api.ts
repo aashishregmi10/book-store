@@ -16,11 +16,36 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Default cache window for any tagged read that doesn't name its own. Nothing
+ * calls `revalidateTag` today (the admin is a separate app that talks to
+ * Express directly), so a tag on its own would pin a response forever — the
+ * time window is what actually makes the catalogue self-heal.
+ */
+export const DEFAULT_REVALIDATE = 300; // 5 minutes
+
+/**
+ * Revalidation windows, longest-lived first. Kept together so the whole
+ * storefront's freshness/latency trade-off is one thing to read and tune.
+ */
+export const CACHE_TTL = {
+  /** Taxonomy — 16 slugs that change when someone edits seed-taxonomy.js. */
+  genres: 3600,
+  /** Editorial — articles are published, then rarely touched. */
+  articles: 900,
+  /** Catalogue listings + homepage rails. Stock and price move here. */
+  catalogue: 300,
+  /** A single book: price, stock and reviews all surface on this page. */
+  book: 120,
+} as const;
+
 interface GetOptions {
   /** Next 16 cache tags for on-demand revalidation (paired with `revalidate`). */
   tags?: string[];
-  /** Seconds to cache. Omit for request-time (dynamic) fetch — the default while the API may be unreachable at build. */
+  /** Seconds to cache. Defaults to DEFAULT_REVALIDATE when `tags` are given. */
   revalidate?: number;
+  /** Opt out of the Data Cache entirely — per-user reads, never catalogue reads. */
+  noStore?: boolean;
   searchParams?: Record<string, string | number | undefined>;
 }
 
@@ -41,15 +66,25 @@ function buildUrl(path: string, searchParams?: GetOptions["searchParams"]) {
  */
 export async function apiGet<T>(path: string, opts: GetOptions = {}): Promise<T> {
   const url = buildUrl(path, opts.searchParams);
-  const next: { revalidate?: number; tags?: string[] } = {};
-  if (opts.revalidate !== undefined) next.revalidate = opts.revalidate;
-  if (opts.tags) next.tags = opts.tags;
+
+  // `fetch` is uncached by default in Next 16, and `next.tags` alone does NOT
+  // opt a request in — without `cache: 'force-cache'` the tags are inert and
+  // every render hits Express again. That, plus `force-dynamic` on the pages,
+  // is what had the whole storefront re-querying Mongo on every navigation.
+  const cached = !opts.noStore && (opts.tags !== undefined || opts.revalidate !== undefined);
 
   let res: Response;
   try {
     res = await fetch(url, {
-      // No `revalidate` ⇒ uncached ⇒ request-time render (dynamic).
-      ...(opts.revalidate !== undefined || opts.tags ? { next } : { cache: "no-store" }),
+      ...(cached
+        ? {
+            cache: "force-cache" as const,
+            next: {
+              revalidate: opts.revalidate ?? DEFAULT_REVALIDATE,
+              ...(opts.tags ? { tags: opts.tags } : {}),
+            },
+          }
+        : { cache: "no-store" as const }),
       headers: { Accept: "application/json" },
     });
   } catch (err) {

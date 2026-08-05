@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { apiGet, apiGetOrNull } from "@/lib/api";
+import { apiGet, apiGetOrNull, CACHE_TTL } from "@/lib/api";
 import type { Genre, BookCardData, Paged } from "@/lib/types";
 import { itemListLd, breadcrumbLd } from "@/lib/seo";
 import { JsonLd } from "@/components/JsonLd";
@@ -11,7 +11,8 @@ import { BooksFilters } from "@/components/books/BooksFilters";
 import { BooksToolbar } from "@/components/books/BooksToolbar";
 import { BooksGrid } from "@/components/books/BooksGrid";
 
-export const dynamic = "force-dynamic";
+// Reads `searchParams`, so it renders per request — but its catalogue fetches
+// are shared and cached. See the note in app/books/page.tsx.
 
 interface GenreResponse extends Paged<BookCardData> {
   genre: Genre;
@@ -88,8 +89,8 @@ export default async function GenrePage({
         page: sp.page,
       },
     }).catch(() => null),
-    apiGet<Genre[]>("/genres", { tags: ["genres"] }).catch(() => [] as Genre[]),
-    apiGet<{ authors: string[]; publishers: string[] }>("/books/filters/metadata", { tags: ["books"] }).catch(() => ({
+    apiGet<Genre[]>("/genres", { tags: ["genres"], revalidate: CACHE_TTL.genres }).catch(() => [] as Genre[]),
+    apiGet<{ authors: string[]; publishers: string[] }>("/books/filters/metadata", { tags: ["books"], revalidate: CACHE_TTL.genres }).catch(() => ({
       authors: [],
       publishers: [],
     })),
@@ -119,7 +120,7 @@ export default async function GenrePage({
         ]}
       />
 
-      <div className="mx-auto max-w-[1600px] px-6 py-10 sm:px-8 lg:px-16 xl:px-24">
+      <div className="shell py-10">
         <nav aria-label="Breadcrumb" className="font-data text-xs uppercase tracking-wide text-muted">
           <Link href="/" className="hover:text-accent">Home</Link>
           <span className="px-2">/</span>

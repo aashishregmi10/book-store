@@ -5,7 +5,7 @@ import { BookCover } from "@/components/books/BookCover";
 import { notFound } from "next/navigation";
 import { Star, Truck, Package, ShieldCheck } from "lucide-react";
 
-import { apiGetOrNull } from "@/lib/api";
+import { apiGetOrNull, CACHE_TTL } from "@/lib/api";
 import type { BookDetail, BookCardData, ReviewData, QuestionData } from "@/lib/types";
 import { npr, discountPct } from "@/lib/format";
 import { bookLd, breadcrumbLd, qaPageLd } from "@/lib/seo";
@@ -37,7 +37,10 @@ function breadcrumbParent(book: { category?: string | null; genre: string }) {
   return { name: book.genre.replace(/-/g, " "), path: `/genre/${book.genre}` };
 }
 
-export const dynamic = "force-dynamic";
+// ISR — a book page has no per-visitor content, so it is prerendered on first
+// request and refreshed in the background. Two minutes is short enough that a
+// price or stock edit in the admin surfaces quickly.
+export const revalidate = 120;
 
 interface BookResponse {
   book: BookDetail;
@@ -48,7 +51,7 @@ interface BookResponse {
 
 // Cached per-request so generateMetadata and the page share one fetch.
 const getBook = cache((slug: string) =>
-  apiGetOrNull<BookResponse>(`/books/${slug}`, { tags: [`book:${slug}`] })
+  apiGetOrNull<BookResponse>(`/books/${slug}`, { tags: [`book:${slug}`], revalidate: CACHE_TTL.book })
 );
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -106,7 +109,7 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
         ]}
       />
 
-      <div className="mx-auto max-w-[1600px] px-6 py-8 sm:px-8 lg:px-16 xl:px-24">
+      <div className="shell py-8">
         {/* Breadcrumb */}
         <nav aria-label="Breadcrumb" className="font-data text-xs uppercase tracking-wide text-muted">
           <Link href="/" className="hover:text-accent">Home</Link>
