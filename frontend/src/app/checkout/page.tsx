@@ -76,10 +76,23 @@ export default function CheckoutPage() {
         <p className="mt-2 font-body text-muted">
           Thank you. Your order <span className="font-data text-text">{orderNumber}</span> is confirmed — pay cash when it arrives.
         </p>
-        <div className="mt-6 flex justify-center gap-3">
-          {user && <Link href="/account" className="bg-accent px-5 py-3 font-data text-sm uppercase tracking-wide text-white hover:bg-accent-hover">Track order</Link>}
+        {/* Guests get a tracking route too. They used to be handed an order
+            number with nowhere to type it — "Track order" only rendered for
+            signed-in users, and every order read required a session. */}
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <Link
+            href={user ? "/account" : "/track"}
+            className="bg-accent px-5 py-3 font-data text-sm uppercase tracking-wide text-white hover:bg-accent-hover"
+          >
+            Track order
+          </Link>
           <Link href="/books" className="border border-border px-5 py-3 font-data text-sm uppercase tracking-wide text-text hover:border-accent">Keep browsing</Link>
         </div>
+        {!user && (
+          <p className="mt-4 font-body text-sm text-muted">
+            Keep that number — you can check on your order any time with it and your phone number.
+          </p>
+        )}
       </div>
     );
   }

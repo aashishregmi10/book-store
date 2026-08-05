@@ -1,6 +1,7 @@
 'use strict';
 
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 
 const Order = require('../models/order.model');
 const User = require('../models/user.model');
@@ -157,6 +158,52 @@ router.get('/my-orders', authenticate, async (req, res, next) => {
   try {
     const orders = await Order.find({ user: req.userId }).sort({ createdAt: -1 }).lean();
     return ok(res, orders, 'Your orders');
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ── POST /api/orders/lookup — guest order tracking ───────
+// Guests can check out, so guests end up holding an order number that, until
+// now, nothing would accept: every read on this router required a session, and
+// a guest order has no user to match. They were handed a reference and no way
+// to use it.
+//
+// Order numbers are sequential (PT-YYYYMMDD-00001), so the number alone proves
+// nothing — pairing it with the delivery phone is what makes this safe, and it
+// is something the real customer always has. Phones are compared on digits
+// only, since nobody retypes their number the same way twice.
+const lookupBody = z.object({ orderNumber: trimmedString(), phone: trimmedString() });
+
+const lookupLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV !== 'production',
+  message: { message: 'Too many lookups — please try again shortly.', errors: [{ code: 'RATE_LIMITED' }] },
+});
+
+const digitsOf = (v) => String(v || '').replace(/\D/g, '');
+
+router.post('/lookup', lookupLimiter, validate({ body: lookupBody }), async (req, res, next) => {
+  try {
+    const order = await Order.findOne({ orderNumber: req.body.orderNumber.toUpperCase() }).lean();
+
+    // One message for "no such order" and "wrong phone" alike. Distinguishing
+    // them would turn this into an oracle for which order numbers exist.
+    const mismatch = () =>
+      fail(res, "We couldn't find an order with that number and phone number.", 404, [{ code: 'NOT_FOUND' }]);
+
+    if (!order) return mismatch();
+
+    const given = digitsOf(req.body.phone);
+    const onOrder = digitsOf(order.deliveryAddress?.phone);
+    // Compare the last 9 digits so +977/0 prefixes don't cause false misses.
+    const tail = (d) => d.slice(-9);
+    if (!given || !onOrder || tail(given) !== tail(onOrder)) return mismatch();
+
+    return ok(res, order, 'Order');
   } catch (err) {
     return next(err);
   }

@@ -5,7 +5,8 @@ import { SITE } from "@/lib/seo";
 // `/oneechan` is the admin sign-in route; it was missing here, so the one URL
 // whose whole value is being obscure was the one crawlers were free to index.
 // `/auth` covers the password-reset screens, which carry a token in the query.
-const disallow = ["/cart", "/checkout", "/account", "/admin", "/oneechan", "/auth", "/api"];
+// `/track` takes an order number + phone, so it must not be indexed either.
+const disallow = ["/cart", "/checkout", "/account", "/admin", "/oneechan", "/auth", "/track", "/api"];
 
 // AI assistants & answer engines we explicitly welcome (GEO). Being listed by
 // name signals intent and avoids accidental blocks.

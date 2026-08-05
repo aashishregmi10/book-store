@@ -38,6 +38,14 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 
+# One-off data-migration artefacts (Daraz cover/soldCount backfills,
+# merchandising flag snapshots). Written to the repo root by scripts in
+# backend/scripts as a rollback safety net — useful locally, but they are
+# point-in-time dumps of catalogue state, not source, and they bloat clones.
+# The existing ones stay on disk; they are simply no longer tracked.
+daraz-*-backup-*.csv
+merchandising-flags-backup-*.json
+
 # Misc
 *.pem
 .cache/

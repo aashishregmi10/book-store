@@ -204,6 +204,52 @@ describe('POST /api/orders (COD)', () => {
   });
 });
 
+// Guests can check out, so they hold an order number that every other read on
+// this router rejects — there is no session to match it against.
+describe('POST /api/orders/lookup (guest tracking)', () => {
+  const GUEST_ADDR = { ...ADDR, phone: '9801234567' };
+
+  async function placeGuestOrder() {
+    const res = await request(app)
+      .post('/api/orders')
+      .send({ items: [{ bookId: bookA.id, quantity: 1 }], deliveryAddress: GUEST_ADDR });
+    expect(res.status).toBe(201);
+    return res.body.data.order.orderNumber;
+  }
+
+  it('returns the order for the right number + phone', async () => {
+    const orderNumber = await placeGuestOrder();
+    const res = await request(app).post('/api/orders/lookup').send({ orderNumber, phone: '9801234567' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.orderNumber).toBe(orderNumber);
+    expect(res.body.data.isGuest).toBe(true);
+  });
+
+  it('matches regardless of how the phone was typed', async () => {
+    const orderNumber = await placeGuestOrder();
+    for (const phone of ['+977 9801234567', '980-123-4567', '09801234567']) {
+      const res = await request(app).post('/api/orders/lookup').send({ orderNumber, phone });
+      expect(res.status).toBe(200);
+    }
+  });
+
+  it('refuses the order number alone, and says nothing about which half was wrong', async () => {
+    const orderNumber = await placeGuestOrder();
+
+    const wrongPhone = await request(app).post('/api/orders/lookup').send({ orderNumber, phone: '9800000000' });
+    const noSuchOrder = await request(app)
+      .post('/api/orders/lookup')
+      .send({ orderNumber: 'PT-20990101-99999', phone: '9801234567' });
+
+    expect(wrongPhone.status).toBe(404);
+    expect(noSuchOrder.status).toBe(404);
+    // Identical responses: otherwise this endpoint tells an attacker which
+    // sequential order numbers exist.
+    expect(wrongPhone.body.message).toBe(noSuchOrder.body.message);
+  });
+});
+
 describe('Order lifecycle', () => {
   it('lists my orders and cancels one (restoring stock + points)', async () => {
     const { token, userId } = await makeUser();

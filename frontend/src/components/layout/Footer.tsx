@@ -96,6 +96,7 @@ export function Footer() {
             <li><Link href="/about" className="hover:text-accent">Our story</Link></li>
             <li><Link href="/contact" className="hover:text-accent">Contact</Link></li>
             <li><Link href="/account" className="hover:text-accent">Rewards &amp; tiers</Link></li>
+            <li><Link href="/track" className="hover:text-accent">Track an order</Link></li>
             <li><Link href="/terms" className="hover:text-accent">Terms &amp; returns</Link></li>
             <li><Link href="/privacy" className="hover:text-accent">Privacy</Link></li>
             <li><a href={`mailto:${SITE.email}`} className="hover:text-accent">{SITE.email}</a></li>
