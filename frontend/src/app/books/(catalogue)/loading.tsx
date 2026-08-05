@@ -1,5 +1,18 @@
 import { Skeleton, BookGridSkeleton } from "@/components/ui/Skeleton";
 
+/**
+ * Catalogue skeleton — scoped to /books ONLY by the `(catalogue)` route group.
+ *
+ * Do not move this back up to `app/books/`. A loading.tsx wraps its own page
+ * *and every segment nested below it* in one Suspense boundary, so sitting at
+ * `app/books/` it also covered `/books/[slug]`. Opening any book from the
+ * homepage, a genre page or search therefore flashed this full 25-card grid
+ * with a filter rail — a catalogue page that was never being navigated to —
+ * before the book detail appeared.
+ *
+ * The route group keeps the URL as /books while making `[slug]` a sibling
+ * rather than a child, so the book page now shows its own skeleton.
+ */
 export default function BooksLoading() {
   return (
     <div className="shell py-10">
