@@ -3,14 +3,16 @@
 const express = require('express');
 
 const Order = require('../models/order.model');
-const Book = require('../models/book.model');
 const User = require('../models/user.model');
 const Coupon = require('../models/coupon.model');
 const Activity = require('../models/activity.model');
 const { authenticate, optionalAuth } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
-const { z, objectId, trimmedString } = require('../utils/zod');
+const { z, objectId, trimmedString, phone } = require('../utils/zod');
 const { priceCart } = require('../services/pricing');
+// Stock moves through the shared service so checkout, cancellation and the
+// admin refund paths can never drift apart again (see services/stock.js).
+const { decrementStock, restoreStock } = require('../services/stock');
 const { ok, created, fail } = require('../utils/apiResponse');
 const email = require('../utils/emailService');
 const logger = require('../config/logger');
@@ -32,7 +34,7 @@ const createOrderBody = z.object({
   couponCode: z.string().trim().optional(),
   deliveryAddress: z.object({
     fullName: trimmedString(),
-    phone: trimmedString(),
+    phone: phone(),
     address1: trimmedString(),
     address2: z.string().optional(),
     city: trimmedString(),
@@ -40,99 +42,6 @@ const createOrderBody = z.object({
   }),
 });
 const orderNumberParams = z.object({ orderNumber: trimmedString() });
-
-// Decrement stock + bump soldCount + recompute stockStatus atomically.
-// Conditional on stock>=qty so a raced order can't oversell.
-// Recompute top-level stock/price from variants, then derive stockStatus.
-const SYNC_FROM_VARIANTS = { $set: { stock: { $sum: '$variants.stock' }, price: { $min: '$variants.price' } } };
-const STATUS_FROM_STOCK = {
-  $set: {
-    stockStatus: {
-      $switch: {
-        branches: [
-          { case: { $eq: ['$stock', 0] }, then: 'out-of-stock' },
-          { case: { $lte: ['$stock', 3] }, then: 'low-stock' },
-        ],
-        default: 'in-stock',
-      },
-    },
-  },
-};
-
-// Adjust a single variant's stock by `delta` (negative to reserve) inside a $map.
-const adjustVariant = (variantId, delta) => ({
-  $set: {
-    variants: {
-      $map: {
-        input: '$variants',
-        as: 'v',
-        in: {
-          $cond: [
-            { $eq: [{ $toString: '$$v._id' }, String(variantId)] },
-            { $mergeObjects: ['$$v', { stock: { $add: ['$$v.stock', delta] } }] },
-            '$$v',
-          ],
-        },
-      },
-    },
-  },
-});
-
-function decrementStock(bookId, qty, variantId) {
-  if (variantId) {
-    return Book.updateOne(
-      { _id: bookId, stockStatus: { $ne: 'discontinued' }, variants: { $elemMatch: { _id: variantId, stock: { $gte: qty } } } },
-      [adjustVariant(variantId, -qty), { $set: { soldCount: { $add: ['$soldCount', qty] } } }, SYNC_FROM_VARIANTS, STATUS_FROM_STOCK],
-      { updatePipeline: true }
-    );
-  }
-  return Book.updateOne(
-    { _id: bookId, stock: { $gte: qty }, stockStatus: { $ne: 'discontinued' } },
-    [{ $set: { stock: { $subtract: ['$stock', qty] }, soldCount: { $add: ['$soldCount', qty] } } }, STATUS_FROM_STOCK],
-    { updatePipeline: true }
-  );
-}
-
-// Reverse a decrement (compensation on partial failure / cancellation).
-const STATUS_FROM_STOCK_KEEP_DISC = {
-  $set: {
-    stockStatus: {
-      $cond: [
-        { $eq: ['$stockStatus', 'discontinued'] },
-        'discontinued',
-        {
-          $switch: {
-            branches: [
-              { case: { $eq: ['$stock', 0] }, then: 'out-of-stock' },
-              { case: { $lte: ['$stock', 3] }, then: 'low-stock' },
-            ],
-            default: 'in-stock',
-          },
-        },
-      ],
-    },
-  },
-};
-
-function restoreStock(bookId, qty, variantId) {
-  if (variantId) {
-    return Book.updateOne(
-      { _id: bookId, 'variants._id': variantId },
-      [
-        adjustVariant(variantId, qty),
-        { $set: { soldCount: { $max: [{ $subtract: ['$soldCount', qty] }, 0] } } },
-        SYNC_FROM_VARIANTS,
-        STATUS_FROM_STOCK_KEEP_DISC,
-      ],
-      { updatePipeline: true }
-    );
-  }
-  return Book.updateOne(
-    { _id: bookId },
-    [{ $set: { stock: { $add: ['$stock', qty] }, soldCount: { $max: [{ $subtract: ['$soldCount', qty] }, 0] } } }, STATUS_FROM_STOCK_KEEP_DISC],
-    { updatePipeline: true }
-  );
-}
 
 // ── POST /api/orders — place order (auth optional → guest checkout) ──
 router.post(
@@ -236,7 +145,7 @@ router.post(
       return created(res, { order }, 'Order placed');
     } catch (err) {
       // Best-effort compensation if we failed after reserving stock.
-      await Promise.all(decremented.map((d) => restoreStock(d.book, d.quantity))).catch(() => {});
+      await Promise.all(decremented.map((d) => restoreStock(d.book, d.quantity, d.variantId))).catch(() => {});
       logger.error({ err: err.message }, 'Order creation failed');
       return next(err);
     }
@@ -273,8 +182,11 @@ router.post('/:orderNumber/cancel', authenticate, validate({ params: orderNumber
       return fail(res, `Cannot cancel an order that is ${order.status}`, 400, [{ code: 'NOT_CANCELLABLE' }]);
     }
 
-    // Restore stock.
-    await Promise.all(order.items.map((i) => restoreStock(i.book, i.quantity)));
+    // Restore stock. `variantId` is not optional here: for a multi-format book
+    // the top-level `stock` is derived from the variants ($sum), so restoring
+    // without it adds the quantity to the derived field while the variant that
+    // was actually sold stays decremented — the two then disagree permanently.
+    await Promise.all(order.items.map((i) => restoreStock(i.book, i.quantity, i.variantId)));
 
     // Refund redeemed points + reverse earned points.
     if (order.user) {

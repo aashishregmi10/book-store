@@ -39,13 +39,13 @@ function button(label, href, accent = '#2D5A3D') {
 }
 
 /** Never throws — logs and returns false on failure so callers can fire-and-forget. */
-async function send({ to, subject, html }) {
+async function send({ to, subject, html, replyTo }) {
   if (!isConfigured) {
     logger.info({ to: '[redacted]', subject }, 'Email (SMTP not configured) — skipped send, would have delivered.');
     return false;
   }
   try {
-    await transporter.sendMail({ from: FROM, to, subject, html });
+    await transporter.sendMail({ from: FROM, to, subject, html, ...(replyTo ? { replyTo } : {}) });
     logger.info({ subject }, 'Email sent.');
     return true;
   } catch (err) {
@@ -100,6 +100,25 @@ function sendPasswordReset(user, rawToken) {
      <p style="font-size:12px;color:#8C7B6B;">If you didn't request this, you can safely ignore this email.</p>`
   );
   return send({ to: user.email, subject: 'Reset your Books Temple password', html });
+}
+
+// Escapes the customer's own words before they land in an HTML email — the
+// message is arbitrary user input and the shop's inbox renders HTML.
+const escapeHtml = (s = '') =>
+  String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+/**
+ * Tell the shop somebody used the contact form. `replyTo` is the sender, so
+ * hitting reply in the inbox answers the customer directly.
+ */
+function sendContactMessage(to, note) {
+  const html = shell(
+    'New message from the contact form',
+    `<p><strong>${escapeHtml(note.name)}</strong> &lt;${escapeHtml(note.email)}&gt;</p>
+     <p style="font-size:12px;color:#8C7B6B;">Topic: ${escapeHtml(note.topic || 'Not specified')}</p>
+     <div style="white-space:pre-wrap;border-left:3px solid #E7E0D4;padding-left:12px;margin:16px 0;">${escapeHtml(note.message)}</div>`
+  );
+  return send({ to, subject: `Contact form: ${note.topic || 'New message'}`, html, replyTo: note.email });
 }
 
 function sendLowStockAlert(adminEmail, books) {
@@ -166,6 +185,7 @@ module.exports = {
   sendOrderConfirmation,
   sendOrderStatusUpdate,
   sendPasswordReset,
+  sendContactMessage,
   sendLowStockAlert,
   sendPointsEarned,
   sendReferralBonus,

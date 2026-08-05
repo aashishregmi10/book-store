@@ -57,8 +57,8 @@ export function Footer() {
             className="h-16 w-auto sm:h-20"
           />
           <p className="mt-4 max-w-md font-body text-sm leading-relaxed text-muted">
-            A bookshop for Nepali readers. Over 3,000 titles in English and Nepali, same-day delivery in
-            Kathmandu, careful packaging to all 77 districts.
+            A bookshop for Nepali readers. Over 2,000 titles in English and Nepali, carefully packed and
+            carried to all 77 districts.
           </p>
 
           <ul className="mt-6 flex items-center gap-3">
@@ -96,7 +96,9 @@ export function Footer() {
             <li><Link href="/about" className="hover:text-accent">Our story</Link></li>
             <li><Link href="/contact" className="hover:text-accent">Contact</Link></li>
             <li><Link href="/account" className="hover:text-accent">Rewards &amp; tiers</Link></li>
-            <li><a href="mailto:hello@bookstemplenepal.com" className="hover:text-accent">hello@bookstemplenepal.com</a></li>
+            <li><Link href="/terms" className="hover:text-accent">Terms &amp; returns</Link></li>
+            <li><Link href="/privacy" className="hover:text-accent">Privacy</Link></li>
+            <li><a href={`mailto:${SITE.email}`} className="hover:text-accent">{SITE.email}</a></li>
           </ul>
         </div>
       </div>

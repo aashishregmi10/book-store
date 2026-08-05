@@ -9,18 +9,36 @@ export const metadata: Metadata = {
   alternates: { canonical: "/contact" },
 };
 
+// Set NEXT_PUBLIC_CONTACT_PHONE to the shop's real number (E.164, e.g.
+// +9779800000000) to show the phone/WhatsApp row. It is deliberately hidden
+// while unset: the page previously shipped a literal "+977 1-4XXXXXX"
+// placeholder wired to a tel: link, so anyone who tapped it dialled nonsense.
+const PHONE = process.env.NEXT_PUBLIC_CONTACT_PHONE;
+
 export default function ContactPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
-
+      {/* The page had no heading at all — no <h1> for readers or for search. */}
+      <h1 className="font-display text-4xl leading-tight text-text sm:text-5xl">Talk to a bookseller.</h1>
+      <p className="mt-3 max-w-xl font-body text-lg leading-relaxed text-muted">
+        Question about an order, after a title we don&apos;t stock, or buying in bulk? Send a note and
+        a person will read it.
+      </p>
 
       <div className="mt-8 grid gap-6 md:grid-cols-2">
         {/* Ways to reach us */}
         <div className="space-y-3">
           <Channel icon={Mail} title="Email" detail="hello@bookstemplenepal.com" href="mailto:hello@bookstemplenepal.com" />
-          <Channel icon={MessageCircle} title="Phone / WhatsApp" detail="+977 1-4XXXXXX" href="tel:+97714XXXXXX" />
+          {PHONE && (
+            <Channel
+              icon={MessageCircle}
+              title="Phone / WhatsApp"
+              detail={PHONE}
+              href={`tel:${PHONE.replace(/[^+\d]/g, "")}`}
+            />
+          )}
           <Channel icon={Clock} title="Reply time" detail="Within a day, Sun–Fri" />
-          <Channel icon={Truck} title="Delivery" detail="All 77 districts · same-day in the Valley" />
+          <Channel icon={Truck} title="Delivery" detail="All 77 districts" />
         </div>
 
         {/* Form */}

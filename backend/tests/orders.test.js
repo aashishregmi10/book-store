@@ -82,6 +82,38 @@ describe('POST /api/orders (COD)', () => {
     expect(res.body.data.order.pointsEarned).toBe(0);
   });
 
+  // The delivery phone was validated as "any non-empty string". On a COD shop
+  // the courier rings it to arrange handover, so a junk number is a parcel that
+  // cannot be delivered and an order that cannot be salvaged.
+  it.each([['1'], ['asdf'], ['98012345'], ['8801234567']])(
+    'rejects an unusable delivery phone (%s)',
+    async (badPhone) => {
+      const { token } = await makeUser(`p${badPhone.replace(/\W/g, '')}@test.com`);
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ items: [{ bookId: bookA.id, quantity: 1 }], deliveryAddress: { ...ADDR, phone: badPhone } });
+
+      expect(res.status).toBe(400);
+      expect(res.body.errors.some((e) => e.field === 'deliveryAddress.phone')).toBe(true);
+      // Nothing was reserved for an order that never became one.
+      expect((await Book.findById(bookA.id)).stock).toBe(10);
+    }
+  );
+
+  it.each([['9801234567'], ['+977 9841234567'], ['01-4123456']])(
+    'accepts a real Nepali number (%s)',
+    async (goodPhone) => {
+      const { token } = await makeUser(`g${goodPhone.replace(/\W/g, '')}@test.com`);
+      const res = await request(app)
+        .post('/api/orders')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ items: [{ bookId: bookA.id, quantity: 1 }], deliveryAddress: { ...ADDR, phone: goodPhone } });
+
+      expect(res.status).toBe(201);
+    }
+  );
+
   it('rejects when stock is insufficient (409)', async () => {
     const { token } = await makeUser();
     const res = await request(app)
@@ -195,6 +227,28 @@ describe('Order lifecycle', () => {
     const user = await User.findById(userId);
     expect(user.points).toBe(pointsAfterOrder - (await earnedFor(orderNumber, place))); // earned reversed
   });
+
+  // Regression: every cancel test above sends `{ reason }`, so nothing covered
+  // the request the UI actually makes — a POST with no body at all. Express 5
+  // leaves req.body undefined there (Express 4 gave an empty object), so
+  // `req.body.reason` threw and cancelling always answered 500.
+  it('cancels when the request carries no body, defaulting the reason', async () => {
+    const { token } = await makeUser();
+    const place = await request(app)
+      .post('/api/orders')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ items: [{ bookId: bookA.id, quantity: 2 }], deliveryAddress: ADDR });
+    const { orderNumber } = place.body.data.order;
+
+    const cancel = await request(app)
+      .post(`/api/orders/${orderNumber}/cancel`)
+      .set('Authorization', `Bearer ${token}`); // deliberately no .send()
+
+    expect(cancel.status).toBe(200);
+    expect(cancel.body.data.order.status).toBe('cancelled');
+    expect(cancel.body.data.order.cancellationReason).toBe('Cancelled by customer');
+    expect((await Book.findById(bookA.id)).stock).toBe(10); // restored
+  });
 });
 
 // helper: points earned recorded on the placed order
@@ -260,5 +314,34 @@ describe('Format variants', () => {
     expect(after.variants.find((v) => v.format === 'Hardcover').stock).toBe(1); // 3 - 2
     expect(after.variants.find((v) => v.format === 'Paperback').stock).toBe(5); // untouched
     expect(after.stock).toBe(6); // summed
+  });
+
+  // Regression: cancelling used to call restoreStock() without the variantId,
+  // which credited the DERIVED top-level `stock` instead of the variant that
+  // was actually sold. The book then read as having more copies than the
+  // variants add up to — and stayed that way, since every later recompute
+  // re-derives `stock` from the variants and silently discards the phantom.
+  it('cancelling a variant order returns the copies to that same variant', async () => {
+    const { token } = await makeUser();
+    const hc = multi.variants.find((v) => v.format === 'Hardcover');
+    const placed = await request(app)
+      .post('/api/orders')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ items: [{ bookId: multi.id, variantId: hc.id, quantity: 2 }], deliveryAddress: ADDR });
+    expect(placed.status).toBe(201);
+
+    const cancelled = await request(app)
+      .post(`/api/orders/${placed.body.data.order.orderNumber}/cancel`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(cancelled.status).toBe(200);
+
+    const after = await Book.findById(multi.id);
+    expect(after.variants.find((v) => v.format === 'Hardcover').stock).toBe(3); // fully restored
+    expect(after.variants.find((v) => v.format === 'Paperback').stock).toBe(5); // never touched
+    // The invariant that actually caught the bug: the total must equal the sum
+    // of the variants, not the sum plus a stray credit.
+    expect(after.stock).toBe(8);
+    expect(after.stock).toBe(after.variants.reduce((n, v) => n + v.stock, 0));
+    expect(after.soldCount).toBe(0);
   });
 });

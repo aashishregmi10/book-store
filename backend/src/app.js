@@ -31,6 +31,20 @@ app.use(
 );
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false, limit: '1mb' }));
+
+// Express 5 leaves `req.body` UNDEFINED when a request carries no body at all,
+// where Express 4 left an empty object. Handlers that read an optional field
+// off it — `req.body.reason` on the order-cancel routes, `req.body.isDefault`
+// on addresses — then throw a TypeError and 500.
+//
+// That is not theoretical: "Cancel order" sends no body, so it crashed every
+// time. Normalising here fixes the whole class at once, including the routes
+// that validate only `params` and so never get a parsed body.
+app.use((req, _res, next) => {
+  if (req.body === undefined) req.body = {};
+  next();
+});
+
 app.use(cookieParser());
 app.use(sanitizeRequest);
 
@@ -41,16 +55,37 @@ app.use((req, _res, next) => {
   next();
 });
 
-// ── Global rate limit (Master Guide §9.2: 100 / 15 min) ──
+// ── Global rate limit ────────────────────────────────────
+// The ceiling is deliberately high, and that is not laziness.
+//
+// This limiter keys on IP, but in production almost none of our traffic
+// arrives from a visitor's IP: the storefront is server-rendered, so Next
+// fetches the catalogue from Vercel's egress addresses and *every shopper on
+// the site shares one bucket*. A single filtered genre view costs three
+// requests. At the old 100/15min ceiling a handful of simultaneous visitors
+// would 429 the entire shop — the limiter would have been the outage.
+//
+// Brute-force protection is where it belongs instead: the per-action limiters
+// on login / register / forgot-password (middleware/auth.js), which key the
+// same way but guard endpoints no legitimate SSR render ever calls. This one
+// is only a backstop against a runaway scraper.
+//
+// INTERNAL_API_KEY, when set on both apps, exempts our own server-side fetches
+// entirely and is the proper fix; without it the ceiling alone carries the load.
+const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY;
+
 app.use(
   '/api',
   rateLimit({
     windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-    max: Number(process.env.RATE_LIMIT_MAX) || 100,
+    max: Number(process.env.RATE_LIMIT_MAX) || 2000,
     standardHeaders: true,
     legacyHeaders: false,
-    // Only rate-limit in production; dev hot-reload + SSR fan-out trips low limits instantly.
-    skip: () => process.env.NODE_ENV !== 'production',
+    skip: (req) => {
+      // Only rate-limit in production; dev hot-reload + SSR fan-out trips low limits instantly.
+      if (process.env.NODE_ENV !== 'production') return true;
+      return Boolean(INTERNAL_API_KEY) && req.headers['x-internal-key'] === INTERNAL_API_KEY;
+    },
     message: { message: 'Too many requests, please try again later.', errors: [{ code: 'RATE_LIMITED' }] },
   })
 );
@@ -71,6 +106,7 @@ app.use('/api/orders', require('./routes/orders.route'));
 // app.use('/api/inventory', require('./routes/inventory.route'));
 // app.use('/api/reviews', require('./routes/reviews.route'));
 // app.use('/api/notifications', require('./routes/notifications.route'));
+app.use('/api/contact', require('./routes/contact.route'));
 app.use('/api/upload', require('./routes/upload.route'));
 app.use('/api/feed', require('./routes/feed.route'));
 app.use('/api/admin', require('./routes/admin.route'));

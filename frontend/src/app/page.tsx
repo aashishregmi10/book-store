@@ -105,9 +105,13 @@ export default async function HomePage() {
           cheque the checkout can't cash. */}
       <section className="border-b border-promo-border bg-promo">
         <div className="shell py-5">
-          <p className="font-display text-lg font-semibold text-text sm:text-xl">
-            Welcome in pull up a chair and have a browse. 
-          </p>
+          {/* This is the homepage <h1>, not a decorative line. Removing the old
+              hero took the only h1 on the site's most important page with it,
+              leaving the document outline starting at h2. Styled to sit quietly
+              in the strip — heading level and type scale are separate calls. */}
+          <h1 className="font-display text-lg font-semibold text-text sm:text-xl">
+            Welcome in — pull up a chair and have a browse. 📚
+          </h1>
           <p className="mt-1 font-body text-sm text-muted">
             Nepal&apos;s bookshop that never closes. Whatever you&apos;re in the mood for, it&apos;s on a shelf here somewhere.
           </p>

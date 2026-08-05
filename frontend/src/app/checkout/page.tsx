@@ -7,6 +7,7 @@ import { useCart } from "@/lib/stores/cart";
 import { useAuth } from "@/lib/stores/auth";
 import { clientApi, ClientApiError } from "@/lib/client-api";
 import { npr } from "@/lib/format";
+import { isNepaliPhone } from "@/lib/phone";
 
 const PROVINCES = ["Koshi", "Madhesh", "Bagmati", "Gandaki", "Lumbini", "Karnali", "Sudurpashchim"];
 // Only one delivery speed is offered right now, so there's nothing for a
@@ -98,7 +99,7 @@ export default function CheckoutPage() {
     const fe: Partial<Record<keyof typeof addr, string>> = {};
     if (!addr.fullName.trim()) fe.fullName = "Full name is required.";
     if (!addr.phone.trim()) fe.phone = "Phone number is required.";
-    else if (addr.phone.replace(/\D/g, "").length < 7) fe.phone = "Enter a valid phone number.";
+    else if (!isNepaliPhone(addr.phone)) fe.phone = "Enter a valid Nepali phone number, e.g. 9801234567.";
     if (!addr.address1.trim()) fe.address1 = "Address is required.";
     if (!addr.city.trim()) fe.city = "City is required.";
     if (Object.keys(fe).length) {

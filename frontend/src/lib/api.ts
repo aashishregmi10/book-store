@@ -6,6 +6,15 @@ import type { ApiEnvelope } from "./types";
  */
 const API_BASE = process.env.API_URL || "http://localhost:5000/api";
 
+/**
+ * Marks a request as coming from our own server rather than a browser, so the
+ * API's IP-keyed rate limiter doesn't count every shopper's server render
+ * against the one shared Vercel egress address. Server-only — this module is
+ * never bundled for the client, and the value has no `NEXT_PUBLIC_` prefix, so
+ * it cannot leak into the browser. Optional: unset simply means no exemption.
+ */
+const INTERNAL_KEY = process.env.INTERNAL_API_KEY;
+
 export class ApiError extends Error {
   status: number;
   body: unknown;
@@ -85,7 +94,10 @@ export async function apiGet<T>(path: string, opts: GetOptions = {}): Promise<T>
             },
           }
         : { cache: "no-store" as const }),
-      headers: { Accept: "application/json" },
+      headers: {
+        Accept: "application/json",
+        ...(INTERNAL_KEY ? { "x-internal-key": INTERNAL_KEY } : {}),
+      },
     });
   } catch (err) {
     throw new ApiError(`Network error reaching API: ${(err as Error).message}`, 0);

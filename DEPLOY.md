@@ -39,6 +39,21 @@ Set these on the **backend** project (copy from `backend/.env.example`):
 - `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `EMAIL_FROM` (if email is used)
 - `REDIS_URL=…` (optional — the app degrades gracefully without it)
 - `RATE_LIMIT_WINDOW_MS` / `RATE_LIMIT_MAX` / `INDEXNOW_KEY` (optional)
+- `CONTACT_EMAIL=…` (where /contact notes are emailed; they are also stored in the DB regardless)
+- `INTERNAL_API_KEY=…` (optional but recommended — see the rate-limit note below)
+
+> **Rate limiting and SSR.** The global limiter keys on IP, and the storefront is
+> server-rendered, so in production almost every API call arrives from one of
+> Vercel's egress addresses — *all shoppers share a single bucket*. The default
+> ceiling is deliberately high (2000/15min) for that reason. Setting
+> `INTERNAL_API_KEY` to the same value on **both** projects exempts our own
+> server-side fetches entirely and is the proper fix. Brute-force protection is
+> unaffected either way: it lives on the per-action login/register limiters.
+
+> **Startup validation.** The API now refuses to boot in production if
+> `MONGODB_URI`, `JWT_SECRET` or `FRONTEND_URL` is missing, if `JWT_SECRET` is
+> under 32 characters or still looks like the placeholder, or if `FRONTEND_URL`
+> has a trailing slash. A failed deploy in the logs beats a broken login page.
 - `GOOGLE_CLIENT_ID=…` (for Google sign-in — the public Web client ID)
 - `NEW_RELIC_LICENSE_KEY=…` / `NEW_RELIC_APP_NAME=Books Temple Nepal API` (optional APM; only runs when `NODE_ENV=production`)
 - `FRONTEND_URL=https://<your-frontend-domain>`   ← fill after first deploy
@@ -57,6 +72,8 @@ Set these on the **frontend** project:
 - `NEXT_PUBLIC_GOOGLE_CLIENT_ID=…` (public Google Web client ID — must match the backend's `GOOGLE_CLIENT_ID`)
 - `NEXT_PUBLIC_GSC_VERIFICATION=…` / `NEXT_PUBLIC_BING_VERIFICATION=…` (optional)
 - `NEXT_PUBLIC_GA_MEASUREMENT_ID=G-…` (GA4 measurement ID — **Production environment only**)
+- `NEXT_PUBLIC_CONTACT_PHONE=+977…` (optional; the /contact phone row stays hidden while unset rather than showing a number that doesn't work)
+- `INTERNAL_API_KEY=…` (optional; must match the backend's value — note: **no** `NEXT_PUBLIC_` prefix, it must not reach the browser)
 
 > **Analytics:** set `NEXT_PUBLIC_GA_MEASUREMENT_ID` on the *Production* environment
 > only. Leaving it unset for Preview/Development keeps branch deploys and local

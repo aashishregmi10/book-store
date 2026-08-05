@@ -11,16 +11,22 @@ export const metadata: Metadata = {
 
 const PRINCIPLES: [string, string][] = [
   ["Handpicked, not algorithm-fed", "Every title on the shelf is one a real bookseller would press into your hands - no endless filler, no pay-to-rank."],
-  ["Honest prices, in rupees", "Clear NPR pricing with no surprises at checkout. What you see is what you pay at your door."],
+  // Was "what you see is what you pay at your door", which stopped being true
+  // the moment the courier started billing delivery itself. The principle is
+  // still honest pricing — it just has to describe what we actually charge.
+  ["Honest prices, in rupees", "Clear NPR pricing on every book, and the price you see is the price we charge. Delivery is billed by the courier at its own rate."],
   ["The whole country is our catchment", "Kathmandu in a day or two, the rest of Nepal in three to five - careful packaging to all 77 districts."],
   ["Pay when it arrives", "Cash on delivery, because trust is earned at the doorstep, not demanded at the form."],
 ];
 
+// Only claims we can actually stand behind. This block used to advertise
+// "4.8★ average reader rating" for a shop that has not opened and has no
+// reviews, and "3,000+" titles against a catalogue of roughly 2,300.
 const STATS: [string, string][] = [
-  ["3,000+", "Titles in English & Nepali"],
+  ["2,000+", "Titles in English & Nepali"],
   ["77 / 77", "Districts we deliver to"],
   ["1–2 days", "Inside the Kathmandu Valley"],
-  ["4.8★", "Average reader rating"],
+  ["COD", "Pay at your door"],
 ];
 
 export default function AboutPage() {

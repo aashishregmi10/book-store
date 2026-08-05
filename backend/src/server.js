@@ -11,6 +11,10 @@ if (process.env.NODE_ENV === 'production' && process.env.NEW_RELIC_LICENSE_KEY) 
 const http = require('http');
 const { Server } = require('socket.io');
 
+// Before anything else touches process.env — a bad deploy should die here, not
+// halfway through a customer's checkout.
+require('./config/env').validateEnv();
+
 const app = require('./app');
 const logger = require('./config/logger');
 const { connectMongo, disconnectMongo } = require('./config/database');

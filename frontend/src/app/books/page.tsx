@@ -92,6 +92,14 @@ export default async function BooksPage({
 
   return (
     <div className="shell py-10">
+      {/* The catalogue had no <h1> at all — the outline started at the toolbar's
+          h2 and screen-reader users landed on a page with no stated subject.
+          It reflects the active search, since "All books" is a lie once a
+          query is applied. */}
+      <h1 className="mb-5 font-display text-3xl text-text sm:text-4xl">
+        {sp.q ? <>Search: <span className="text-accent">{sp.q}</span></> : "All books"}
+      </h1>
+
       {/* Quick genre chips — mobile-first browse without opening the filter panel */}
       <CategoryChips genres={genres.map((g) => ({ slug: g.slug, name: g.name }))} className="mb-5 lg:hidden" />
 

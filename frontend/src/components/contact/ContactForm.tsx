@@ -2,21 +2,42 @@
 
 import { useState } from "react";
 import { Send, Check } from "lucide-react";
+import { clientApi, ClientApiError } from "@/lib/client-api";
+import { Spinner } from "@/components/ui/Spinner";
 
 const TOPICS = ["An order", "A book request", "Trade & wholesale", "Just saying hi"];
 
 export function ContactForm() {
   const [form, setForm] = useState({ name: "", email: "", topic: TOPICS[0], message: "" });
+  // Honeypot. Hidden from people, irresistible to bots — see the field below.
+  const [website, setWebsite] = useState("");
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
 
   function set<K extends keyof typeof form>(key: K, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // No contact endpoint yet — confirm receipt locally. (Wire to an API/email later.)
-    setSent(true);
+    setError("");
+    setSending(true);
+    try {
+      // This used to flip straight to the thank-you screen without sending
+      // anything anywhere — the note promised a reply within a day and the
+      // message went nowhere. It now only confirms once the API has the note.
+      await clientApi.post("/contact", { ...form, website });
+      setSent(true);
+    } catch (err) {
+      setError(
+        err instanceof ClientApiError
+          ? err.message
+          : "We couldn't send that just now. Email us at hello@bookstemplenepal.com instead."
+      );
+    } finally {
+      setSending(false);
+    }
   }
 
   if (sent) {
@@ -82,11 +103,33 @@ export function ContactForm() {
         </label>
       </div>
 
+      {/* Honeypot — off-screen and out of the tab order, so nobody using a
+          keyboard or a screen reader can land in it, but a form-filling bot
+          will. Anything typed here means the submission isn't a person. */}
+      <label aria-hidden className="sr-only" style={{ position: "absolute", left: "-9999px" }}>
+        Website
+        <input
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          value={website}
+          onChange={(e) => setWebsite(e.target.value)}
+        />
+      </label>
+
+      {error && (
+        <p role="alert" className="mt-4 rounded-md border border-sale/40 bg-sale/5 px-3 py-2 font-body text-sm text-sale">
+          {error}
+        </p>
+      )}
+
       <button
         type="submit"
-        className="mt-4 inline-flex items-center justify-center gap-2 rounded-full bg-accent px-6 py-2.5 font-data text-sm font-medium text-white transition-colors hover:bg-accent-hover"
+        disabled={sending}
+        className="mt-4 inline-flex items-center justify-center gap-2 rounded-full bg-accent px-6 py-2.5 font-data text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-60"
       >
-        <Send className="size-4" /> Send
+        {sending ? <Spinner className="size-4" /> : <Send className="size-4" />}
+        {sending ? "Sending…" : "Send"}
       </button>
     </form>
   );

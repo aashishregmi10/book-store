@@ -8,10 +8,12 @@ export default function manifest(): MetadataRoute.Manifest {
     description: SITE.description,
     start_url: "/",
     display: "standalone",
-    // Brand palette (/CLAUDE.md). Were leftover generic-blue values that clashed
-    // with the forest-green mark and the warm off-white app background.
-    background_color: "#FAF7F2",
-    theme_color: "#2D5A3D",
+    // Must track the live palette in globals.css (--color-bg / --color-accent).
+    // These were still the warm-neutral + forest-green pair from an earlier
+    // brand, so the PWA splash screen and the Android title bar rendered in
+    // colours that appear nowhere on the site.
+    background_color: "#e8f1fb",
+    theme_color: "#1c5fa6",
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
       { src: "/icon-512.png", sizes: "512x512", type: "image/png" },

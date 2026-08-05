@@ -5,7 +5,7 @@ const express = require('express');
 const User = require('../models/user.model');
 const { authenticate } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
-const { z, objectId, trimmedString } = require('../utils/zod');
+const { z, objectId, trimmedString, phone } = require('../utils/zod');
 const { ok, created, fail } = require('../utils/apiResponse');
 
 const router = express.Router();
@@ -13,7 +13,7 @@ router.use(authenticate);
 
 const addressBody = z.object({
   fullName: trimmedString(),
-  phone: trimmedString(),
+  phone: phone(),
   address1: trimmedString(),
   city: trimmedString(),
   province: z.enum(User.PROVINCES),

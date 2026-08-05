@@ -94,6 +94,28 @@ describe('Refresh token rotation + reuse detection', () => {
   // Pull the `refreshToken=...` pair out of a Set-Cookie header for replay.
   const refreshCookie = (res) => res.headers['set-cookie'][0].split(';')[0];
 
+  // Regression: both token kinds are signed with the same secret, and
+  // `authenticate` only checked the signature. A refresh token therefore
+  // worked as a bearer credential — trading a 15-minute access token for a
+  // 180-day one and skipping the rotation/reuse detection entirely.
+  it('refuses a refresh token presented as a bearer access token', async () => {
+    const reg = await request(app).post('/api/auth/register').send(REG);
+    const rawRefresh = refreshCookie(reg).split('=')[1];
+
+    const res = await request(app)
+      .get('/api/orders/my-orders')
+      .set('Authorization', `Bearer ${rawRefresh}`);
+
+    expect(res.status).toBe(401);
+    expect(res.body.errors[0].code).toBe('INVALID_TOKEN');
+
+    // The genuine access token from the same registration still works.
+    const okRes = await request(app)
+      .get('/api/orders/my-orders')
+      .set('Authorization', `Bearer ${reg.body.data.accessToken}`);
+    expect(okRes.status).toBe(200);
+  });
+
   it('rotates the refresh token and issues a new access token', async () => {
     const reg = await request(app).post('/api/auth/register').send(REG);
     const cookieA = refreshCookie(reg);

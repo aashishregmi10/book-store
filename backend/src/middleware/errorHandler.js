@@ -33,7 +33,17 @@ function errorHandler(err, req, res, _next) {
   }
   // Surface an ApiError's `code` into the errors array for consistent client handling.
   const errors = err.errors && err.errors.length ? err.errors : err.code ? [{ code: err.code }] : [];
-  return fail(res, err.message || 'Internal server error', status, errors);
+
+  // 4xx messages are written for the customer and are safe to return. 5xx
+  // messages are whatever the failing library said — Mongo connection strings,
+  // driver internals, file paths — so they get a generic reply in production
+  // and stay in the logs above. Dev keeps the detail, where it's useful.
+  const clientMessage =
+    status >= 500 && process.env.NODE_ENV === 'production'
+      ? 'Something went wrong on our end. Please try again.'
+      : err.message || 'Internal server error';
+
+  return fail(res, clientMessage, status, errors);
 }
 
 module.exports = { notFound, errorHandler };

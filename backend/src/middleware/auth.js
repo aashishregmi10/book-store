@@ -20,6 +20,14 @@ function authenticate(req, _res, next) {
   if (!token) return next(new ApiError('Access denied — no token', 401, 'NO_TOKEN'));
   try {
     const decoded = verify(token);
+    // Access tokens only. Both kinds are signed with the same secret, so
+    // without this check a refresh token works as a bearer credential — and a
+    // refresh token lives for 180 days and bypasses the rotation/reuse
+    // detection that is the whole point of keeping it in an httpOnly cookie.
+    // /auth/refresh makes the mirror-image check; this is the missing half.
+    if (decoded.type !== 'access') {
+      return next(new ApiError('Invalid token', 401, 'INVALID_TOKEN'));
+    }
     req.userId = decoded.userId;
     return next();
   } catch (err) {
@@ -32,7 +40,8 @@ function optionalAuth(req, _res, next) {
   const token = getBearer(req);
   if (!token) return next();
   try {
-    req.userId = verify(token).userId;
+    const decoded = verify(token);
+    if (decoded.type === 'access') req.userId = decoded.userId; // see authenticate
   } catch {
     /* ignore invalid token for optional routes */
   }
