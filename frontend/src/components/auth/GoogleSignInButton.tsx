@@ -13,11 +13,32 @@ const GIS_SRC = "https://accounts.google.com/gsi/client";
 /** True when Google sign-in is configured (button will render something). */
 export const isGoogleConfigured = Boolean(CLIENT_ID);
 
+/**
+ * How long to wait for GIS before telling the user it hasn't shown up.
+ * Deliberately generous: most of our traffic is on mobile data, where the
+ * script plus Google's button iframe can genuinely take several seconds, and
+ * giving up on a button that was about to work is worse than waiting. Nothing
+ * is torn down when this fires — a late arrival still renders (see `stalled`).
+ */
+const GIS_TIMEOUT_MS = 15000;
+
 // Minimal typing for the Google Identity Services global.
+interface GisError {
+  type?: string;
+  message?: string;
+}
 interface GoogleIdApi {
   accounts: {
     id: {
-      initialize: (cfg: { client_id: string; callback: (r: { credential?: string }) => void }) => void;
+      initialize: (cfg: {
+        client_id: string;
+        callback: (r: { credential?: string }) => void;
+        // Fires when GIS itself fails — the browser blocked the FedCM dialog,
+        // the user dismissed it, or the origin isn't authorised. Without this
+        // every one of those is silent and the button just looks inert.
+        error_callback?: (err: GisError) => void;
+        use_fedcm_for_prompt?: boolean;
+      }) => void;
       renderButton: (el: HTMLElement, opts: Record<string, unknown>) => void;
     };
   };
@@ -39,6 +60,10 @@ export function GoogleSignInButton({ onError }: { onError?: (msg: string) => voi
   const setAuth = useAuth((s) => s.setAuth);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
+  // GIS hasn't rendered within GIS_TIMEOUT_MS (or its script failed outright).
+  // Only drops the pulsing placeholder — the container stays mounted so a slow
+  // script that arrives late can still render its button into it.
+  const [stalled, setStalled] = useState(false);
 
   const handleCredential = useCallback(
     async (response: { credential?: string }) => {
@@ -81,9 +106,34 @@ export function GoogleSignInButton({ onError }: { onError?: (msg: string) => voi
     if (!CLIENT_ID) return;
     let cancelled = false;
 
+    // If GIS never renders, say so. The usual cause is the current origin
+    // missing from the OAuth client's "Authorized JavaScript origins" in
+    // Google Cloud Console — Google logs that to the console and otherwise
+    // does nothing, which reads to a visitor as a dead button.
+    const timer = window.setTimeout(() => {
+      if (cancelled) return;
+      setStalled(true);
+      onError?.("Google sign-in is taking longer than usual — you can sign in with your email and password below.");
+    }, GIS_TIMEOUT_MS);
+
+    const stopWaiting = () => {
+      window.clearTimeout(timer);
+    };
+
     const init = () => {
       if (cancelled || !window.google || !ref.current) return;
-      window.google.accounts.id.initialize({ client_id: CLIENT_ID, callback: handleCredential });
+      window.google.accounts.id.initialize({
+        client_id: CLIENT_ID,
+        callback: handleCredential,
+        error_callback: (err) => {
+          // Dismissing the Google dialog is a normal thing to do, not an error
+          // worth shouting about; anything else means sign-in is genuinely
+          // unavailable and the user needs to be told to use email instead.
+          if (err?.type === "popup_closed" || err?.type === "user_cancel") return;
+          console.error("[google-signin] GIS error", err);
+          onError?.("Google sign-in isn't available right now — use your email and password below.");
+        },
+      });
       ref.current.innerHTML = "";
       window.google.accounts.id.renderButton(ref.current, {
         theme: "outline",
@@ -92,12 +142,17 @@ export function GoogleSignInButton({ onError }: { onError?: (msg: string) => voi
         width: 300,
         logo_alignment: "center",
       });
+      stopWaiting();
+      setStalled(false); // a late arrival still counts — drop any "taking long" state
       setReady(true);
     };
 
     if (window.google) {
       init();
-      return;
+      return () => {
+        cancelled = true;
+        stopWaiting();
+      };
     }
     let script = document.querySelector<HTMLScriptElement>(`script[src="${GIS_SRC}"]`);
     if (!script) {
@@ -107,19 +162,32 @@ export function GoogleSignInButton({ onError }: { onError?: (msg: string) => voi
       script.defer = true;
       document.head.appendChild(script);
     }
+    // A blocked script (ad blocker, offline, restricted network) fires `error`
+    // and never `load`, so the button would sit as a skeleton forever.
+    const onScriptError = () => {
+      if (cancelled) return;
+      stopWaiting();
+      setStalled(true);
+      onError?.("Couldn't reach Google. Use your email and password below.");
+    };
     script.addEventListener("load", init);
+    script.addEventListener("error", onScriptError);
     return () => {
       cancelled = true;
+      stopWaiting();
       script?.removeEventListener("load", init);
+      script?.removeEventListener("error", onScriptError);
     };
-  }, [handleCredential]);
+  }, [handleCredential, onError]);
 
   if (!CLIENT_ID) return null;
   // Reserve the button's height so the modal doesn't jump when GIS finishes
-  // loading; show a quiet skeleton in the meantime.
+  // loading; show a quiet skeleton in the meantime. Once stalled, the skeleton
+  // goes but the row collapses to nothing — a placeholder that pulses forever
+  // is what made this look broken rather than merely unavailable.
   return (
-    <div className="relative flex min-h-[44px] items-center justify-center">
-      {!ready && !busy && (
+    <div className={`relative flex items-center justify-center ${stalled && !ready ? "" : "min-h-[44px]"}`}>
+      {!ready && !busy && !stalled && (
         <div
           aria-hidden
           className="absolute inset-0 animate-pulse rounded-md border border-border bg-bg"
