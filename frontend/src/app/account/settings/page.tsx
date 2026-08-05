@@ -85,7 +85,7 @@ export default function AccountSettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[1600px] px-6 py-12 sm:px-8 lg:px-16 xl:px-24">
+    <div className="shell py-12">
       <Link href="/account" className="inline-flex items-center gap-1 font-body text-sm text-accent hover:underline">
         <ChevronLeft className="size-4" /> Back to account
       </Link>

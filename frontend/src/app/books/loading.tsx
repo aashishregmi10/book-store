@@ -2,7 +2,7 @@ import { Skeleton, BookGridSkeleton } from "@/components/ui/Skeleton";
 
 export default function BooksLoading() {
   return (
-    <div className="mx-auto max-w-[1600px] px-6 py-10 sm:px-8 lg:px-16 xl:px-24">
+    <div className="shell py-10">
       <Skeleton className="h-10 w-64" />
       <div className="mt-6 grid gap-8 lg:grid-cols-[16rem_1fr]">
         <div className="hidden space-y-4 lg:block">

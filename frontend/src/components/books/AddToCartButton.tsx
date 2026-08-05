@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ShoppingBag, Check } from "lucide-react";
+import { Check } from "lucide-react";
 import { useCart, type CartItem } from "@/lib/stores/cart";
+import { CartIcon } from "@/components/ui/CartIcon";
 import { RestockRequestButton } from "./RestockRequestButton";
 
 /**
@@ -44,7 +45,7 @@ export function AddToCartButton({
 
   return (
     <button onClick={handleAdd} className={`${base} bg-accent text-white hover:bg-accent-hover`}>
-      {added ? <Check className="size-4" /> : <ShoppingBag className="size-4" />}
+      {added ? <Check className="size-4" /> : <CartIcon className="size-4" />}
       {added ? "Added" : "Add to cart"}
     </button>
   );

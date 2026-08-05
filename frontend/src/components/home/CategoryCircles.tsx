@@ -1,28 +1,41 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { BookCover } from "@/components/books/BookCover";
 
 interface CategoryChip {
   name: string;
   href: string;
   icon: LucideIcon;
-  bg: string;
-  fg: string;
-  cover?: string;
 }
 
 /**
- * Photo-forward quick-browse row: a real book cover inside each circle when
- * one is available (never a stock photo). Falls back to a tinted icon for
- * the rare category with no matching book yet.
+ * Tinted pastel circles, cycled by position rather than mapped per slug: a
+ * genre added to the taxonomy later picks up a colour on its own instead of
+ * rendering uncoloured until someone remembers to extend a lookup table.
+ * Eight entries, so no two neighbours in a row ever share a tint.
+ */
+const TINTS = [
+  { bg: "#fde7ef", fg: "#c2557e" }, // pink
+  { bg: "#e3f5e9", fg: "#3b8f63" }, // green
+  { bg: "#fdf1d8", fg: "#b5822a" }, // amber
+  { bg: "#e2eefb", fg: "#2c6fb5" }, // blue
+  { bg: "#eee9fa", fg: "#6b54b8" }, // lilac
+  { bg: "#fcebe0", fg: "#c0663a" }, // peach
+  { bg: "#f5e8fa", fg: "#94489e" }, // violet
+  { bg: "#e0f2f1", fg: "#2f857e" }, // teal
+];
+
+/**
+ * Quick-browse genre row: one tinted circle per genre, horizontally scrollable
+ * with a visible track so it's obvious there's more past the right edge.
  */
 export function CategoryCircles({ items }: { items: CategoryChip[] }) {
   if (items.length === 0) return null;
 
   return (
-    <div className="flex gap-4 overflow-x-auto px-1 pb-1 sm:gap-6 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      {items.map((item) => {
+    <div className="scroll-row flex gap-5 px-1 pb-3 sm:gap-7">
+      {items.map((item, i) => {
         const Icon = item.icon;
+        const tint = TINTS[i % TINTS.length];
         return (
           // Fixed width so every chip is the same size regardless of label
           // length. Without it a name like "Business & Economics" stretches its
@@ -31,20 +44,14 @@ export function CategoryCircles({ items }: { items: CategoryChip[] }) {
           <Link
             key={item.href}
             href={item.href}
-            className="group flex w-16 shrink-0 flex-col items-center gap-2 sm:w-24"
+            className="group flex w-20 shrink-0 flex-col items-center gap-2.5 sm:w-24"
           >
-            {item.cover ? (
-              <span className="relative size-12 shrink-0 overflow-hidden rounded-full border border-border transition-transform group-hover:scale-105 sm:size-14">
-                <BookCover src={item.cover} alt={item.name} title={item.name} sizes="56px" />
-              </span>
-            ) : (
-              <span
-                className="grid size-12 shrink-0 place-items-center rounded-full transition-transform group-hover:scale-105 sm:size-14"
-                style={{ backgroundColor: item.bg }}
-              >
-                <Icon className="size-5 sm:size-6" style={{ color: item.fg }} strokeWidth={1.75} />
-              </span>
-            )}
+            <span
+              className="grid size-16 shrink-0 place-items-center rounded-full transition-transform duration-200 group-hover:scale-105 sm:size-20"
+              style={{ backgroundColor: tint.bg }}
+            >
+              <Icon className="size-7 sm:size-8" style={{ color: tint.fg }} strokeWidth={1.75} />
+            </span>
             {/* Two lines max, centred — long genre names wrap instead of
                 forcing the column wider. */}
             <span className="line-clamp-2 text-center font-data text-[11px] leading-tight uppercase tracking-wide text-text transition-colors group-hover:text-accent">

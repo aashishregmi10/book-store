@@ -48,11 +48,17 @@ export function Header({ genres = [] }: { genres?: Genre[] }) {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/70 bg-bg/85 backdrop-blur">
-      <div className="mx-auto flex max-w-[1600px] items-center gap-6 px-6 py-3.5 sm:px-8 lg:px-16 xl:px-24">
+      <div className="shell flex items-center gap-6 py-3.5">
         {/* Brand lockup. Sized by height with width:auto so the aspect ratio is
             never distorted; the source PNG is trimmed to its ink so there's no
-            dead margin to compensate for. Deliberately smaller on mobile — this
-            row previously overflowed the viewport on phone widths. */}
+            dead margin to compensate for.
+
+            The wordmark is a hairline script: its strokes are roughly a pixel
+            wide, so at the 32/40px it used to render at the letterforms broke
+            up and it read as a smudge rather than a name. It needs real height
+            to stay legible — 40px on phones and 56px from sm up, which the row
+            can afford now that the gutters are tighter. Still capped below the
+            nav's line height so the header bar doesn't grow. */}
         <Link href="/" className="flex shrink-0 items-center" aria-label="Books Temple Nepal — home">
           <Image
             src="/logo-wordmark.png"
@@ -60,7 +66,7 @@ export function Header({ genres = [] }: { genres?: Genre[] }) {
             width={900}
             height={278}
             priority
-            className="h-8 w-auto sm:h-10"
+            className="h-10 w-auto sm:h-14"
           />
         </Link>
 

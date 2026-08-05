@@ -45,7 +45,7 @@ export function Footer() {
       className="mt-24 border-t border-border/70"
       style={{ background: "color-mix(in srgb, var(--color-accent) 8%, var(--color-bg))" }}
     >
-      <div className="mx-auto grid max-w-[1600px] gap-12 px-6 py-16 sm:px-8 lg:px-16 xl:px-24 md:grid-cols-4">
+      <div className="shell grid gap-12 py-16 md:grid-cols-4">
         <div className="md:col-span-2">
           {/* Full lockup here — the footer has room for the "Online Bookstore"
               subtitle that has to be cropped out of the header at 32px. */}
@@ -102,7 +102,7 @@ export function Footer() {
       </div>
 
       <div className="border-t border-border/60">
-        <div className="mx-auto flex max-w-[1600px] flex-col items-start justify-between gap-2 px-6 py-6 font-body text-xs text-muted sm:px-8 lg:px-16 xl:px-24 md:flex-row md:items-center">
+        <div className="shell flex flex-col items-start justify-between gap-2 py-6 font-body text-xs text-muted md:flex-row md:items-center">
           <span>© {new Date().getFullYear()} Books Temple Nepal Pvt. Ltd.</span>
           <span>NPR pricing · Cash on Delivery across all 77 districts</span>
         </div>

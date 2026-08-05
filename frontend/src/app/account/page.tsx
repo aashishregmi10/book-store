@@ -57,7 +57,7 @@ export default function AccountPage() {
   const balance = pointsData?.points ?? user.points ?? 0;
 
   return (
-    <div className="mx-auto max-w-[1600px] px-6 py-10 sm:px-8 lg:px-16 xl:px-24">
+    <div className="shell py-10">
       {/* Identity + what the account is worth, in one line each. */}
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-6">
         <div>

@@ -93,7 +93,7 @@ export default function WishlistPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-[1600px] px-6 py-12 sm:px-8 lg:px-16 xl:px-24">
+    <div className="shell py-12">
       {books === null ? (
         <WishlistSkeleton />
       ) : list.length === 0 ? (

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import {
   UserRound,
   TrendingUp,
@@ -18,9 +17,9 @@ import {
   FlaskConical,
   type LucideIcon,
 } from "lucide-react";
-import { apiGet } from "@/lib/api";
-import type { BookCardData, Genre, Paged } from "@/lib/types";
-import { BookRail } from "@/components/books/BookRail";
+import { apiGet, CACHE_TTL } from "@/lib/api";
+import type { BookCardData, Genre } from "@/lib/types";
+import { BookShelf } from "@/components/books/BookShelf";
 import { CategoryCircles } from "@/components/home/CategoryCircles";
 
 // Icon per genre slug — BookOpen is the fallback for any genre added later
@@ -44,8 +43,14 @@ const GENRE_ICONS: Record<string, LucideIcon> = {
   "young-adult": GraduationCap,
 };
 
-// Request-time render: the storefront reads live catalog data from the API.
-export const dynamic = "force-dynamic";
+/**
+ * ISR: the homepage is the same for everyone, so it is prerendered and served
+ * from cache, then refreshed in the background every 5 minutes. It used to be
+ * `force-dynamic`, which re-ran every API call on every visit — including on a
+ * plain logo click back from a genre page — and made the skeleton the first
+ * thing anyone saw.
+ */
+export const revalidate = 300;
 
 interface Featured {
   featured: BookCardData[];
@@ -55,9 +60,12 @@ interface Featured {
 
 async function getFeatured(): Promise<Featured | null> {
   try {
-    return await apiGet<Featured>("/books/featured/books", { tags: ["books"] });
+    return await apiGet<Featured>("/books/featured/books", {
+      tags: ["books"],
+      revalidate: CACHE_TTL.catalogue,
+    });
   } catch {
-    return null; // API unreachable — render the hero + a gentle notice
+    return null; // API unreachable — render a gentle notice rather than failing
   }
 }
 
@@ -65,100 +73,75 @@ async function getFeatured(): Promise<Featured | null> {
 // up here automatically instead of needing this page edited each time. The row
 // is genres only — the fixed Manga/Kids/Loksewa sections still have their own
 // /category pages, they just don't take the first three slots here any more.
-async function getQuickBrowseCovers() {
-  const genres = await apiGet<Genre[]>("/genres", { tags: ["genres"] }).catch(() => [] as Genre[]);
+//
+// One request, total. This used to fire an extra /books?limit=1 per genre to
+// pull a cover for each circle — 16 more round trips to Express and 16 more
+// Mongo queries on every homepage render — but the circles are icon-led now,
+// so there is nothing left to look up.
+async function getQuickBrowse() {
+  const genres = await apiGet<Genre[]>("/genres", {
+    tags: ["genres"],
+    revalidate: CACHE_TTL.genres,
+  }).catch(() => [] as Genre[]);
 
-  const items = genres
-    .map((g) => ({
-      name: g.name,
-      href: `/genre/${g.slug}`,
-      filter: { genre: g.slug },
-      icon: GENRE_ICONS[g.slug] ?? BookOpen,
-    }))
-    .map((item) => ({ ...item, bg: "color-mix(in srgb, var(--color-accent) 12%, white)", fg: "var(--color-accent)" }));
-
-  const results = await Promise.all(
-    items.map((item) =>
-      apiGet<Paged<BookCardData>>("/books", {
-        tags: ["books"],
-        searchParams: { ...item.filter, sort: "popular", limit: 1 },
-      }).catch(() => null)
-    )
-  );
-  return items.map((item, i) => ({ ...item, cover: results[i]?.items[0]?.coverImage?.secureUrl }));
+  return genres.map((g) => ({
+    name: g.name,
+    href: `/genre/${g.slug}`,
+    icon: GENRE_ICONS[g.slug] ?? BookOpen,
+  }));
 }
 
 export default async function HomePage() {
-  const [data, quickBrowse] = await Promise.all([getFeatured(), getQuickBrowseCovers()]);
+  const [data, quickBrowse] = await Promise.all([getFeatured(), getQuickBrowse()]);
 
   return (
     <>
-      {/* Asymmetric, typography-led hero — NOT centered-with-one-CTA.
-          Full-bleed bookshelf photo with a scrim for text contrast, rather
-          than the flat --bg fill + floating cover cards this replaced. */}
-      <section className="relative overflow-hidden">
-        <Image
-          src="/hero-books.jpg"
-          alt="Rows of books on a library shelf"
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover"
-        />
-        {/* Mobile gets a flat dark scrim: the headline runs the full width on a
-            narrow screen, so a left-to-right fade would leave its right half
-            sitting on the pale end of the gradient and unreadable. From md up
-            the text is confined to the left column, so the directional fade is
-            safe and keeps the shelf visible. */}
-        <div className="absolute inset-0 bg-text/75 md:bg-gradient-to-r md:from-text/85 md:via-text/60 md:to-text/25" />
-
-        <div className="relative mx-auto max-w-[1600px] px-6 py-16 sm:px-8 lg:px-16 xl:px-24 md:py-24">
-          <div className="max-w-xl">
-            <h1 className="font-display text-4xl leading-[1.1] text-white sm:text-5xl md:text-6xl">
-              Books worth reading,
-              <br />
-              delivered across Nepal.
-            </h1>
-            <p className="mt-4 max-w-md font-body text-base leading-relaxed text-white/80">
-              Handpicked titles, honest prices, cash on delivery to all seven provinces.
-            </p>
-            <div className="mt-7">
-              <Link
-                href="/books"
-                className="inline-flex items-center gap-2 bg-accent px-6 py-3 font-data text-sm uppercase tracking-wide text-white transition-colors hover:bg-accent-hover"
-              >
-                Shop now →
-              </Link>
-            </div>
-          </div>
+      {/* Welcome strip. Takes the place the hero used to occupy, at a fraction
+          of its height: the hero was a full-bleed shelf photo carrying one
+          headline and one CTA, and it pushed every actual book below the fold.
+          Deliberately just a greeting — no delivery promise. We don't set or
+          collect the courier's charge (see the note in services/pricing.js),
+          so a banner claiming anything about delivery cost would be writing a
+          cheque the checkout can't cash. */}
+      <section className="border-b border-promo-border bg-promo">
+        <div className="shell py-5">
+          <p className="font-display text-lg font-semibold text-text sm:text-xl">
+            Welcome in pull up a chair and have a browse. 
+          </p>
+          <p className="mt-1 font-body text-sm text-muted">
+            Nepal&apos;s bookshop that never closes. Whatever you&apos;re in the mood for, it&apos;s on a shelf here somewhere.
+          </p>
         </div>
       </section>
 
-      {/* Explore popular categories — photo-forward quick browse (real covers,
-          icon fallback), one circle per genre plus the 3 fixed categories. */}
+      {/* Quick browse — one tinted circle per genre. Browsing is the point of
+          the homepage, so it leads. */}
       <section className="border-b border-border bg-surface">
-        <div className="mx-auto max-w-[1600px] px-6 py-5 sm:px-8 lg:px-16 xl:px-24">
-          <div className="mb-4 flex items-end justify-between">
-            <h2 className="font-display text-2xl text-text">Explore popular categories</h2>
+        <div className="shell py-7">
+          <div className="mb-1 flex items-start justify-between gap-4">
+            <h2 className="font-display text-2xl text-text sm:text-3xl">Find your next read</h2>
             <Link
               href="/books"
-              className="font-data text-xs uppercase tracking-wide text-accent hover:underline"
+              className="shrink-0 pt-1 font-data text-sm text-link hover:underline"
             >
-              See all →
+              Explore all genres →
             </Link>
           </div>
+          <p className="mb-5 font-body text-sm text-muted">
+            Browse by genre, mood, or what&apos;s trending in Nepal
+          </p>
           <CategoryCircles items={quickBrowse} />
         </div>
       </section>
 
       {data && (data.bestsellers.length || data.newArrivals.length || data.featured.length) ? (
         <>
-          <BookRail title="Bestsellers" books={data.bestsellers} href="/books?sort=popular" />
-          <BookRail title="New arrivals" books={data.newArrivals} href="/books?sort=newest" />
-          <BookRail title="Staff favourites" books={data.featured} href="/books" />
+          <BookShelf title="Bestsellers" books={data.bestsellers} href="/books?sort=popular" />
+          <BookShelf title="New arrivals" books={data.newArrivals} href="/books?sort=newest" />
+          <BookShelf title="Staff favourites" books={data.featured} href="/books" />
         </>
       ) : (
-        <section className="mx-auto max-w-[1600px] px-6 py-20 text-center sm:px-8 lg:px-16 xl:px-24">
+        <section className="shell py-20 text-center">
           <h2 className="font-display text-2xl text-text">The shelves are being restocked.</h2>
           <p className="mt-3 font-body text-muted">
             Nothing to show here just yet — give it a moment, or{" "}

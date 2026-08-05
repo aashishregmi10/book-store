@@ -16,7 +16,10 @@
   --color-accent-hover: #164d86;
   --color-muted: #64748b;     /* slate grey — captions, placeholders (can-logistic text-secondary) */
   --color-border: #cfe0f1;    /* pale blue hairline dividers, card edges */
+  --color-link: #0072d6;      /* brighter blue reserved for "see all" links */
   --color-sale: #c0392b;      /* restrained brick red for sale/urgency */
+  --color-promo: #fdf3d8;     /* warm cream — the browse banner field */
+  --color-promo-border: #f2e2b4;
   --color-star: #ffc400;       /* bright gold-yellow — filled rating stars */
   --color-star-empty: #dcdcdc; /* soft grey — empty rating stars */
 
@@ -57,6 +60,57 @@
 }
 
 @layer components {
+  /*
+    Page shell — the single source of truth for horizontal gutters.
+
+    Previously every section repeated `max-w-[1600px] px-6 sm:px-8 lg:px-16
+    xl:px-24`, which left ~192px of dead margin down both edges of a 1600px
+    screen: content stopped well short of the viewport on exactly the widths
+    where there was most room for books. The gutters here stay generous on
+    phones (where thumbs need the edge) and tighten as the screen grows, so a
+    desktop shelf fits five covers with the row actually reaching the sides.
+  */
+  .shell {
+    margin-inline: auto;
+    width: 100%;
+    max-width: 1920px;
+    padding-inline: 1rem; /* 16px — mobile */
+  }
+  @media (min-width: 640px) {
+    .shell { padding-inline: 1.5rem; }  /* 24px */
+  }
+  @media (min-width: 1024px) {
+    .shell { padding-inline: 2rem; }    /* 32px */
+  }
+  @media (min-width: 1536px) {
+    .shell { padding-inline: 2.5rem; }  /* 40px */
+  }
+
+  /*
+    Horizontal scroller with a visible track. The genre row is wider than the
+    viewport on every screen size, and a hidden scrollbar gave no hint that
+    there was anything past the right edge — people simply didn't scroll it.
+    Styled slim rather than left at the OS default, which is chunky on Windows.
+  */
+  .scroll-row {
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+  }
+  .scroll-row::-webkit-scrollbar {
+    height: 8px;
+  }
+  .scroll-row::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scroll-row::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 999px;
+  }
+  .scroll-row:hover::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--color-muted) 45%, transparent);
+  }
+
   /* Uppercase/wide-tracking label used on book cards, badges, chips */
   .label-smallcaps {
     text-transform: uppercase;

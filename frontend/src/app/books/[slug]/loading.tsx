@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 
 export default function BookDetailLoading() {
   return (
-    <div className="mx-auto max-w-[1600px] px-6 py-10 sm:px-8 lg:px-16 xl:px-24">
+    <div className="shell py-10">
       <Skeleton className="h-4 w-48" />
       <div className="mt-6 grid gap-10 md:grid-cols-[320px_minmax(0,1fr)]">
         <Skeleton className="aspect-[2/3] w-full" />
