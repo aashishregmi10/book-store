@@ -115,7 +115,7 @@ describe('Coupon redemption at checkout', () => {
     expect(priced.body.data.subtotal).toBe(1000);
     expect(priced.body.data.couponCode).toBe('LAUNCH10');
     expect(priced.body.data.couponDiscount).toBe(100);
-    expect(priced.body.data.total).toBe(1020); // 1000 + 120 standard delivery - 100 discount
+    expect(priced.body.data.total).toBe(900); // 1000 subtotal - 100 discount; delivery is never priced by us
 
     const bogus = await request(app).post('/api/cart/validate').send({ items: [{ bookId: book.id, quantity: 1 }], couponCode: 'NOPE' });
     expect(bogus.body.data.couponDiscount).toBe(0);
@@ -136,7 +136,7 @@ describe('Coupon redemption at checkout', () => {
     expect(order.subtotal).toBe(2000);
     expect(order.couponCode).toBe('LAUNCH10');
     expect(order.couponDiscount).toBe(200);
-    expect(order.total).toBe(1800); // delivery free at/above 1500
+    expect(order.total).toBe(1800); // 2000 subtotal - 200 coupon discount; no delivery fee
 
     const coupon = await Coupon.findOne({ code: 'LAUNCH10' });
     expect(coupon.usageCount).toBe(1);

@@ -47,7 +47,7 @@ describe('POST /api/orders (COD)', () => {
     const { order } = res.body.data;
     expect(order.orderNumber).toMatch(/^PT-\d{8}-\d{5}$/);
     expect(order.subtotal).toBe(2298);
-    expect(order.deliveryFee).toBe(0); // free over NPR 1500
+    expect(order.deliveryFee).toBe(0); // never priced by us — the courier bills separately
     expect(order.total).toBe(2298);
     expect(order.pointsEarned).toBe(earned(2298));
     expect(order.paymentMethod).toBe('cod');
@@ -94,7 +94,7 @@ describe('POST /api/orders (COD)', () => {
     expect(b.stock).toBe(1); // untouched
   });
 
-  it('redeems points and charges delivery under the free threshold', async () => {
+  it('redeems points; delivery is never charged by us', async () => {
     const { token, userId } = await makeUser();
     await User.updateOne({ _id: userId }, { points: 500 });
     const res = await request(app)
@@ -104,9 +104,9 @@ describe('POST /api/orders (COD)', () => {
 
     expect(res.status).toBe(201);
     const { order } = res.body.data;
-    expect(order.deliveryFee).toBe(120); // 899 < 1500
+    expect(order.deliveryFee).toBe(0); // courier bills the customer directly, not us
     expect(order.pointsUsed).toBe(100);
-    expect(order.total).toBe(899 + 120 - 100);
+    expect(order.total).toBe(899 - 100);
     const user = await User.findById(userId);
     expect(user.points).toBe(500 - 100 + earned(899));
   });
@@ -151,7 +151,7 @@ describe('POST /api/orders (COD)', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.data.order.pointsUsed).toBe(50);
-    expect(res.body.data.order.total).toBe(899 + 120 - 50);
+    expect(res.body.data.order.total).toBe(899 - 50);
   });
 
   it('applies a percentage coupon', async () => {
@@ -166,7 +166,7 @@ describe('POST /api/orders (COD)', () => {
     const { order } = res.body.data;
     expect(order.couponCode).toBe('SAVE10');
     expect(order.couponDiscount).toBe(Math.floor(899 * 0.1));
-    expect(order.total).toBe(899 + 120 - Math.floor(899 * 0.1));
+    expect(order.total).toBe(899 - Math.floor(899 * 0.1));
     const coupon = await Coupon.findOne({ code: 'SAVE10' });
     expect(coupon.usageCount).toBe(1);
   });
