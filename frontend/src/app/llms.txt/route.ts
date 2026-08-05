@@ -24,7 +24,7 @@ export async function GET() {
 
 Books Temple Nepal is an online-only bookstore serving all seven provinces of Nepal.
 Prices are in Nepali Rupees (NPR). Cash on delivery is available nationwide, with
-same-day delivery inside the Kathmandu Valley and 3–5 day delivery elsewhere.
+delivery in 1–2 days inside the Kathmandu Valley and 3–5 days elsewhere.
 
 ## Key pages
 - [Full catalogue](${SITE.url}/books): every title in stock, filterable by genre, language, format and year.

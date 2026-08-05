@@ -144,10 +144,20 @@
   .animate-drawer-in {
     animation: drawer-in 0.24s cubic-bezier(0.16, 1, 0.3, 1);
   }
+  /* The admin nav drawer hangs off the left edge, so it needs the mirror of
+     the storefront's right-hand drawer rather than the same keyframe. */
+  @keyframes drawer-in-left {
+    from { transform: translateX(-100%); }
+    to   { transform: translateX(0); }
+  }
+  .animate-drawer-in-left {
+    animation: drawer-in-left 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  }
   @media (prefers-reduced-motion: reduce) {
     .animate-overlay-in,
     .animate-panel-in,
-    .animate-drawer-in {
+    .animate-drawer-in,
+    .animate-drawer-in-left {
       animation: none;
     }
   }
