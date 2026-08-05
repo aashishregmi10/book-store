@@ -5,8 +5,14 @@ const Coupon = require('../models/coupon.model');
 const Order = require('../models/order.model');
 
 // Tunable commerce rules (Nepal store).
-const DELIVERY_FEES = { standard: 120, express: 300, 'same-day': 500 };
-const FREE_DELIVERY_THRESHOLD = 1500; // NPR — free delivery at/above this subtotal
+//
+// Delivery is NOT priced here, on purpose. The logistics company bills the
+// customer directly at its own rates, which vary by destination and parcel —
+// the shop neither sets nor collects that money. Quoting a figure at checkout
+// would therefore be a number we cannot honour, so the order total is the
+// goods only and `deliveryFee` is always 0. Anything that used to advertise a
+// flat fee or a free-delivery threshold has been removed alongside this.
+const DELIVERY_METHODS = ['standard', 'express', 'same-day'];
 const POINTS_EARN_RATE = 0.02; // 1 point per NPR 50 spent
 const POINTS_REDEEM_VALUE = 1; // 1 point == NPR 1 at checkout
 
@@ -121,9 +127,8 @@ async function priceCart({ items = [], deliveryMethod = 'standard', couponCode, 
     });
   }
 
-  // Delivery
-  const baseFee = DELIVERY_FEES[deliveryMethod] ?? DELIVERY_FEES.standard;
-  let deliveryFee = subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : baseFee;
+  // Delivery: never charged by us — see the note at the top of this file.
+  const deliveryFee = 0;
 
   // Coupon
   let couponDiscount = 0;
@@ -133,8 +138,11 @@ async function priceCart({ items = [], deliveryMethod = 'standard', couponCode, 
     const result = await evaluateCoupon(couponCode, { subtotal, items: lineItems, userId: user?._id });
     if (result.ok) {
       appliedCoupon = result.coupon;
-      if (result.freeShipping) deliveryFee = 0;
-      else couponDiscount = result.discount;
+      // A `free_shipping` coupon has nothing left to discount now that
+      // delivery isn't billed here; it applies cleanly as a zero discount
+      // rather than erroring, so any coupon already in circulation still
+      // redeems instead of failing at checkout.
+      couponDiscount = result.discount;
     } else {
       couponError = result.reason;
     }
@@ -148,14 +156,16 @@ async function priceCart({ items = [], deliveryMethod = 'standard', couponCode, 
   }
   const pointsDiscount = pointsApplied * POINTS_REDEEM_VALUE;
 
-  const total = Math.max(0, subtotal + deliveryFee - couponDiscount - pointsDiscount);
+  const total = Math.max(0, subtotal - couponDiscount - pointsDiscount);
   const pointsEarned = user ? Math.floor(subtotal * POINTS_EARN_RATE) : 0;
 
   return {
     lineItems,
     subtotal,
+    // Kept in the payload (and on the order record) at 0 so historical orders
+    // that DID carry a fee stay readable in the admin alongside new ones.
     deliveryFee,
-    deliveryMethod: DELIVERY_FEES[deliveryMethod] ? deliveryMethod : 'standard',
+    deliveryMethod: DELIVERY_METHODS.includes(deliveryMethod) ? deliveryMethod : 'standard',
     couponCode: appliedCoupon?.code || null,
     couponDiscount,
     couponError,
@@ -168,4 +178,4 @@ async function priceCart({ items = [], deliveryMethod = 'standard', couponCode, 
   };
 }
 
-module.exports = { priceCart, evaluateCoupon, DELIVERY_FEES, FREE_DELIVERY_THRESHOLD, POINTS_EARN_RATE, POINTS_REDEEM_VALUE };
+module.exports = { priceCart, evaluateCoupon, DELIVERY_METHODS, POINTS_EARN_RATE, POINTS_REDEEM_VALUE };

@@ -231,9 +231,16 @@ export default function CheckoutPage() {
             {priced && priced.pointsDiscount > 0 && (
               <div className="flex justify-between text-accent"><dt>Points ({priced.pointsUsed})</dt><dd>−{npr(priced.pointsDiscount)}</dd></div>
             )}
-            <div className="flex justify-between"><dt className="text-muted">Delivery</dt><dd className="text-text">{priced ? (priced.deliveryFee === 0 ? "Free" : npr(priced.deliveryFee)) : "…"}</dd></div>
+            {/* No Delivery line. The courier bills its own rate directly, so
+                any figure here — including "Free" — would be one we neither
+                set nor collect. The note below says who to expect it from
+                instead of quietly leaving a gap in the maths. */}
             <div className="flex justify-between border-t border-border pt-2 text-base"><dt className="font-semibold text-text">Total</dt><dd className="font-semibold text-text">{priced ? npr(priced.total) : "…"}</dd></div>
           </dl>
+          <p className="mt-3 font-body text-xs leading-relaxed text-muted">
+            This is the price of the books. The courier charges its own delivery fee on
+            handover, based on where the parcel is going.
+          </p>
           {priced?.issues?.length ? (
             <ul className="mt-3 space-y-1">
               {priced.issues.map((iss, n) => <li key={n} className="font-body text-xs text-sale">{iss.message}</li>)}

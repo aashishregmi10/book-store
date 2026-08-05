@@ -155,7 +155,14 @@ export function CouponForm({
               >
                 <option value="percentage">Percentage off</option>
                 <option value="fixed">Fixed amount off (NPR)</option>
-                <option value="free_shipping">Free delivery</option>
+                {/* "Free delivery" is deliberately not offered any more: the
+                    shop no longer bills delivery, so such a coupon would
+                    discount nothing. Existing ones stay valid in the enum and
+                    still redeem (as a zero discount) rather than erroring —
+                    this only stops new ones being created. */}
+                {form.type === "free_shipping" && (
+                  <option value="free_shipping">Free delivery (retired)</option>
+                )}
               </select>
             </label>
 

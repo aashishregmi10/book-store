@@ -248,7 +248,11 @@ export default function AdminOrders() {
 
                               <dl className="space-y-1 border-t border-border pt-3 font-data text-sm">
                                 <Row label="Subtotal" value={npr(detail.subtotal)} />
-                                <Row label="Delivery" value={detail.deliveryFee === 0 ? "Free" : npr(detail.deliveryFee)} />
+                                {/* Only for orders placed back when the shop
+                                    billed delivery itself. New orders carry 0
+                                    — the courier charges the customer directly
+                                    — so a row there would just be noise. */}
+                                {detail.deliveryFee > 0 && <Row label="Delivery (legacy)" value={npr(detail.deliveryFee)} />}
                                 {detail.discount > 0 && <Row label="Discount" value={`−${npr(detail.discount)}`} />}
                                 <Row label="Total" value={npr(detail.total)} strong />
                                 <Row label="Payment" value={`${detail.paymentMethod.toUpperCase()} · ${detail.paymentStatus}`} />

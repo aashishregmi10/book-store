@@ -13,7 +13,6 @@ import { clientApi } from "@/lib/client-api";
 import type { BookCardData } from "@/lib/types";
 import { npr } from "@/lib/format";
 
-const FREE_DELIVERY = 1500;
 
 export function SideDrawers() {
   const open = useDrawer((s) => s.open);
@@ -78,8 +77,6 @@ function CartPanel({ onClose }: { onClose: () => void }) {
     return <EmptyState icon={ShoppingBag} title="Your cart is empty" cta="Browse the shelves" href="/books" onClose={onClose} />;
   }
 
-  const toFree = Math.max(0, FREE_DELIVERY - subtotal);
-
   return (
     <>
       <ul className="flex-1 divide-y divide-border overflow-y-auto px-5">
@@ -131,7 +128,7 @@ function CartPanel({ onClose }: { onClose: () => void }) {
           <span className="font-data text-lg font-semibold text-text">{npr(subtotal)}</span>
         </div>
         <p className="mt-1 font-body text-xs text-muted">
-          {toFree > 0 ? `Add ${npr(toFree)} more for free delivery.` : "You've unlocked free delivery."}
+          Delivery charged separately by the courier.
         </p>
         <div className="mt-4 flex gap-3">
           <Link href="/cart" onClick={onClose} className="flex-1 rounded-full border border-border px-4 py-2.5 text-center font-data text-sm text-text hover:border-accent">

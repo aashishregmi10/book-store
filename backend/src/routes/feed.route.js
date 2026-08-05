@@ -22,6 +22,11 @@ function buildItem(b) {
   const desc = (b.description || `${b.title} by ${b.author}`).slice(0, 4900);
   const idTag = b.isbn ? `<g:gtin>${esc(b.isbn)}</g:gtin>` : '<g:identifier_exists>no</g:identifier_exists>';
   const salePrice = onSale ? `<g:sale_price>${b.price}.00 NPR</g:sale_price>` : '';
+  // No <g:shipping>: the courier bills the customer directly at its own rates
+  // (see services/pricing.js), so there is no per-item shipping price the shop
+  // can honestly declare. Merchant Center falls back to the account-level
+  // shipping settings, which is where a real rate table belongs — a made-up
+  // per-item figure here would be an item-level price mismatch.
   return `
     <item>
       <g:id>${esc(b._id)}</g:id>
@@ -37,7 +42,6 @@ function buildItem(b) {
       ${idTag}
       <g:google_product_category>${BOOKS_CATEGORY}</g:google_product_category>
       <g:product_type>${esc(b.genre)}</g:product_type>
-      <g:shipping><g:country>NP</g:country><g:price>${b.price >= 1500 ? '0.00' : '120.00'} NPR</g:price></g:shipping>
     </item>`;
 }
 

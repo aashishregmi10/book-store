@@ -24,7 +24,9 @@ interface AdminCoupon {
 const shortDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
 function worth(c: AdminCoupon): string {
-  if (c.type === "free_shipping") return "Free delivery";
+  // Retired type — the shop no longer bills delivery, so these discount
+  // nothing. Labelled honestly rather than left promising a saving.
+  if (c.type === "free_shipping") return "Free delivery (no effect)";
   if (c.type === "fixed") return `${npr(c.value)} off`;
   return `${c.value}% off`;
 }

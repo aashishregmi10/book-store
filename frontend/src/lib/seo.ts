@@ -71,10 +71,18 @@ export function websiteLd() {
   };
 }
 
-// Delivery + returns mirror backend/src/services/pricing.js (free ≥ NPR 1500, else 120).
-const shippingDetails = (price: number) => ({
+/**
+ * Delivery timing only — deliberately no `shippingRate`.
+ *
+ * The courier bills the customer directly at its own rates (see
+ * backend/src/services/pricing.js), so the shop has no shipping price to
+ * declare. Quoting "0" would assert free delivery, which is false; quoting a
+ * flat figure would assert a price we don't control. Omitting the rate while
+ * keeping handling/transit times states exactly what we do know. Google reads
+ * a missing rate as "not specified" rather than free.
+ */
+const shippingDetails = () => ({
   "@type": "OfferShippingDetails",
-  shippingRate: { "@type": "MonetaryAmount", value: price >= 1500 ? "0" : "120", currency: "NPR" },
   shippingDestination: { "@type": "DefinedRegion", addressCountry: "NP" },
   deliveryTime: {
     "@type": "ShippingDeliveryTime",
@@ -151,7 +159,7 @@ export function bookLd(book: BookDetail, reviews: ReviewData[] = []) {
       availability: inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
       itemCondition: "https://schema.org/NewCondition", // the store only ever carries new copies
       seller: { "@id": `${SITE.url}/#organization` },
-      shippingDetails: shippingDetails(book.price),
+      shippingDetails: shippingDetails(),
       hasMerchantReturnPolicy: returnPolicy,
     },
   };

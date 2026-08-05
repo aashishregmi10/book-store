@@ -8,8 +8,9 @@ import { useCart, selectSubtotal, lineKey, type StockInfo } from "@/lib/stores/c
 import { clientApi } from "@/lib/client-api";
 import { npr } from "@/lib/format";
 
-const FREE_DELIVERY = 1500;
-const DELIVERY_FEE = 120;
+// No delivery constants here any more: the courier bills its own rate directly
+// at handover, so the cart has no fee to add and no threshold to dangle.
+// See backend/src/services/pricing.js.
 const POINTS_RATE = 0.05;
 const COUNT_WORDS = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"];
 
@@ -47,16 +48,14 @@ export default function CartPage() {
     );
   }
 
-  const delivery = subtotal >= FREE_DELIVERY ? 0 : DELIVERY_FEE;
-  const total = subtotal + delivery;
-  const toFree = Math.max(0, FREE_DELIVERY - subtotal);
+  const total = subtotal;
   const points = Math.round(subtotal * POINTS_RATE);
   const word = COUNT_WORDS[items.length] ?? String(items.length);
   const heading = `${word} good ${items.length === 1 ? "choice" : "choices"}.`;
   const checkoutHref = promo.trim() ? `/checkout?promo=${encodeURIComponent(promo.trim())}` : "/checkout";
 
   return (
-    <div className="mx-auto max-w-[1600px] px-6 pb-24 pt-12 sm:px-8 lg:px-16 xl:px-24">
+    <div className="shell pb-24 pt-12">
       <p className="label-smallcaps font-data text-xs">Your cart</p>
       <h1 className="mt-2 font-display text-5xl text-text md:text-6xl">{heading}</h1>
 
@@ -122,7 +121,6 @@ export default function CartPage() {
           <h2 className="font-display text-xl text-text">Order summary</h2>
           <dl className="mt-6 space-y-3 font-body text-sm">
             <Row label="Subtotal" value={npr(subtotal)} />
-            <Row label="Delivery (Kathmandu, same-day)" value={delivery === 0 ? "Free" : npr(delivery)} />
             <Row label="Reading points earned" value={`+${points} pts`} muted />
           </dl>
 
@@ -147,8 +145,8 @@ export default function CartPage() {
             Checkout — Cash on Delivery
           </Link>
 
-          <p className="mt-4 text-center font-body text-xs text-muted">
-            {toFree > 0 ? `Add ${npr(toFree)} more for free delivery.` : "You've unlocked free delivery."}
+          <p className="mt-4 text-center font-body text-xs leading-relaxed text-muted">
+            Books only — the courier charges delivery separately when it hands the parcel over.
           </p>
         </aside>
       </div>
