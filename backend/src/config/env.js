@@ -44,8 +44,15 @@ function validateEnv({ exitOnFailure = true } = {}) {
     problems.push('JWT_SECRET still looks like the .env.example placeholder.');
   }
 
-  if (process.env.FRONTEND_URL?.endsWith('/')) {
-    problems.push('FRONTEND_URL has a trailing slash — it must match the browser origin exactly or CORS will reject it.');
+  // FRONTEND_URL may list several comma-separated origins (config/origins.js)
+  // — a platform like Vercel keeps a previous URL live alongside a freshly
+  // attached custom domain, and both need to pass CORS while that's true.
+  // Each one still has to be a bare origin: a trailing slash means it will
+  // never exactly match a browser's Origin header, and CORS will reject it.
+  for (const origin of (process.env.FRONTEND_URL || '').split(',')) {
+    if (origin.trim().endsWith('/')) {
+      problems.push(`FRONTEND_URL entry "${origin.trim()}" has a trailing slash — it must match the browser origin exactly or CORS will reject it.`);
+    }
   }
 
   if (problems.length) {

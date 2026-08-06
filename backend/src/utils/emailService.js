@@ -2,9 +2,12 @@
 
 const nodemailer = require('nodemailer');
 const logger = require('../config/logger');
+const { canonicalOrigin } = require('../config/origins');
 
 const FROM = process.env.EMAIL_FROM || 'Books Temple Nepal <noreply@bookstemplenepal.com>';
-const FRONTEND = process.env.FRONTEND_URL || 'http://localhost:3000';
+// FRONTEND_URL can list several allowed CORS origins (config/origins.js); the
+// first is canonical and is what every link in an email points at.
+const FRONTEND = canonicalOrigin;
 
 // Configured only when a real SMTP password is present (not the template placeholder).
 const isConfigured = Boolean(

@@ -3,13 +3,13 @@
 const express = require("express");
 const Book = require("../models/book.model");
 const { withCache } = require("../utils/cache");
+const { canonicalOrigin } = require("../config/origins");
 
 const router = express.Router();
 
-const FRONTEND = (process.env.FRONTEND_URL || "http://localhost:3000").replace(
-  /\/$/,
-  "",
-);
+// FRONTEND_URL can list several allowed CORS origins now (config/origins.js);
+// the first is canonical and is what every built link here uses.
+const FRONTEND = canonicalOrigin;
 
 const esc = (s = "") =>
   String(s).replace(

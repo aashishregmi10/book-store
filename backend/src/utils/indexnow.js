@@ -1,6 +1,7 @@
 'use strict';
 
 const logger = require('../config/logger');
+const { canonicalOrigin } = require('../config/origins');
 
 // IndexNow lets us notify Bing/Yandex/Seznam (and, increasingly, others) the
 // moment a URL changes — far faster than waiting for a recrawl. The frontend
@@ -9,11 +10,11 @@ const ENDPOINT = 'https://api.indexnow.org/indexnow';
 
 /**
  * Fire-and-forget IndexNow ping. `paths` are site-relative (e.g. '/books/slug')
- * or absolute URLs. No-ops if INDEXNOW_KEY / FRONTEND_URL aren't configured.
+ * or absolute URLs. No-ops if INDEXNOW_KEY isn't configured.
  */
 function pingIndexNow(paths = []) {
   const key = process.env.INDEXNOW_KEY;
-  const frontend = (process.env.FRONTEND_URL || '').replace(/\/$/, '');
+  const frontend = canonicalOrigin;
   if (!key || !frontend || !paths.length || typeof fetch !== 'function') return;
 
   const host = frontend.replace(/^https?:\/\//, '');

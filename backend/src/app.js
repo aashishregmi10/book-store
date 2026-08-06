@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 
 const logger = require('./config/logger');
+const { corsOriginCheck } = require('./config/origins');
 const { sanitizeRequest } = require('./middleware/sanitize');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 const { ok } = require('./utils/apiResponse');
@@ -21,14 +22,20 @@ app.set('trust proxy', 1);
 app.set('query parser', 'simple');
 
 // ── Security & parsing ───────────────────────────────────
-app.use(helmet());
-app.use(compression());
 app.use(
-  cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-    credentials: true,
+  helmet({
+    // Google Identity Services signs the user in inside a popup, then hands
+    // the credential back to this tab via window.postMessage. Helmet's
+    // default Cross-Origin-Opener-Policy is 'same-origin', which isolates the
+    // browsing context group and silently drops that postMessage — Google
+    // Sign-In then never completes, with only a console warning to go on.
+    // 'same-origin-allow-popups' keeps the COOP isolation everywhere except
+    // for popups this page itself opened, which is exactly the popup case.
+    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
   })
 );
+app.use(compression());
+app.use(cors({ origin: corsOriginCheck, credentials: true }));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 

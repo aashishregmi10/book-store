@@ -59,8 +59,18 @@ Set these on the **backend** project (copy from `backend/.env.example`):
 - `FRONTEND_URL=https://<your-frontend-domain>`   ← fill after first deploy
 - `PORT` — **do not set**; Vercel injects it (server.js already reads `process.env.PORT`)
 
-`FRONTEND_URL` drives **CORS** (`app.js`) and the **Socket.io** origin, and must
-exactly match the deployed frontend origin (no trailing slash).
+`FRONTEND_URL` drives **CORS** (`app.js`) and the **Socket.io** origin, and each
+entry must exactly match a deployed frontend origin (no trailing slash).
+
+> **Custom domain?** `FRONTEND_URL` accepts a comma-separated list, e.g.
+> `https://www.bookstemple.com,https://book-store-tawny-two.vercel.app`. This
+> matters because Vercel keeps the project's default `*.vercel.app` URL live
+> alongside a newly attached custom domain — if `FRONTEND_URL` only names one
+> of them, the API rejects CORS requests (and Google Sign-In) from the other.
+> The **first** entry is canonical: it's what emails, the sitemap, the
+> merchant feed and IndexNow use to build links, so list the real domain
+> first. Update it — and redeploy the backend — the same day you attach a
+> custom domain, not after.
 
 ## 3. Frontend environment variables
 
