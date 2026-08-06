@@ -9,7 +9,7 @@ const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 
 const logger = require('./config/logger');
-const { corsOriginCheck } = require('./config/origins');
+const { corsOriginCheck, allowedOrigins } = require('./config/origins');
 const { sanitizeRequest } = require('./middleware/sanitize');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 const { ok } = require('./utils/apiResponse');
@@ -24,13 +24,15 @@ app.set('query parser', 'simple');
 // ── Security & parsing ───────────────────────────────────
 app.use(
   helmet({
-    // Google Identity Services signs the user in inside a popup, then hands
-    // the credential back to this tab via window.postMessage. Helmet's
-    // default Cross-Origin-Opener-Policy is 'same-origin', which isolates the
-    // browsing context group and silently drops that postMessage — Google
-    // Sign-In then never completes, with only a console warning to go on.
-    // 'same-origin-allow-popups' keeps the COOP isolation everywhere except
-    // for popups this page itself opened, which is exactly the popup case.
+    // COOP governs whether a document keeps a handle on windows it opened, so
+    // it only ever applies to HTML. This API serves JSON, so the setting is
+    // inert here — it is NOT what makes the Google Sign-In popup's
+    // window.postMessage work. That depends on the COOP of the page that
+    // opened the popup, which is the Next.js frontend (currently sends no COOP
+    // header, i.e. the permissive default, which is what GIS needs).
+    //
+    // Kept relaxed anyway so that if this app ever serves a page that opens an
+    // OAuth popup, helmet's 'same-origin' default doesn't silently break it.
     crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
   })
 );
@@ -98,7 +100,15 @@ app.use(
 );
 
 // ── Health check (no DB dependency) ──────────────────────
-app.get('/api/health', (_req, res) => ok(res, { status: 'ok', uptime: process.uptime() }, 'Healthy'));
+// `allowedOrigins` is reported deliberately. When CORS rejects a request the
+// browser only says the header is "not present", which tells you nothing about
+// what the server would have accepted — and the usual cause (a new domain
+// missing from FRONTEND_URL) is invisible from the outside. These are public
+// URLs, not secrets, and having them one curl away turns a guessing game into
+// a five-second check.
+app.get('/api/health', (_req, res) =>
+  ok(res, { status: 'ok', uptime: process.uptime(), allowedOrigins }, 'Healthy')
+);
 
 // ── Feature routes (mounted as they are built) ───────────
 app.use('/api/auth', require('./routes/auth.route'));
