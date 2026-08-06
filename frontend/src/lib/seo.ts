@@ -2,7 +2,15 @@ import type { BookDetail, BookCardData, Genre, ReviewData } from "./types";
 
 export const SITE = {
   name: "Books Temple Nepal",
-  url: process.env.NEXT_PUBLIC_SITE_URL || "https://bookstemplenepal.com",
+  // The live domain. Everything canonical is built from this — canonical tags,
+  // og:url, the sitemap, and every @id in the JSON-LD below — so a wrong value
+  // here tells Google the real home of this content is somewhere else.
+  //
+  // NEXT_PUBLIC_SITE_URL still overrides it (needed for local dev and preview
+  // deploys), but the fallback is now the actual domain rather than a guess:
+  // it used to read bookstemplenepal.com, which is not even the domain the
+  // shop runs on. No trailing slash — `abs()` joins paths straight onto it.
+  url: process.env.NEXT_PUBLIC_SITE_URL || "https://www.bookstemple.com",
   description: "Nepal's online bookstore — books worth reading, delivered across all seven provinces. NPR prices, cash on delivery.",
   locale: "en_NP",
   email: "hello@bookstemplenepal.com",
@@ -36,8 +44,12 @@ export function organizationLd() {
     foundingDate: "2026",
     sameAs: SAME_AS,
     areaServed: { "@type": "Country", name: "Nepal" },
-    currenciesAccepted: "NPR",
-    paymentAccepted: "Cash on Delivery",
+    // `currenciesAccepted` and `paymentAccepted` used to sit here and were
+    // flagged by the Schema Markup Validator: both are LocalBusiness
+    // properties, and this is an OnlineStore (an Organization subtype), so
+    // they were simply unrecognised and carried no signal. Currency and
+    // payment belong on the Offer instead, where every book page already
+    // declares priceCurrency NPR and acceptedPaymentMethod COD.
     knowsAbout: ["Nepali publishing market", "Educational textbooks Nepal", "Book distribution logistics"],
     contactPoint: {
       "@type": "ContactPoint",
@@ -158,6 +170,14 @@ export function bookLd(book: BookDetail, reviews: ReviewData[] = []) {
       priceValidUntil: validUntil,
       availability: inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
       itemCondition: "https://schema.org/NewCondition", // the store only ever carries new copies
+      // Cash on delivery, declared where schema.org actually accepts a payment
+      // method (Offer, not Organization). The GoodRelations COD identifier is
+      // the value Google documents for this.
+      acceptedPaymentMethod: {
+        "@type": "PaymentMethod",
+        "@id": "http://purl.org/goodrelations/v1#COD",
+        name: "Cash on Delivery",
+      },
       seller: { "@id": `${SITE.url}/#organization` },
       shippingDetails: shippingDetails(),
       hasMerchantReturnPolicy: returnPolicy,
