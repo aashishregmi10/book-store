@@ -4,11 +4,33 @@ import { Suspense, useEffect, useRef } from "react";
 import Script from "next/script";
 import { usePathname, useSearchParams } from "next/navigation";
 
-const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+/**
+ * The storefront's GA4 measurement ID.
+ *
+ * Hardcoded rather than left to configuration: it is not a secret (it ships in
+ * the HTML of every page and is readable by anyone with view-source), and
+ * keeping it in an env var meant a forgotten dashboard field silently produced
+ * no analytics at all, with "Data collection isn't active" as the only clue.
+ *
+ * Set NEXT_PUBLIC_GA_MEASUREMENT_ID to override it, or to an EMPTY STRING to
+ * switch analytics off for an environment.
+ */
+const DEFAULT_GA_ID = "G-N2HK5DM3CH";
 
-/** True when GA4 is configured. Nothing renders without a measurement ID, so
- *  local dev and preview deploys stay out of the property by default. */
-export const isAnalyticsConfigured = Boolean(GA_ID);
+const configured = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+// `undefined` means "not configured" → use the default. An explicit empty
+// string means "deliberately disabled" and must not fall back.
+const GA_ID = (configured === undefined ? DEFAULT_GA_ID : configured).trim();
+
+// Never report from `next dev`. Without this the default ID above would send
+// every local page view into the live property and dirty the real numbers.
+// Preview deploys build with NODE_ENV=production and so DO report — set
+// NEXT_PUBLIC_GA_MEASUREMENT_ID to an empty string on Vercel's Preview
+// environment if you want them excluded too.
+const enabled = Boolean(GA_ID) && process.env.NODE_ENV === "production";
+
+/** True when GA4 will actually report from this build. */
+export const isAnalyticsConfigured = enabled;
 
 declare global {
   interface Window {
@@ -32,7 +54,7 @@ declare global {
  *    afterInteractive loads it off the critical path instead.
  */
 export function Analytics() {
-  if (!GA_ID) return null;
+  if (!enabled) return null;
   return (
     <>
       <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />

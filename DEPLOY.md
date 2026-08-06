@@ -81,14 +81,20 @@ Set these on the **frontend** project:
 - `NEXT_PUBLIC_API_URL=https://<your-backend-domain>/api` (browser fetches)
 - `NEXT_PUBLIC_GOOGLE_CLIENT_ID=…` (public Google Web client ID — must match the backend's `GOOGLE_CLIENT_ID`)
 - `NEXT_PUBLIC_GSC_VERIFICATION=…` / `NEXT_PUBLIC_BING_VERIFICATION=…` (optional)
-- `NEXT_PUBLIC_GA_MEASUREMENT_ID=G-…` (GA4 measurement ID — **Production environment only**)
+- `NEXT_PUBLIC_GA_MEASUREMENT_ID=G-…` (optional — the live GA4 ID is the built-in default; see below)
 - `NEXT_PUBLIC_CONTACT_PHONE=+977…` (optional; the /contact phone row stays hidden while unset rather than showing a number that doesn't work)
 - `INTERNAL_API_KEY=…` (optional; must match the backend's value — note: **no** `NEXT_PUBLIC_` prefix, it must not reach the browser)
 
-> **Analytics:** set `NEXT_PUBLIC_GA_MEASUREMENT_ID` on the *Production* environment
-> only. Leaving it unset for Preview/Development keeps branch deploys and local
-> work out of the property — `components/Analytics.tsx` renders nothing without it,
-> so there is no tag to fire.
+> **Analytics:** the GA4 measurement ID is hardcoded in
+> `components/Analytics.tsx` — it is public (it ships in the HTML of every
+> page), and leaving it to a dashboard field meant one forgotten entry silently
+> produced no analytics at all. **No env var is needed for GA to work.**
+>
+> `npm run dev` never reports, so local work stays out of the property. Preview
+> deploys build with `NODE_ENV=production` and *do* report — set
+> `NEXT_PUBLIC_GA_MEASUREMENT_ID` to an **empty string** on Vercel's *Preview*
+> environment to exclude them. Set it to a different `G-…` to point an
+> environment at another property.
 
 > **Google sign-in in production:** add your deployed frontend domain to the
 > OAuth client's **Authorized JavaScript origins** in Google Cloud Console
