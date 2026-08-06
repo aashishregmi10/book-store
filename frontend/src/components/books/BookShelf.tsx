@@ -3,8 +3,8 @@ import { ArrowRight } from "lucide-react";
 import type { BookCardData } from "@/lib/types";
 import { BookCard } from "./BookCard";
 
-/** Books per homepage section — two full rows at the 6-column desktop width. */
-const SHELF_SIZE = 12;
+/** Books per homepage section — two full rows at the 7-column desktop width. */
+const SHELF_SIZE = 14;
 
 /**
  * A titled homepage shelf: a plain responsive grid, not a carousel.
@@ -42,10 +42,12 @@ export function BookShelf({
         )}
       </div>
 
-      {/* Six across on desktop — one more column than the catalogue grid, since
+      {/* Seven across on desktop — more columns than the catalogue grid, since
           a homepage shelf is a taster rather than something to browse in depth,
-          and the tighter cards let two full rows sit above less scroll. */}
-      <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+          and the tighter cards let two full rows sit above less scroll. The
+          count steps up with the breakpoint so a row is always full: at 7 wide
+          a 5-column layout would leave two gaps on the second row. */}
+      <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
         {items.map((b) => (
           <BookCard key={b.slug} book={b} />
         ))}
