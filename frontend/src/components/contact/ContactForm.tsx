@@ -33,7 +33,7 @@ export function ContactForm() {
       setError(
         err instanceof ClientApiError
           ? err.message
-          : "We couldn't send that just now. Email us at hello@bookstemplenepal.com instead."
+          : "We couldn't send that just now. Email us at bookstemple01@gmail.com instead."
       );
     } finally {
       setSending(false);

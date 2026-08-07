@@ -13,7 +13,7 @@ export const SITE = {
   url: process.env.NEXT_PUBLIC_SITE_URL || "https://www.bookstemple.com",
   description: "Nepal's online bookstore — books worth reading, delivered across all seven provinces. NPR prices, cash on delivery.",
   locale: "en_NP",
-  email: "hello@bookstemplenepal.com",
+  email: "bookstemple01@gmail.com",
   // Social/profile URLs strengthen the entity in Google's & AI engines' knowledge
   // graphs. These are the real, live accounts — an unclaimed handle here is worse
   // than no entry, since it points the graph at someone else's page.

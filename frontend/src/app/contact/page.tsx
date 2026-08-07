@@ -28,7 +28,7 @@ export default function ContactPage() {
       <div className="mt-8 grid gap-6 md:grid-cols-2">
         {/* Ways to reach us */}
         <div className="space-y-3">
-          <Channel icon={Mail} title="Email" detail="hello@bookstemplenepal.com" href="mailto:hello@bookstemplenepal.com" />
+          <Channel icon={Mail} title="Email" detail="bookstemple01@gmail.com" href="mailto:bookstemple01@gmail.com" />
           {PHONE && (
             <Channel
               icon={MessageCircle}

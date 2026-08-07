@@ -171,7 +171,67 @@ const BOOKS = [
   },
 ];
 
+/**
+ * Create or update the admin account. Safe to run against any database — it
+ * touches exactly one user document and deletes nothing.
+ *
+ * Credentials come from SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD. They are read
+ * from the environment rather than hardcoded so a real production password
+ * never lands in git history.
+ */
+async function seedAdmin() {
+  const adminEmail = process.env.SEED_ADMIN_EMAIL;
+  const adminPass = process.env.SEED_ADMIN_PASSWORD;
+  if (!adminEmail || !adminPass) {
+    throw new Error(
+      'Set SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD before seeding an admin.'
+    );
+  }
+
+  let admin = await User.findOne({ email: adminEmail.toLowerCase() }).select('+password');
+  let created;
+  if (admin) {
+    // Previously this branch only flipped isAdmin and left the password alone,
+    // so re-running the seed with a new password silently did nothing. Assign
+    // it — the model's pre-save hook hashes it.
+    admin.password = adminPass;
+    admin.isAdmin = true;
+    admin.isEmailVerified = true;
+    created = false;
+  } else {
+    admin = new User({
+      email: adminEmail,
+      password: adminPass,
+      fullName: 'Books Temple Admin',
+      isAdmin: true,
+      isEmailVerified: true,
+    });
+    created = true;
+  }
+  await admin.save();
+  return { adminEmail: admin.email, created };
+}
+
+/**
+ * Full development seed. DESTRUCTIVE: it empties the catalogue collections
+ * before inserting its handful of demo rows.
+ *
+ * The guard exists because this file's only safeguard used to be the operator
+ * remembering which database their .env pointed at — and here that is the live
+ * Atlas cluster. Running `npm run seed` out of habit would have deleted the
+ * whole catalogue. It now refuses when it finds a populated catalogue unless
+ * SEED_ALLOW_WIPE=true says the destruction is intentional.
+ */
 async function seed() {
+  const existingBooks = await Book.countDocuments();
+  if (existingBooks > BOOKS.length && process.env.SEED_ALLOW_WIPE !== 'true') {
+    throw new Error(
+      `Refusing to seed: this database already holds ${existingBooks} books, and seeding deletes every ` +
+        'book, genre and coupon first. If you really mean to wipe it, re-run with SEED_ALLOW_WIPE=true. ' +
+        'To only create/update the admin account, run: npm run seed:admin'
+    );
+  }
+
   // Wipe catalog collections (idempotent dev seed); upsert users.
   await Promise.all([
     Book.deleteMany({}),
@@ -205,22 +265,7 @@ async function seed() {
   }
 
   // Admin (upsert by email; never delete users).
-  const adminEmail = process.env.SEED_ADMIN_EMAIL || "admin@bookstemplenepal.com";
-  const adminPass = process.env.SEED_ADMIN_PASSWORD || "admin123";
-  let admin = await User.findOne({ email: adminEmail });
-  if (!admin) {
-    admin = new User({
-      email: adminEmail,
-      password: adminPass,
-      fullName: "Books Temple Admin",
-      isAdmin: true,
-      isEmailVerified: true,
-    });
-    await admin.save();
-  } else {
-    admin.isAdmin = true;
-    await admin.save();
-  }
+  const { adminEmail } = await seedAdmin();
 
   // Demo customer.
   if (!(await User.findOne({ email: "reader@bookstemplenepal.com" }))) {
@@ -252,18 +297,27 @@ async function seed() {
   };
 }
 
-// Run directly: `npm run seed`
+// Run directly:
+//   npm run seed         → full demo seed (DESTRUCTIVE, guarded — see seed())
+//   npm run seed:admin   → create/update the admin account only (safe)
 if (require.main === module) {
+  const adminOnly = process.argv.includes("--admin-only");
   (async () => {
     try {
       await connectMongo();
-      const summary = await seed();
-      logger.info(summary, "Seed complete");
-      logger.info(
-        "Admin login → email: %s  password: %s (change before production!)",
-        summary.adminEmail,
-        process.env.SEED_ADMIN_PASSWORD || "admin123",
-      );
+      if (adminOnly) {
+        const { adminEmail, created } = await seedAdmin();
+        // The password is never logged — it is in the environment, and the
+        // person who set it already knows it.
+        logger.info(
+          { adminEmail, action: created ? "created" : "updated" },
+          "Admin account ready"
+        );
+      } else {
+        const summary = await seed();
+        logger.info(summary, "Seed complete");
+        logger.info("Admin login → email: %s (password as set in SEED_ADMIN_PASSWORD)", summary.adminEmail);
+      }
       await disconnectMongo();
       process.exit(0);
     } catch (err) {
@@ -273,4 +327,4 @@ if (require.main === module) {
   })();
 }
 
-module.exports = { seed };
+module.exports = { seed, seedAdmin };
