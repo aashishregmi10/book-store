@@ -12,7 +12,7 @@ export const SITE = {
   // it used to read bookstemplenepal.com, which is not even the domain the
   // shop runs on. No trailing slash — `abs()` joins paths straight onto it.
   url: process.env.NEXT_PUBLIC_SITE_URL || "https://www.bookstemple.com",
-  description: "Nepal's online bookstore — books worth reading, delivered across all seven provinces. NPR prices, cash on delivery.",
+  description: "Nepal's online bookstore. Books worth reading, delivered across all seven provinces. NPR prices, cash on delivery.",
   locale: "en_NP",
   email: "bookstemple01@gmail.com",
   // Social/profile URLs strengthen the entity in Google's & AI engines' knowledge

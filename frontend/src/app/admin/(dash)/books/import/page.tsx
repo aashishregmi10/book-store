@@ -82,7 +82,7 @@ export default function BulkImport() {
     setMsg("");
     setCreated(null);
     if (!parsed.length) return setMsg("Add at least one ISBN or title.");
-    if (tooMany) return setMsg(`Max ${MAX} per batch — you have ${parsed.length}.`);
+    if (tooMany) return setMsg(`Max ${MAX} per batch, you have ${parsed.length}.`);
     setLooking(true);
     try {
       // The lookup endpoint only wants identifiers; price is kept locally (by line) for create.

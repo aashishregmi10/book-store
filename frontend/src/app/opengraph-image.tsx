@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = "Books Temple Nepal — buy books online in Nepal";
+export const alt = "Books Temple Nepal: buy books online in Nepal";
 
 // Branded default social/AI preview card. Per-page (book/genre/article) OG
 // images can be added later with their own opengraph-image files.

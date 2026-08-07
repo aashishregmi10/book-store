@@ -219,7 +219,7 @@ function EmptyState({ icon: Icon, title, cta, href, onClose }: { icon: typeof Sh
     <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
       <span className="grid size-14 place-items-center rounded-full bg-accent/10"><Icon className="size-6 text-accent" /></span>
       <h3 className="mt-4 font-display text-xl text-text">{title}</h3>
-      <p className="mt-1 font-body text-sm text-muted">Nothing here yet — let&apos;s fix that.</p>
+      <p className="mt-1 font-body text-sm text-muted">Nothing here yet, let&apos;s fix that.</p>
       <Link href={href} onClick={onClose} className="mt-5 rounded-full bg-accent px-6 py-2.5 font-data text-sm uppercase tracking-wide text-white hover:bg-accent-hover">
         {cta}
       </Link>

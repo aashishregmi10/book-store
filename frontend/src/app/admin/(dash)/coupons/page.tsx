@@ -138,7 +138,7 @@ export default function AdminCoupons() {
               {rows.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-10 text-center font-body text-muted">
-                    No coupons yet — create one to run your first promotion.
+                    No coupons yet, create one to run your first promotion.
                   </td>
                 </tr>
               )}

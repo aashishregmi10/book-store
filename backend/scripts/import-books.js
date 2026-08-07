@@ -163,7 +163,7 @@ async function importRow(row, opts) {
       description:
         meta.description && meta.description.trim().length >= 10
           ? meta.description.trim()
-          : `${meta.title}${meta.author ? ` by ${meta.author}` : ''} — details to be added.`,
+          : `${meta.title}${meta.author ? ` by ${meta.author}` : ''}. Details to be added.`,
       isbn: isbn13 || undefined,
       specifications: {
         pages: meta.specifications?.pages || undefined,

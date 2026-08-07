@@ -17,7 +17,7 @@ const GENRES = [
     name: "Self-Help",
     color: "#2D5A3D",
     description:
-      "Books Temple Nepal stocks the top-rated self-help and personal-development titles available across Nepal — from habit-building to deep focus — with NPR pricing and Kathmandu delivery in 1–2 days.",
+      "Books Temple Nepal stocks the top-rated self-help and personal-development titles available across Nepal, from habit-building to deep focus, with NPR pricing and Kathmandu delivery in 1–2 days.",
     metaTitle: "Best Self-Help Books in Nepal",
     metaDesc:
       "Buy bestselling self-help books online in Nepal. Fast delivery, NPR prices, cash on delivery.",
@@ -27,7 +27,7 @@ const GENRES = [
     name: "Fiction",
     color: "#7A3B2E",
     description:
-      "A handpicked shelf of literary and contemporary fiction — modern classics and timeless novels — delivered anywhere in Nepal with cash on delivery.",
+      "A handpicked shelf of literary and contemporary fiction, modern classics and timeless novels, delivered anywhere in Nepal with cash on delivery.",
     metaTitle: "Fiction Books & Novels in Nepal",
     metaDesc:
       "Buy fiction novels online in Nepal. Modern classics and bestsellers with fast Kathmandu delivery.",
@@ -37,7 +37,7 @@ const GENRES = [
     name: "Nepali Literature",
     color: "#8C6A2B",
     description:
-      "Celebrated works of Nepali literature — novels and prose by the country’s finest writers — available for delivery to all seven provinces.",
+      "Celebrated works of Nepali literature, novels and prose by the country’s finest writers, available for delivery to all seven provinces.",
     metaTitle: "Nepali Literature & Novels Online",
     metaDesc:
       "Buy Nepali literature and novels online in Nepal. Works by leading Nepali authors, delivered nationwide.",
@@ -47,7 +47,7 @@ const GENRES = [
     name: "Business & Economics",
     color: "#2F4A5A",
     description:
-      "Sharp, practical business and economics reading — strategy, money, and big ideas — curated for Nepali readers and entrepreneurs.",
+      "Sharp, practical business and economics reading: strategy, money, and big ideas, curated for Nepali readers and entrepreneurs.",
     metaTitle: "Business & Economics Books in Nepal",
     metaDesc:
       "Buy business and economics books online in Nepal. Strategy, finance and entrepreneurship titles.",
@@ -250,7 +250,7 @@ async function seed() {
         secureUrl: cover(b.isbn),
         name: b.title,
       },
-      description: `${b.title} by ${b.author}. ${GENRES.find((g) => g.slug === b.genre)?.name} — in stock now at Books Temple Nepal with cash-on-delivery across all seven provinces.`,
+      description: `${b.title} by ${b.author}. ${GENRES.find((g) => g.slug === b.genre)?.name}, in stock now at Books Temple Nepal with cash-on-delivery across all seven provinces.`,
       isActive: true,
     })),
   );

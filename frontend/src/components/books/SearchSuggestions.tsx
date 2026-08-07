@@ -28,7 +28,7 @@ export function SearchSuggestions({
   if (!hasAny) {
     return (
       <p className="px-3 py-6 text-center font-body text-sm text-muted">
-        {loading ? "Searching…" : <>No quick matches — press <span className="text-text">Enter</span> to search the full catalogue.</>}
+        {loading ? "Searching…" : <>No quick matches. Press <span className="text-text">Enter</span> to search the full catalogue.</>}
       </p>
     );
   }

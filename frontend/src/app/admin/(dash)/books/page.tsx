@@ -283,7 +283,7 @@ function AdminBooksContent() {
             {books.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-10 text-center font-body text-muted">
-                  Nothing here yet — add your first book.
+                  Nothing here yet, add your first book.
                 </td>
               </tr>
             )}

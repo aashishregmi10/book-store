@@ -96,7 +96,7 @@ export function GoogleSignInButton({ onError }: { onError?: (msg: string) => voi
         // already closing and a navigation is in flight, so dropping the
         // spinner would flash the button back for a frame.
         setBusy(false);
-        onError?.(err instanceof ClientApiError ? err.message : "Google sign-in failed — try again.");
+        onError?.(err instanceof ClientApiError ? err.message : "Google sign-in failed, try again.");
       }
     },
     [setAuth, router, onError]
@@ -113,7 +113,7 @@ export function GoogleSignInButton({ onError }: { onError?: (msg: string) => voi
     const timer = window.setTimeout(() => {
       if (cancelled) return;
       setStalled(true);
-      onError?.("Google sign-in is taking longer than usual — you can sign in with your email and password below.");
+      onError?.("Google sign-in is taking longer than usual. You can sign in with your email and password below.");
     }, GIS_TIMEOUT_MS);
 
     const stopWaiting = () => {
@@ -131,7 +131,7 @@ export function GoogleSignInButton({ onError }: { onError?: (msg: string) => voi
           // unavailable and the user needs to be told to use email instead.
           if (err?.type === "popup_closed" || err?.type === "user_cancel") return;
           console.error("[google-signin] GIS error", err);
-          onError?.("Google sign-in isn't available right now — use your email and password below.");
+          onError?.("Google sign-in isn't available right now, use your email and password below.");
         },
       });
       ref.current.innerHTML = "";

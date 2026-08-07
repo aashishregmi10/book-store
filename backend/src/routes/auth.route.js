@@ -76,7 +76,7 @@ router.post(
         if (existing.googleId) {
           return fail(
             res,
-            'This email already has an account created through Google — use “Continue with Google” to sign in.',
+            'This email already has an account created through Google. Use “Continue with Google” to sign in.',
             409,
             [{ field: 'email', code: 'GOOGLE_ONLY_ACCOUNT' }]
           );
@@ -214,7 +214,7 @@ router.post(
         return fail(res, 'Invalid credentials', 401, [{ code: 'INVALID_CREDENTIALS' }]);
       }
       if (!user.isAdmin) {
-        return fail(res, 'Access denied — admin account required', 403, [{ code: 'NOT_ADMIN' }]);
+        return fail(res, 'Access denied: admin account required', 403, [{ code: 'NOT_ADMIN' }]);
       }
       if (user.isBanned) return fail(res, 'Account suspended. Contact support.', 403, [{ code: 'BANNED' }]);
 
@@ -276,12 +276,12 @@ router.post('/refresh', async (req, res, next) => {
       await user.save();
       clearRefreshCookie(res);
       logger.warn({ userId: String(user._id), fid: decoded.fid }, 'refresh token reuse detected — family revoked');
-      return fail(res, 'Session revoked — please sign in again', 401, [{ code: 'TOKEN_REUSE' }]);
+      return fail(res, 'Session revoked, please sign in again', 401, [{ code: 'TOKEN_REUSE' }]);
     }
     if (result === 'unknown') {
       // Family already gone: logged out, expired/pruned, or a forged fid.
       clearRefreshCookie(res);
-      return fail(res, 'Session expired — please sign in again', 401, [{ code: 'SESSION_EXPIRED' }]);
+      return fail(res, 'Session expired, please sign in again', 401, [{ code: 'SESSION_EXPIRED' }]);
     }
 
     await user.save();

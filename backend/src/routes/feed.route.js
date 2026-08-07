@@ -77,7 +77,7 @@ router.get("/products.xml", async (_req, res, next) => {
       return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
   <channel>
-    <title>Books Temple Nepal — Books</title>
+    <title>Books Temple Nepal: Books</title>
     <link>${FRONTEND}</link>
     <description>Books available at Books Temple Nepal, with NPR pricing and cash on delivery across Nepal.</description>${items}
   </channel>

@@ -37,7 +37,7 @@ export default function TermsPage() {
         <Section title="Ordering">
           <p>
             Placing an order is an offer to buy, which we accept when we dispatch it. We may decline an
-            order — if a title turns out to be unavailable, if the address is outside what our courier can
+            order: if a title turns out to be unavailable, if the address is outside what our courier can
             reach, or if something looks fraudulent. Prices are in Nepali Rupees and can change, but the
             price shown when you order is the price you pay us.
           </p>
@@ -53,7 +53,7 @@ export default function TermsPage() {
         <Section title="Delivery charges">
           <p>
             The order total covers the books. The courier charges its own delivery fee at handover, set by
-            them and varying with where the parcel is going — we neither set that amount nor collect it.
+            them and varying with where the parcel is going. We neither set that amount nor collect it.
           </p>
           <p className="mt-3">
             Typically 1–2 days inside the Kathmandu Valley and 3–5 days elsewhere in Nepal. Those are
@@ -67,14 +67,14 @@ export default function TermsPage() {
             <Link href="/account" className="text-link underline-offset-4 hover:underline">
               your account
             </Link>
-            . Once it has shipped it can no longer be cancelled from the site — write to us instead. Any
+            . Once it has shipped it can no longer be cancelled from the site, write to us instead. Any
             reward points you spent on a cancelled order are returned to your balance.
           </p>
         </Section>
 
         <Section title="If something is wrong with your book">
           <p>
-            We do not run general change-of-mind returns — margins on books here do not support it, and
+            We do not run general change-of-mind returns: margins on books here do not support it, and
             you pay only once you have the parcel in hand, so you can decline it at the door.
           </p>
           <p className="mt-3">
@@ -101,7 +101,7 @@ export default function TermsPage() {
 
         <Section title="Your account">
           <p>
-            Keep your password to yourself — you are responsible for what happens under your account. Tell
+            Keep your password to yourself. You are responsible for what happens under your account. Tell
             us if you think someone else has got into it. We may suspend an account that is being used to
             defraud us or to abuse other customers.
           </p>

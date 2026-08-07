@@ -51,7 +51,7 @@ export function Footer() {
               subtitle that has to be cropped out of the header at 32px. */}
           <Image
             src="/logo-full.png"
-            alt="Books Temple Nepal — online bookstore"
+            alt="Books Temple Nepal, online bookstore"
             width={1200}
             height={427}
             className="h-16 w-auto sm:h-20"

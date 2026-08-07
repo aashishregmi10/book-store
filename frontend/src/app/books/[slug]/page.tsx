@@ -61,10 +61,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { book } = data;
   const soldOut = book.stockStatus === "out-of-stock" || book.stockStatus === "discontinued";
   return {
-    title: book.metaTitle || `${book.title} by ${book.author} — ${npr(book.price)}`,
+    title: book.metaTitle || `${book.title} by ${book.author} - ${npr(book.price)}`,
     description:
       book.metaDescription ||
-      `Buy ${book.title} by ${book.author} online in Nepal for ${npr(book.price)}. ${soldOut ? "Currently out of stock — see similar titles." : "In stock, cash on delivery across Nepal."}`,
+      `Buy ${book.title} by ${book.author} online in Nepal for ${npr(book.price)}. ${soldOut ? "Currently out of stock. See similar titles." : "In stock, cash on delivery across Nepal."}`,
     alternates: { canonical: `/books/${book.slug}` },
     // Out-of-stock pages stay live but temporarily noindex (SEO Guide §8.1).
     robots: soldOut ? { index: false, follow: true } : undefined,
@@ -127,7 +127,7 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
             <div className="relative mx-auto aspect-[2/3] w-full max-w-xs overflow-hidden border border-border bg-surface md:mx-0">
               <BookCover
                 src={book.coverImage.secureUrl}
-                alt={`${book.title} by ${book.author} — book cover`}
+                alt={`${book.title} by ${book.author}, book cover`}
                 title={book.title}
                 priority
                 sizes="(max-width: 768px) 80vw, 360px"
@@ -191,7 +191,7 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
             <ul className="mt-6 grid gap-2 font-body text-sm text-muted">
               <li className="flex items-center gap-2"><Truck className="size-4 text-accent" /> Kathmandu 1–2 days · rest of Nepal 3–5 days</li>
               <li className="flex items-center gap-2"><Package className="size-4 text-accent" /> Carefully packed &amp; shipped safely</li>
-              <li className="flex items-center gap-2"><ShieldCheck className="size-4 text-accent" /> Cash on delivery — pay when it arrives</li>
+              <li className="flex items-center gap-2"><ShieldCheck className="size-4 text-accent" /> Cash on delivery: pay when it arrives</li>
             </ul>
 
             {/* Specs as a definition list — far more AI-citable than prose */}
@@ -251,7 +251,7 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
                       ))}
                     </ul>
                   ) : (
-                    <p className="font-body text-muted">No reviews yet — be the first to share your thoughts.</p>
+                    <p className="font-body text-muted">No reviews yet. Be the first to share your thoughts.</p>
                   )}
                   <ReviewForm slug={book.slug} />
                 </div>
@@ -274,7 +274,7 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
                       ))}
                     </dl>
                   ) : (
-                    <p className="font-body text-muted">No questions yet — be the first to ask about this book.</p>
+                    <p className="font-body text-muted">No questions yet. Be the first to ask about this book.</p>
                   )}
                   <AskQuestion slug={book.slug} />
                 </div>

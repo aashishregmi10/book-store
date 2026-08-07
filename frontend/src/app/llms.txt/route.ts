@@ -38,7 +38,7 @@ ${genreLines || `- [Browse all genres](${SITE.url}/books)`}
 ## Buying & delivery
 - Currency: NPR. Payment: Cash on Delivery only.
 - Order totals cover the books only. The courier charges its own delivery fee
-  on handover, based on the destination — the shop does not set or collect it.
+  on handover, based on the destination. The shop does not set or collect it.
 - Delivery: 1–2 days in Kathmandu Valley, 3–5 days to the rest of Nepal.
 - Every order is carefully packed and shipped safely.
 

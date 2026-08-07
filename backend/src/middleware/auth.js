@@ -17,7 +17,7 @@ function getBearer(req) {
  */
 function authenticate(req, _res, next) {
   const token = getBearer(req);
-  if (!token) return next(new ApiError('Access denied — no token', 401, 'NO_TOKEN'));
+  if (!token) return next(new ApiError('Access denied: no token', 401, 'NO_TOKEN'));
   try {
     const decoded = verify(token);
     // Access tokens only. Both kinds are signed with the same secret, so

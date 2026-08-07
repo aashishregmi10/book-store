@@ -29,7 +29,7 @@ interface TrackedOrder {
 
 // Reads better than the raw enum, and keeps the courier hand-off explicit.
 const STATUS_COPY: Record<string, string> = {
-  placed: "Placed — we're getting it ready",
+  placed: "Placed, we're getting it ready",
   confirmed: "Confirmed",
   processing: "Being packed",
   shipped: "With the courier",
@@ -56,7 +56,7 @@ export default function TrackOrderPage() {
       setError(
         err instanceof ClientApiError
           ? err.message
-          : "We couldn't reach the shop just now — try again in a moment."
+          : "We couldn't reach the shop just now, try again in a moment."
       );
     } finally {
       setLoading(false);
@@ -148,7 +148,7 @@ export default function TrackOrderPage() {
             <span className="font-data text-lg font-semibold text-accent">{npr(order.total)}</span>
           </div>
           <p className="mt-3 font-body text-xs leading-relaxed text-muted">
-            Books only — the courier charges delivery separately when it hands the parcel over.
+            Books only. The courier charges delivery separately when it hands the parcel over.
           </p>
         </section>
       )}

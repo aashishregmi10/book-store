@@ -116,7 +116,7 @@ export default function WishlistPage() {
                 <p className="label-smallcaps font-data text-xs">Saved for later</p>
                 <h1 className="mt-2 font-display text-4xl leading-tight text-text">Your wishlist.</h1>
                 <p className="mt-3 font-body text-sm leading-relaxed text-muted">
-                  {stats.count} {stats.count === 1 ? "title" : "titles"} waiting for the right rainy afternoon — we&apos;ll
+                  {stats.count} {stats.count === 1 ? "title" : "titles"} waiting for the right rainy afternoon, we&apos;ll
                   nudge you when prices drop.
                 </p>
               </div>

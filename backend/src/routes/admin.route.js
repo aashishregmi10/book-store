@@ -333,14 +333,14 @@ router.get('/books/lookup', validate({ query: lookupQuery }), async (req, res, n
     let isbn13 = null;
     if (req.query.isbn) {
       const norm = normalizeIsbns(req.query.isbn);
-      if (!norm.valid) return fail(res, 'That ISBN looks invalid — check the digits.', 400, [{ code: 'INVALID_ISBN' }]);
+      if (!norm.valid) return fail(res, 'That ISBN looks invalid, check the digits.', 400, [{ code: 'INVALID_ISBN' }]);
       isbn = norm.isbn13 || norm.clean; // providers prefer ISBN-13
       isbn10 = norm.isbn10;
       isbn13 = norm.isbn13;
     }
 
     const meta = await lookupBook({ isbn, title, author, publisher });
-    if (!meta) return fail(res, 'No match found — add the book manually.', 404, [{ code: 'NOT_FOUND' }]);
+    if (!meta) return fail(res, 'No match found, add the book manually.', 404, [{ code: 'NOT_FOUND' }]);
 
     // From a title/author/publisher search the resolved ISBNs come back on the result.
     isbn13 = isbn13 || meta.isbn13 || null;
@@ -471,7 +471,7 @@ router.post('/books/lookup/bulk', validate({ body: bulkLookupBody }), async (req
   try {
     const { books } = req.body;
     if (books.length > BULK_MAX) {
-      return fail(res, `Too many books — max ${BULK_MAX} per batch.`, 400, [
+      return fail(res, `Too many books, max ${BULK_MAX} per batch.`, 400, [
         { code: 'BULK_LIMIT_EXCEEDED', max_allowed: BULK_MAX },
       ]);
     }
@@ -533,7 +533,7 @@ async function createOneDraft(item, defaults) {
     const description =
       item.description && item.description.trim().length >= 10
         ? item.description.trim()
-        : `${item.title}${item.author ? ` by ${item.author}` : ''} — details to be added.`;
+        : `${item.title}${item.author ? ` by ${item.author}` : ''}. Details to be added.`;
 
     const book = await Book.create({
       slug: slugify(item.title),
@@ -566,7 +566,7 @@ router.post('/books/bulk-create', validate({ body: bulkCreateBody }), async (req
       return fail(res, 'Pick a genre or section for the batch.', 400, [{ code: 'GENRE_OR_SECTION' }]);
     }
     if (books.length > BULK_MAX) {
-      return fail(res, `Too many books — max ${BULK_MAX} per batch.`, 400, [{ code: 'BULK_LIMIT_EXCEEDED', max_allowed: BULK_MAX }]);
+      return fail(res, `Too many books, max ${BULK_MAX} per batch.`, 400, [{ code: 'BULK_LIMIT_EXCEEDED', max_allowed: BULK_MAX }]);
     }
     const results = await mapPool(books, BULK_CONCURRENCY, (item) => createOneDraft(item, defaults));
     const createdCount = results.filter((r) => r.success).length;
@@ -711,7 +711,7 @@ router.delete('/genres/:id', validate({ params: idParams }), async (req, res, ne
     if (!genre) return fail(res, 'Genre not found', 404, [{ code: 'NOT_FOUND' }]);
     const inUse = await Book.countDocuments({ genre: genre.slug });
     if (inUse > 0) {
-      return fail(res, `${inUse} book${inUse > 1 ? 's' : ''} still shelved under this genre — reassign them first.`, 409, [{ code: 'GENRE_IN_USE' }]);
+      return fail(res, `${inUse} book${inUse > 1 ? 's' : ''} still shelved under this genre, reassign them first.`, 409, [{ code: 'GENRE_IN_USE' }]);
     }
     await genre.deleteOne();
     await cacheDel('genres_list');
@@ -932,8 +932,8 @@ router.put('/orders/:id/cancel', validate({ params: idParams }), async (req, res
       const u = await User.findById(order.user);
       if (u) {
         u.points = Math.max(0, u.points + order.pointsUsed - order.pointsEarned);
-        if (order.pointsUsed) u.pointsHistory.push({ amount: order.pointsUsed, reason: 'Order cancelled — points restored', orderId: order._id });
-        if (order.pointsEarned) u.pointsHistory.push({ amount: -order.pointsEarned, reason: 'Order cancelled — reward reversed', orderId: order._id });
+        if (order.pointsUsed) u.pointsHistory.push({ amount: order.pointsUsed, reason: 'Order cancelled, points restored', orderId: order._id });
+        if (order.pointsEarned) u.pointsHistory.push({ amount: -order.pointsEarned, reason: 'Order cancelled, reward reversed', orderId: order._id });
         await u.save();
       }
     }
@@ -956,7 +956,7 @@ router.put('/orders/:id/refund', validate({ params: idParams }), async (req, res
     if (order.user && order.pointsEarned > 0) {
       await User.updateOne({ _id: order.user }, {
         $inc: { points: -order.pointsEarned },
-        $push: { pointsHistory: { amount: -order.pointsEarned, reason: 'Refund — reward reversed', orderId: order._id } },
+        $push: { pointsHistory: { amount: -order.pointsEarned, reason: 'Refund, reward reversed', orderId: order._id } },
       });
     }
     order.paymentStatus = 'refunded';

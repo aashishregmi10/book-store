@@ -48,7 +48,7 @@ export function RestockRequestButton({
       setDone(true);
       setAsking(false);
     } catch (err) {
-      setError(err instanceof ClientApiError ? err.message : "Couldn't save that — try again.");
+      setError(err instanceof ClientApiError ? err.message : "Couldn't save that, try again.");
     } finally {
       setBusy(false);
     }

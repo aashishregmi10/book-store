@@ -33,7 +33,7 @@ export function BookCard({ book }: { book: BookCardData }) {
           <div className="relative aspect-[2/3] overflow-hidden rounded-lg border border-border bg-bg">
             <BookCover
               src={book.coverImage.secureUrl}
-              alt={`${book.title} by ${book.author} — book cover`}
+              alt={`${book.title} by ${book.author}, book cover`}
               title={book.title}
               sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 200px"
               className="object-cover transition duration-500 group-hover:scale-[1.03]"

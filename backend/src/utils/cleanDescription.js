@@ -60,7 +60,7 @@ function templateDescription({ title, author, pages, format, language }) {
   const pagePart = pages ? ` runs ${pages} pages and` : '';
   return (
     `${title}${by} is available now at Books Temple Nepal.${edition}${pagePart} ships across Nepal with cash on delivery. ` +
-    `A fuller description is on the way — in the meantime, tap through for price, format, and availability.`
+    `A fuller description is on the way. In the meantime, tap through for price, format, and availability.`
   ).trim();
 }
 

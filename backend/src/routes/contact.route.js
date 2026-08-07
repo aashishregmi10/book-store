@@ -29,7 +29,7 @@ const contactLimiter = rateLimit({
   legacyHeaders: false,
   skip: () => process.env.NODE_ENV !== "production",
   message: {
-    message: "Too many messages — please try again later.",
+    message: "Too many messages, please try again later.",
     errors: [{ code: "RATE_LIMITED" }],
   },
 });
@@ -57,7 +57,7 @@ router.post(
       if (website) {
         // Silently absorb the bot. Same response as success so it learns nothing.
         logger.info("Contact form honeypot triggered — dropped.");
-        return created(res, null, "Thanks — we'll be in touch.");
+        return created(res, null, "Thanks, we'll be in touch.");
       }
 
       // Persist first. If the notification email fails (or SMTP isn't set up at
@@ -75,7 +75,7 @@ router.post(
 
       // Never log the message body or address — house rule is ids only.
       logger.info({ contactId: String(note._id) }, "Contact message received");
-      return created(res, null, "Thanks — we'll be in touch.");
+      return created(res, null, "Thanks, we'll be in touch.");
     } catch (err) {
       return next(err);
     }

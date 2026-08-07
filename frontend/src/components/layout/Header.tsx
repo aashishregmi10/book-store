@@ -59,7 +59,7 @@ export function Header({ genres = [] }: { genres?: Genre[] }) {
             to stay legible — 40px on phones and 56px from sm up, which the row
             can afford now that the gutters are tighter. Still capped below the
             nav's line height so the header bar doesn't grow. */}
-        <Link href="/" className="flex shrink-0 items-center" aria-label="Books Temple Nepal — home">
+        <Link href="/" className="flex shrink-0 items-center" aria-label="Books Temple Nepal home">
           <Image
             src="/logo-wordmark.png"
             alt="Books Temple Nepal"

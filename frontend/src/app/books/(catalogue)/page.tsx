@@ -33,7 +33,7 @@ export async function generateMetadata({
   const filtered = FILTER_PARAMS.some((k) => sp[k]);
   return {
     title: sp.q ? `Search: ${sp.q}` : "All Books",
-    description: "Browse every title at Books Temple Nepal — NPR prices, cash on delivery across all seven provinces.",
+    description: "Browse every title at Books Temple Nepal. NPR prices, cash on delivery across all seven provinces.",
     alternates: { canonical: "/books" },
     ...(filtered ? { robots: { index: false, follow: true } } : {}),
   };
@@ -115,7 +115,7 @@ export default async function BooksPage({
 
           {!data ? (
             <p className="py-20 text-center font-body text-muted">
-              We couldn&apos;t reach the catalogue — make sure the API is running, then refresh.
+              We couldn&apos;t reach the catalogue. Make sure the API is running, then refresh.
             </p>
           ) : data.items.length === 0 ? (
             <div className="py-20 text-center">

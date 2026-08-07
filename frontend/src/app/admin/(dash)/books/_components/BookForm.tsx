@@ -40,7 +40,7 @@ export function BookForm({
   // Real options come from the admin-curated list; fall back if the API is down
   // or, on edit, keep whatever genre the book already carries even if inactive.
   const genreOptions = [
-    { value: "", label: "— None (section book) —" },
+    { value: "", label: "None (section book)" },
     ...(genres.length
       ? genres.map((g) => ({ value: g.slug, label: g.name }))
       : FALLBACK_GENRES.map((g) => ({ value: g, label: g }))),
@@ -98,9 +98,9 @@ export function BookForm({
           ...(s.language ? { language: s.language } : {}),
         },
       }));
-      setLookupMsg("Filled from Open Library — review the details, then save.");
+      setLookupMsg("Filled from Open Library, review the details, then save.");
     } catch (err) {
-      setLookupMsg(err instanceof ClientApiError ? err.message : "Lookup failed — add details manually.");
+      setLookupMsg(err instanceof ClientApiError ? err.message : "Lookup failed, add details manually.");
     } finally {
       setLooking(false);
     }
@@ -125,7 +125,7 @@ export function BookForm({
     try {
       await onSubmit(form);
     } catch (err) {
-      setError(err instanceof ClientApiError ? err.message : "Save failed — please try again.");
+      setError(err instanceof ClientApiError ? err.message : "Save failed, please try again.");
       setSaving(false);
     }
   }
@@ -190,7 +190,7 @@ export function BookForm({
                 value={form.category}
                 onChange={(v) => set("category", v)}
                 options={CATEGORY_OPTIONS}
-                hint="Optional — shows the book under a top-nav section."
+                hint="Optional: shows the book under a top-nav section."
               />
             </div>
           </Section>
@@ -220,7 +220,7 @@ export function BookForm({
                 </div>
                 {off > 0 && (
                   <p className="font-data text-xs text-accent">
-                    {off}% off — strike-through {npr(form.comparePrice)} shown to readers.
+                    {off}% off: strike-through {npr(form.comparePrice)} shown to readers.
                   </p>
                 )}
               </>
@@ -274,7 +274,7 @@ export function BookForm({
                 onChange={(e) => set("description", e.target.value)}
                 required
                 rows={6}
-                placeholder="Lead with a 40–80 word hook a reader could quote — what the book is and who it's for."
+                placeholder="Lead with a 40–80 word hook a reader could quote: what the book is and who it's for."
                 className="w-full resize-y border border-border bg-bg px-3 py-2 font-body leading-relaxed text-text outline-none placeholder:text-muted/60 focus:border-accent"
               />
               <span className="mt-1 block text-right font-data text-xs text-muted">

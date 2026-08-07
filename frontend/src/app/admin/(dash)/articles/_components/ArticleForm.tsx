@@ -62,7 +62,7 @@ export function ArticleForm({
     try {
       await onSubmit(form);
     } catch (err) {
-      setError(err instanceof ClientApiError ? err.message : "Save failed — please try again.");
+      setError(err instanceof ClientApiError ? err.message : "Save failed, please try again.");
       setSaving(false);
     }
   }
@@ -78,7 +78,7 @@ export function ArticleForm({
         <div className="space-y-4 border border-border bg-surface p-6">
           <Text label="Title" value={form.title} onChange={(v) => set("title", v)} required />
           <Text label="Slug (optional)" value={form.slug || ""} onChange={(v) => set("slug", v)} mono placeholder="auto from title" />
-          <Area label="Excerpt (BLUF — 1–2 sentence summary)" value={form.excerpt} onChange={(v) => set("excerpt", v)} rows={2} />
+          <Area label="Excerpt (BLUF: 1–2 sentence summary)" value={form.excerpt} onChange={(v) => set("excerpt", v)} rows={2} />
           <label className="block">
             <span className="font-data text-xs uppercase tracking-wide text-muted">Body (markdown: ## heading, - list, &gt; quote)</span>
             <textarea

@@ -49,7 +49,7 @@ export default function AboutPage() {
           </h1>
           <p className="mt-6 max-w-xl font-body text-lg leading-relaxed text-muted">
             Books Temple Nepal started with a simple frustration: it was too hard to buy a good book, at a fair price,
-            delivered to your door — wherever in Nepal that door happens to be. So we built the shop we wanted to buy
+            delivered to your door, wherever in Nepal that door happens to be. So we built the shop we wanted to buy
             from.
           </p>
         </div>
@@ -66,12 +66,12 @@ export default function AboutPage() {
         <div className="max-w-2xl space-y-4 font-body text-lg leading-relaxed text-text">
           <p>
             For years, finding a specific title in Nepal meant trekking between shops, settling for whatever was on the
-            table, or paying eye-watering import mark-ups online. Readers outside the Valley had it worse — many simply
+            table, or paying eye-watering import mark-ups online. Readers outside the Valley had it worse: many simply
             stopped looking.
           </p>
           <p>
             We think a country of readers deserves better. Books Temple is our answer: a tightly curated catalogue of fiction,
-            Nepali literature, business, and the books people actually ask for — priced honestly in rupees and carried to
+            Nepali literature, business, and the books people actually ask for, priced honestly in rupees and carried to
             every province by people who care whether the corners arrive bent.
           </p>
           <p>

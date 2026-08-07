@@ -10,7 +10,7 @@ export const revalidate = 900;
 export const metadata: Metadata = {
   title: "Reading Guides & Articles",
   description:
-    "Book recommendations, reading guides, and buying advice for readers in Nepal — from the booksellers at Books Temple Nepal.",
+    "Book recommendations, reading guides, and buying advice for readers in Nepal, from the booksellers at Books Temple Nepal.",
   alternates: { canonical: "/blog" },
 };
 
@@ -24,13 +24,13 @@ export default async function BlogPage() {
         <p className="label-smallcaps font-data text-xs">The reading room</p>
         <h1 className="mt-2 font-display text-4xl text-text sm:text-5xl">Reading guides &amp; articles</h1>
         <p className="mt-3 font-body text-lg leading-relaxed text-muted">
-          Recommendations, reading lists, and honest buying advice for readers across Nepal — written by the booksellers
+          Recommendations, reading lists, and honest buying advice for readers across Nepal, written by the booksellers
           who pick what we stock.
         </p>
       </header>
 
       {articles.length === 0 ? (
-        <p className="py-20 text-center font-body text-muted">No articles yet — check back soon.</p>
+        <p className="py-20 text-center font-body text-muted">No articles yet, check back soon.</p>
       ) : (
         <div className="mt-10 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
           {articles.map((a) => (

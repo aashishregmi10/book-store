@@ -82,7 +82,7 @@ export default function AdminArticles() {
                 </tr>
               ))}
               {rows.length === 0 && (
-                <tr><td colSpan={4} className="px-4 py-10 text-center font-body text-muted">No articles yet — write your first guide.</td></tr>
+                <tr><td colSpan={4} className="px-4 py-10 text-center font-body text-muted">No articles yet, write your first guide.</td></tr>
               )}
             </tbody>
           </table>

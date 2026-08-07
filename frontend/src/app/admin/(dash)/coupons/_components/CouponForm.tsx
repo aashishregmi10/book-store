@@ -101,7 +101,7 @@ export function CouponForm({
     try {
       await onSubmit(form);
     } catch (err) {
-      setError(err instanceof ClientApiError ? err.message : "Save failed — please try again.");
+      setError(err instanceof ClientApiError ? err.message : "Save failed, please try again.");
       setSaving(false);
     }
   }
@@ -130,7 +130,7 @@ export function CouponForm({
               className="mt-1 w-full border border-border bg-bg px-3 py-2 font-data uppercase tracking-[0.12em] text-text outline-none focus:border-accent"
             />
             <span className="mt-1 block font-body text-xs text-muted">
-              What the shopper types at checkout. Case doesn&apos;t matter — it&apos;s stored uppercase.
+              What the shopper types at checkout. Case doesn&apos;t matter, it&apos;s stored uppercase.
             </span>
           </label>
 
@@ -140,7 +140,7 @@ export function CouponForm({
               value={form.description}
               onChange={(e) => set("description", e.target.value)}
               maxLength={200}
-              placeholder="Launch promo — 10% off everything"
+              placeholder="Launch promo: 10% off everything"
               className="mt-1 w-full border border-border bg-bg px-3 py-2 font-body text-text outline-none focus:border-accent"
             />
           </label>

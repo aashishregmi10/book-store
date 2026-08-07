@@ -74,7 +74,7 @@ export default function CheckoutPage() {
         <PartyPopper className="mx-auto size-12 text-accent" />
         <h1 className="mt-4 font-display text-4xl text-text">Order placed!</h1>
         <p className="mt-2 font-body text-muted">
-          Thank you. Your order <span className="font-data text-text">{orderNumber}</span> is confirmed — pay cash when it arrives.
+          Thank you. Your order <span className="font-data text-text">{orderNumber}</span> is confirmed, pay cash when it arrives.
         </p>
         {/* Guests get a tracking route too. They used to be handed an order
             number with nowhere to type it — "Track order" only rendered for
@@ -90,7 +90,7 @@ export default function CheckoutPage() {
         </div>
         {!user && (
           <p className="mt-4 font-body text-sm text-muted">
-            Keep that number — you can check on your order any time with it and your phone number.
+            Keep that number: you can check on your order any time with it and your phone number.
           </p>
         )}
       </div>
@@ -262,7 +262,7 @@ export default function CheckoutPage() {
           ) : null}
           {user && priced && priced.pointsEarned > 0 && (
             <p className="mt-3 font-body text-xs text-accent">
-              You’ll earn {priced.pointsEarned} points on this order — {npr(priced.pointsEarned)} off a future one.
+              You’ll earn {priced.pointsEarned} points on this order: {npr(priced.pointsEarned)} off a future one.
             </p>
           )}
           <button type="submit" disabled={placing || !!priced?.issues?.length} className="mt-5 w-full bg-accent px-5 py-3 font-data text-sm uppercase tracking-wide text-white hover:bg-accent-hover disabled:opacity-50">

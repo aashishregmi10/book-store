@@ -161,7 +161,7 @@ export default async function GenrePage({
 
             {!data ? (
               <p className="py-20 text-center font-body text-muted">
-                We couldn&apos;t reach the catalogue — make sure the API is running, then refresh.
+                We couldn&apos;t reach the catalogue. Make sure the API is running, then refresh.
               </p>
             ) : items.length === 0 ? (
               <div className="py-20 text-center">

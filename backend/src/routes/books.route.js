@@ -425,7 +425,7 @@ router.post(
       const book = await Book.findOne({ slug: String(req.params.slug).toLowerCase(), isActive: true }).select('_id');
       if (!book) return fail(res, 'Book not found', 404, [{ code: 'NOT_FOUND' }]);
       await Question.create({ book: book._id, user: req.userId, question: req.body.question });
-      return created(res, null, "Thanks — we'll answer your question soon.");
+      return created(res, null, "Thanks, we'll answer your question soon.");
     } catch (err) {
       return next(err);
     }
@@ -475,7 +475,7 @@ router.post(
         { upsert: true }
       );
 
-      return created(res, null, "Noted — we'll email you when it's back in stock.");
+      return created(res, null, "Noted, we'll email you when it's back in stock.");
     } catch (err) {
       return next(err);
     }

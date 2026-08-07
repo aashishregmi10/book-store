@@ -79,7 +79,7 @@ export default function AdminGenres() {
       resetForm();
       load();
     } catch (err) {
-      setError(err instanceof ClientApiError ? err.message : "Couldn't save that genre — try again.");
+      setError(err instanceof ClientApiError ? err.message : "Couldn't save that genre, try again.");
     } finally {
       setSaving(false);
     }
@@ -105,7 +105,7 @@ export default function AdminGenres() {
     <div>
       <h1 className="font-display text-3xl text-text">Genres</h1>
       <p className="mt-1 max-w-prose font-body text-sm text-muted">
-        The shelves of the shop. Add the categories you stock here — they become the genre options on every book,
+        The shelves of the shop. Add the categories you stock here: they become the genre options on every book,
         and each one gets its own silo page in the store.
       </p>
 
@@ -240,7 +240,7 @@ export default function AdminGenres() {
               {!loading && genres.length === 0 && (
                 <tr>
                   <td colSpan={4} className="px-4 py-10 text-center font-body text-muted">
-                    No shelves yet — add your first genre on the left.
+                    No shelves yet, add your first genre on the left.
                   </td>
                 </tr>
               )}

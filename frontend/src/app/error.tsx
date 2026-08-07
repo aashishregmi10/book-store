@@ -32,7 +32,7 @@ export default function Error({
         That didn&apos;t load properly.
       </h1>
       <p className="mt-4 max-w-md font-body text-lg leading-relaxed text-muted">
-        Our end, not yours. Try again — and if it keeps happening, tell us and we&apos;ll fix it.
+        Our end, not yours. Try again, and if it keeps happening, tell us and we&apos;ll fix it.
       </p>
 
       <div className="mt-8 flex flex-wrap items-center justify-center gap-3">

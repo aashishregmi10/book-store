@@ -35,7 +35,7 @@ export default function AdminWishlists() {
     <div>
       <h1 className="font-display text-3xl text-text">Wishlists</h1>
       <p className="mt-1 max-w-prose font-body text-sm text-muted">
-        Who saved what. Open a customer to see their saved titles — use it to prioritise restocks, target a promo, or reach out when a saved title drops in price.
+        Who saved what. Open a customer to see their saved titles: use it to prioritise restocks, target a promo, or reach out when a saved title drops in price.
       </p>
 
       <input

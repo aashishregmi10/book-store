@@ -210,7 +210,7 @@ export default function AccountPage() {
                 ))}
               </ul>
             ) : pointsData.history.length === 0 ? (
-              <p className="mt-4 font-body text-muted">Nothing here yet — your first order will start it off.</p>
+              <p className="mt-4 font-body text-muted">Nothing here yet, your first order will start it off.</p>
             ) : (
               <ul className="mt-4 divide-y divide-border border-y border-border">
                 {pointsData.history.map((h, i) => (

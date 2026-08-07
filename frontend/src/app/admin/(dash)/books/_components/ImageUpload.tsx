@@ -41,7 +41,7 @@ export function ImageUpload({
     try {
       onChange(await uploadFile(file));
     } catch (err) {
-      setError(err instanceof ClientApiError ? err.message : "Upload failed — please try again.");
+      setError(err instanceof ClientApiError ? err.message : "Upload failed, please try again.");
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -150,7 +150,7 @@ export function GalleryUpload({
       const uploaded = await Promise.all(picked.map(uploadFile));
       onChange([...value, ...uploaded]);
     } catch (err) {
-      setError(err instanceof ClientApiError ? err.message : "Upload failed — please try again.");
+      setError(err instanceof ClientApiError ? err.message : "Upload failed, please try again.");
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";

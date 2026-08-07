@@ -23,19 +23,19 @@ const SECTIONS = {
     name: "Manga",
     heading: "Manga in Nepal",
     blurb:
-      "Browse manga delivered across Nepal — shonen, shojo, seinen and more, in English and translated editions, at NPR prices with cash on delivery to all seven provinces.",
+      "Browse manga delivered across Nepal: shonen, shojo, seinen and more, in English and translated editions, at NPR prices with cash on delivery to all seven provinces.",
   },
   kids: {
     name: "Kids' Books",
     heading: "Children's Books in Nepal",
     blurb:
-      "Picture books, early readers, and story collections for young readers across Nepal — handpicked, NPR pricing, and cash on delivery nationwide.",
+      "Picture books, early readers, and story collections for young readers across Nepal, handpicked, with NPR pricing and cash on delivery nationwide.",
   },
   loksewa: {
     name: "Loksewa Preparation",
     heading: "Loksewa Preparation Books in Nepal",
     blurb:
-      "Guides, model sets, and reference books for Nepal's Loksewa (Public Service Commission) exams — current syllabus titles delivered nationwide with cash on delivery.",
+      "Guides, model sets, and reference books for Nepal's Loksewa (Public Service Commission) exams: current syllabus titles delivered nationwide with cash on delivery.",
   },
 } as const;
 
@@ -153,7 +153,7 @@ export default async function CategoryPage({
             </div>
 
             {items.length === 0 ? (
-              <p className="py-16 text-center font-body text-muted">Nothing on this shelf matches — try removing a filter.</p>
+              <p className="py-16 text-center font-body text-muted">Nothing on this shelf matches. Try removing a filter.</p>
             ) : (
               <BooksGrid
                 key={`${category}-${urlQuery}`}

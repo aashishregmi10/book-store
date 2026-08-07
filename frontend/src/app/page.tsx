@@ -148,7 +148,7 @@ export default async function HomePage() {
         <section className="shell py-20 text-center">
           <h2 className="font-display text-2xl text-text">The shelves are being restocked.</h2>
           <p className="mt-3 font-body text-muted">
-            Nothing to show here just yet — give it a moment, or{" "}
+            Nothing to show here just yet, give it a moment, or{" "}
             <Link href="/books" className="text-accent underline-offset-4 hover:underline">browse all books</Link>.
           </p>
         </section>

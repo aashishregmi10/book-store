@@ -25,7 +25,7 @@ export function AskQuestion({ slug }: { slug: string }) {
       setSent(true);
       setQuestion("");
     } catch (err) {
-      setError(err instanceof ClientApiError ? err.message : "Couldn't send your question — try again.");
+      setError(err instanceof ClientApiError ? err.message : "Couldn't send your question, try again.");
     } finally {
       setLoading(false);
     }
@@ -34,7 +34,7 @@ export function AskQuestion({ slug }: { slug: string }) {
   if (sent) {
     return (
       <p className="mt-4 inline-flex items-center gap-2 rounded-md border border-accent/30 bg-accent/5 px-3 py-2 font-body text-sm text-accent">
-        <Check className="size-4" /> Thanks — we&apos;ll answer your question soon.
+        <Check className="size-4" /> Thanks, we&apos;ll answer your question soon.
       </p>
     );
   }

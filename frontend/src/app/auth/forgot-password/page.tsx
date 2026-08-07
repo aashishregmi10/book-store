@@ -41,7 +41,7 @@ export default function ForgotPasswordPage() {
             <h1 className="mt-4 font-display text-3xl text-text">Check your inbox</h1>
             <p className="mt-2 font-body text-muted">
               If an account exists for <span className="text-text">{email}</span>, we&apos;ve sent a link to reset your
-              password. It expires in 1 hour — don&apos;t forget to check spam.
+              password. It expires in 1 hour, don&apos;t forget to check spam.
             </p>
           </div>
         ) : (

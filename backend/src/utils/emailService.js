@@ -63,7 +63,7 @@ const nf = (n) => `NPR ${Number(n).toLocaleString('en-IN')}`;
 function sendWelcomeEmail(user) {
   const html = shell(
     `Welcome, ${user.fullName.split(' ')[0]} 📚`,
-    `<p>You've got <strong>${user.points} points</strong> in your account already — a little something to start your shelf.</p>
+    `<p>You've got <strong>${user.points} points</strong> in your account already, a little something to start your shelf.</p>
      <p>${button('Browse the shop', FRONTEND)}</p>`
   );
   return send({ to: user.email, subject: 'Welcome to Books Temple Nepal', html });
@@ -125,7 +125,7 @@ function sendContactMessage(to, note) {
 }
 
 function sendLowStockAlert(adminEmail, books) {
-  const list = books.map((b) => `<li>${b.title} — <strong>${b.stock}</strong> left</li>`).join('');
+  const list = books.map((b) => `<li>${b.title}: <strong>${b.stock}</strong> left</li>`).join('');
   const html = shell(`Low stock alert`, `<ul>${list}</ul><p>${button('Open inventory', `${FRONTEND}/admin/inventory`, '#9B2C2C')}</p>`, '#9B2C2C');
   return send({ to: adminEmail, subject: `Low stock: ${books.length} book(s) need attention`, html });
 }
@@ -138,7 +138,7 @@ function sendPriceDrop(user, book, oldPrice, newPrice) {
     : '';
   const html = shell(
     `Price drop on your wishlist`,
-    `<p>Good news, ${user.fullName.split(' ')[0]} — a book you saved just got cheaper.</p>
+    `<p>Good news, ${user.fullName.split(' ')[0]}, a book you saved just got cheaper.</p>
      <table style="margin:16px 0;"><tr>
        <td style="padding-right:14px;vertical-align:top;">${cover}</td>
        <td style="vertical-align:top;">
@@ -175,11 +175,11 @@ function sendReferralBonus(referrer, points, friendName) {
   const html = shell(
     `${who} placed their first order`,
     `<p style="font-size:32px;font-weight:bold;color:#2D5A3D;">+${points} points</p>
-     <p>That's ${nf(points)} off your next book — your balance is now <strong>${referrer.points}</strong> points.</p>
+     <p>That's ${nf(points)} off your next book. Your balance is now <strong>${referrer.points}</strong> points.</p>
      <p>Thanks for sending them our way.</p>
      <p>${button('See your rewards', `${FRONTEND}/account`)}</p>`
   );
-  return send({ to: referrer.email, subject: `You earned ${points} points — ${who} ordered`, html });
+  return send({ to: referrer.email, subject: `You earned ${points} points: ${who} ordered`, html });
 }
 
 module.exports = {

@@ -73,7 +73,7 @@ router.post(
         if (r.modifiedCount === 1) decremented.push(li);
         else {
           await Promise.all(decremented.map((d) => restoreStock(d.book, d.quantity, d.variantId)));
-          return fail(res, 'Stock changed while checking out — please try again.', 409, [{ bookId: li.bookId, code: 'STOCK_RACE' }]);
+          return fail(res, 'Stock changed while checking out, please try again.', 409, [{ bookId: li.bookId, code: 'STOCK_RACE' }]);
         }
       }
 
@@ -113,7 +113,7 @@ router.post(
           const referrer = await User.findById(user.referredBy);
           if (referrer) {
             referrer.points += 100;
-            referrer.pointsHistory.push({ amount: 100, reason: 'Referral bonus — friend made first purchase', orderId: order._id });
+            referrer.pointsHistory.push({ amount: 100, reason: 'Referral bonus: friend made first purchase', orderId: order._id });
             await referrer.save();
             // Tell them. The bonus used to land silently, so the one person the
             // programme rewards had no idea it had paid out.
@@ -181,7 +181,7 @@ const lookupLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skip: () => process.env.NODE_ENV !== 'production',
-  message: { message: 'Too many lookups — please try again shortly.', errors: [{ code: 'RATE_LIMITED' }] },
+  message: { message: 'Too many lookups, please try again shortly.', errors: [{ code: 'RATE_LIMITED' }] },
 });
 
 const digitsOf = (v) => String(v || '').replace(/\D/g, '');
@@ -240,8 +240,8 @@ router.post('/:orderNumber/cancel', authenticate, validate({ params: orderNumber
       const user = await User.findById(order.user);
       if (user) {
         user.points = Math.max(0, user.points + order.pointsUsed - order.pointsEarned);
-        if (order.pointsUsed) user.pointsHistory.push({ amount: order.pointsUsed, reason: 'Order cancelled — points restored', orderId: order._id });
-        if (order.pointsEarned) user.pointsHistory.push({ amount: -order.pointsEarned, reason: 'Order cancelled — reward reversed', orderId: order._id });
+        if (order.pointsUsed) user.pointsHistory.push({ amount: order.pointsUsed, reason: 'Order cancelled, points restored', orderId: order._id });
+        if (order.pointsEarned) user.pointsHistory.push({ amount: -order.pointsEarned, reason: 'Order cancelled, reward reversed', orderId: order._id });
         await user.save();
       }
     }

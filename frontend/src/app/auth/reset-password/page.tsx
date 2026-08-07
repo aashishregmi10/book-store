@@ -60,7 +60,7 @@ function ResetForm() {
             <span className="grid size-12 place-items-center rounded-full bg-accent/10">
               <ShieldCheck className="size-6 text-accent" />
             </span>
-            <p className="mt-3 font-body text-text">Password reset — taking you to the login screen…</p>
+            <p className="mt-3 font-body text-text">Password reset. Taking you to the login screen…</p>
           </div>
         ) : (
           <>

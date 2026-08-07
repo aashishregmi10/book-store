@@ -31,14 +31,14 @@ export default function PrivacyPage() {
       <div className="mt-10 space-y-10 font-body text-base leading-relaxed text-text">
         <p className="text-lg">
           We are a bookshop, not an advertising business. We collect what we need to get a book to your
-          door and to let you back into your account — nothing else — and we do not sell any of it.
+          door and to let you back into your account (nothing else), and we do not sell any of it.
         </p>
 
         <Section title="What we collect">
           <p>Only two things generate personal data here: making an account, and placing an order.</p>
           <dl className="mt-4 space-y-3">
             <Item term="Account">
-              Your name, email address and — if you add one — a phone number and profile picture. If you
+              Your name, email address and, if you add one, a phone number and profile picture. If you
               sign in with Google we receive your name, email address and profile picture from Google; we
               never see your Google password.
             </Item>
@@ -47,7 +47,7 @@ export default function PrivacyPage() {
               when. Cash on delivery means we never handle card or bank details at all.
             </Item>
             <Item term="Sign-in">
-              A password, stored only as a bcrypt hash — we cannot read it — and a session cookie so you
+              A password, stored only as a bcrypt hash (we cannot read it), and a session cookie so you
               stay signed in. The session cookie is <code className="font-data text-sm">httpOnly</code>,
               which means scripts on the page cannot read it.
             </Item>
@@ -72,11 +72,11 @@ export default function PrivacyPage() {
             are permitted to use your data for their own purposes:
           </p>
           <ul className="mt-4 list-disc space-y-2 pl-5">
-            <li><strong>The courier</strong> — your delivery name, address and phone, so they can reach you.</li>
-            <li><strong>MongoDB Atlas</strong> — the database the shop runs on.</li>
-            <li><strong>Cloudinary</strong> — hosts book covers and profile pictures.</li>
-            <li><strong>Google</strong> — sign-in, and analytics where enabled.</li>
-            <li><strong>Our email provider</strong> — order confirmations and password resets.</li>
+            <li><strong>The courier</strong>: your delivery name, address and phone, so they can reach you.</li>
+            <li><strong>MongoDB Atlas</strong>: the database the shop runs on.</li>
+            <li><strong>Cloudinary</strong>: hosts book covers and profile pictures.</li>
+            <li><strong>Google</strong>: sign-in, and analytics where enabled.</li>
+            <li><strong>Our email provider</strong>: order confirmations and password resets.</li>
           </ul>
           <p className="mt-4">
             We do not sell, rent or trade your personal data. We would only hand it to anyone else if the
@@ -87,7 +87,7 @@ export default function PrivacyPage() {
         <Section title="How long we keep it">
           <p>
             Order records are kept as long as we need them for accounts and returns. Everything else lives
-            for as long as your account does — close it and we delete your personal details, keeping only
+            for as long as your account does. Close it and we delete your personal details, keeping only
             what we are legally obliged to retain against past orders.
           </p>
         </Section>
@@ -103,7 +103,7 @@ export default function PrivacyPage() {
             <Link href="/account/settings" className="text-link underline-offset-4 hover:underline">
               account settings
             </Link>
-            . You never have to make an account to buy — guest checkout asks only for a delivery address.
+            . You never have to make an account to buy: guest checkout asks only for a delivery address.
           </p>
         </Section>
 

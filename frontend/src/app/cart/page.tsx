@@ -40,7 +40,7 @@ export default function CartPage() {
           <ShoppingBag className="size-7 text-accent" />
         </span>
         <h1 className="mt-5 font-display text-3xl text-text">Your cart is empty</h1>
-        <p className="mt-2 font-body text-muted">Nothing here yet — let&apos;s fix that.</p>
+        <p className="mt-2 font-body text-muted">Nothing here yet, let&apos;s fix that.</p>
         <Link href="/books" className="mt-6 inline-block rounded-full bg-accent px-6 py-3 font-data text-sm uppercase tracking-wide text-white hover:bg-accent-hover">
           Browse the shelves
         </Link>
@@ -142,11 +142,11 @@ export default function CartPage() {
             href={checkoutHref}
             className="mt-4 block rounded-full bg-accent px-6 py-3.5 text-center font-data text-sm font-medium text-white transition-colors hover:bg-accent-hover"
           >
-            Checkout — Cash on Delivery
+            Checkout (Cash on Delivery)
           </Link>
 
           <p className="mt-4 text-center font-body text-xs leading-relaxed text-muted">
-            Books only — the courier charges delivery separately when it hands the parcel over.
+            Books only. The courier charges delivery separately when it hands the parcel over.
           </p>
         </aside>
       </div>

@@ -60,7 +60,7 @@ export function ReviewForm({ slug }: { slug: string }) {
       setSent(true);
       router.refresh(); // pull in the newly-published review + updated rating
     } catch (err) {
-      setError(err instanceof ClientApiError ? err.message : "Couldn't post your review — try again.");
+      setError(err instanceof ClientApiError ? err.message : "Couldn't post your review, try again.");
     } finally {
       setLoading(false);
     }
@@ -92,7 +92,7 @@ export function ReviewForm({ slug }: { slug: string }) {
   }
 
   if (elig?.alreadyReviewed) {
-    return <p className="mt-4 font-body text-sm text-muted">You&apos;ve already reviewed this book — thank you.</p>;
+    return <p className="mt-4 font-body text-sm text-muted">You&apos;ve already reviewed this book, thank you.</p>;
   }
 
   if (!elig?.purchased) {
