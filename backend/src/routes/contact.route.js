@@ -14,7 +14,7 @@ const rateLimit = require("express-rate-limit");
 const router = express.Router();
 
 // Where contact-form notifications land. Falls back to the shop address the
-// storefront already publishes, so this works without extra config.
+// storefront already publishes, so this works without extra config
 const INBOX =
   process.env.CONTACT_EMAIL ||
   process.env.ADMIN_EMAIL ||
