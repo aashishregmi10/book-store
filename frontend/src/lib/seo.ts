@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import type { BookDetail, BookCardData, Genre, ReviewData } from "./types";
 
 export const SITE = {
@@ -28,6 +29,44 @@ export const SITE = {
 export const SAME_AS = Object.values(SITE.social);
 
 const abs = (path: string) => `${SITE.url}${path}`;
+
+/**
+ * Metadata for a private/functional page: login, register, cart, checkout,
+ * account, wishlist, order tracking, password reset.
+ *
+ * None of these export their own `metadata` today — every one is a "use
+ * client" page, which can't export it, so each silently inherited the ROOT
+ * layout's defaults: title "Buy Books Online in Nepal", description of the
+ * whole shop, `alternates.canonical: "/"`, and `robots: index, follow`. The
+ * result: a dozen different URLs all claiming via canonical to actually BE
+ * the homepage, while simultaneously telling Google to index them anyway —
+ * and /login, /register aren't even in robots.txt's disallow list, so Google
+ * really does crawl them and sees the contradiction.
+ *
+ * Apply this from a sibling layout.tsx (a Server Component can export
+ * metadata for a client page.tsx beneath it — that's the point of this
+ * helper). `noindex, follow` because none of these pages are something a
+ * search result should ever land someone on; `follow` so PageRank still
+ * flows through any links they contain. The canonical is self-referencing —
+ * standard practice even for a noindexed page, and it stops any other page
+ * (or an accidental repeat of this bug) from claiming to be its canonical
+ * home instead.
+ */
+export function utilityMetadata(path: string, title: string): Metadata {
+  return {
+    // `title.absolute`, not a plain string: the root layout's "%s | Books
+    // Temple Nepal" template only threads through the DIRECT parent segment
+    // (see Next's generate-metadata docs — "augment title.template from the
+    // closest parent segment"). account/settings sits two layouts deep under
+    // one that sets a plain string title with no template of its own, so a
+    // plain string here rendered as a bare "Account settings" with no
+    // suffix while every sibling page got it — inconsistent purely because
+    // of nesting depth. Writing it out explicitly is immune to that.
+    title: { absolute: `${title} | ${SITE.name}` },
+    alternates: { canonical: path },
+    robots: { index: false, follow: true },
+  };
+}
 
 // ── Organization / OnlineStore (homepage) — Nepal trust signals ───────
 export function organizationLd() {

@@ -1,0 +1,7 @@
+import { utilityMetadata } from "@/lib/seo";
+
+export const metadata = utilityMetadata("/login", "Sign in");
+
+export default function LoginLayout({ children }: { children: React.ReactNode }) {
+  return children;
+}

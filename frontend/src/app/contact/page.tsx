@@ -4,8 +4,10 @@ import { ContactForm } from "@/components/contact/ContactForm";
 
 export const metadata: Metadata = {
   title: "Contact",
+  // Trimmed to fit inside Google's ~155-160 char SERP snippet — the previous
+  // copy (175 chars) risked being cut mid-sentence.
   description:
-    "Get in touch with Books Temple Nepal — an online bookshop. Email or message us about an order, a book request, or trade enquiries. Cash on delivery across all seven provinces.",
+    "Get in touch with Books Temple Nepal. Email or message us about an order, a book request, or trade enquiries — cash on delivery across Nepal.",
   alternates: { canonical: "/contact" },
 };
 

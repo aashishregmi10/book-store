@@ -37,7 +37,13 @@ export default function AboutPage() {
         <div className="md:col-span-7">
           <p className="label-smallcaps font-data text-xs">Our story · Kathmandu, est. 2026</p>
           <h1 className="mt-3 font-display text-5xl leading-[1.05] text-text sm:text-6xl">
-            A small bookshop
+            {/* Trailing space before <br/> is deliberate: a <br> contributes no
+                text node, so scrapers/screen readers that read textContent
+                without layout (Google's snippet extraction, some a11y tools)
+                concatenated this straight into "bookshopwith" — the space
+                keeps the plain-text reading correct without changing how the
+                line visually breaks. */}
+            A small bookshop{" "}
             <br />
             <span className="text-accent">with a long memory.</span>
           </h1>
