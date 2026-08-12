@@ -98,13 +98,22 @@ function AdminBooksContent() {
     setSearchInput(search);
   }, [search]);
 
+  // Reads the live URL rather than the `searchParams` captured at render time.
+  // The debounced search effect depends only on `searchInput`, so it fires with
+  // whatever closure it was created in: click a tab while a keystroke is still
+  // settling and the pending push would replay the old query string and drop
+  // the tab again. Reading window.location at call time keeps every update a
+  // patch on the current URL instead of on a snapshot of an older one.
   function updateParams(patch: Record<string, string | null>) {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(
+      typeof window === "undefined" ? searchParams.toString() : window.location.search
+    );
     for (const [key, value] of Object.entries(patch)) {
       if (value === null) params.delete(key);
       else params.set(key, value);
     }
-    router.push(`${pathname}?${params}`, { scroll: false });
+    const qs = params.toString();
+    router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }
 
   useEffect(() => {
