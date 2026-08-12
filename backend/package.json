@@ -10,6 +10,8 @@
     "seed:admin": "node src/seed.js --admin-only",
     "import-books": "node scripts/import-books.js",
     "import-from-scrape": "node scripts/import-from-scrape.js",
+    "scrape-collisions": "node scripts/report-scrape-collisions.js",
+    "backfill-authors": "node scripts/backfill-authors.js",
     "fix-publishers": "node scripts/fix-publishers.js",
     "recategorize-kids": "node scripts/recategorize-kids.js",
     "seed-articles": "node scripts/seed-articles.js",

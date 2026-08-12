@@ -10,7 +10,8 @@
  * Books by ISBN, else (3) a generated editorial blurb — never the boilerplate.
  * Genre: parsed from Daraz when present → Google categories (only when we already
  * fetched them for the description) → a `--genre` fallback. Covers come from the
- * scraped Daraz image.
+ * scraped Daraz image. Books that land in `unclassified` are created as drafts
+ * (isActive:false) — it's a triage holding pen, not a browsable genre.
  *
  * Idempotent/resumable: a book whose ISBN or slug already exists is skipped.
  *
@@ -84,11 +85,17 @@ async function importBook(b, opts) {
   let meta = null;
   let description = '';
   const cleaned = cleanDaraz(b.description);
-  if (isMeaningful(cleaned, b.title)) {
-    description = cleaned;
-  } else if (opts.enrich && isbn13) {
+  if (isMeaningful(cleaned, b.title)) description = cleaned;
+
+  // Look the book up when we still need a description OR an author. Listing
+  // harvests frequently carry neither, and an "Unknown" author is a dead end
+  // for both SEO and the book-card design.
+  const needsDescription = !isMeaningful(description, b.title);
+  if (opts.enrich && isbn13 && (needsDescription || !b.author)) {
     try { meta = await lookupByIsbn(isbn13); } catch { meta = null; }
-    if (meta?.description && isMeaningful(meta.description, b.title)) description = meta.description.trim();
+    if (needsDescription && meta?.description && isMeaningful(meta.description, b.title)) {
+      description = meta.description.trim();
+    }
   }
   if (!isMeaningful(description, b.title)) {
     description = templateDescription({ title: b.title, author: b.author, pages: b.pages, format: parseFormat(b.description), language: b.language });
@@ -115,11 +122,15 @@ async function importBook(b, opts) {
     await Genre.updateOne({ slug: genre }, { $setOnInsert: { slug: genre, name: titleCase(genre), isActive: true } }, { upsert: true });
   }
 
+  // `unclassified` is a holding pen, not a browsable genre — a book whose
+  // subject data was inconclusive ships as a draft for triage, never live.
+  const isActive = genre !== 'unclassified';
+
   try {
     await Book.create({
       slug,
       title: b.title,
-      author: b.author || 'Unknown',
+      author: b.author || meta?.author || 'Unknown',
       isbn: isbn13 || undefined,
       genre,
       category,
@@ -128,20 +139,21 @@ async function importBook(b, opts) {
       coverImage,
       description,
       condition: 'new',
-      isActive: true,
+      isActive,
       supplier: b.brand || undefined, // the Daraz seller (NOT the publisher)
       specifications: {
-        format: parseFormat(b.description),
+        format: parseFormat(b.format) || parseFormat(b.description),
         pages: b.pages || undefined,
         language: b.language || meta?.specifications?.language || undefined,
-        // Real publisher only — comes from Google when we enriched this book;
-        // the dedicated fix-publishers script backfills the rest by ISBN.
-        publisher: meta?.specifications?.publisher || undefined,
+        // Real publisher only (never the Daraz seller). The listing harvest
+        // reads it straight off the "Publication:" spec line; otherwise it comes
+        // from Google when we enriched, and fix-publishers backfills the rest.
+        publisher: b.publisher || meta?.specifications?.publisher || undefined,
         weight: b.weight || undefined,
         isbn10: b.isbn10 || norm?.isbn10 || undefined,
       },
     });
-    return { status: 'created', title: b.title, slug, genre: genre || category, enriched: !!meta };
+    return { status: 'created', title: b.title, slug, genre: genre || category, enriched: !!meta, draft: !isActive };
   } catch (err) {
     return { status: err?.code === 11000 ? 'skipped' : 'failed', title: b.title, error: err?.message };
   }
@@ -190,7 +202,8 @@ async function run(books, opts) {
     fs.writeFileSync(failPath, ['title,reason', ...failed.map((r) => `${JSON.stringify(r.title || '')},${r.status}`)].join('\n'), 'utf8');
     logger.warn({ failPath }, 'Wrote failures CSV');
   }
-  logger.info({ tally }, 'Import complete — books are LIVE (isActive:true). Storefront may lag until cache revalidation.');
+  const drafts = results.filter((r) => r.draft).length;
+  logger.info({ tally, drafts }, 'Import complete — classified books are LIVE; unclassified ones are drafts awaiting triage. Storefront may lag until cache revalidation.');
   process.exit(0);
 })().catch((err) => {
   logger.error({ err: err.message }, 'Importer crashed');

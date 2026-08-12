@@ -56,6 +56,20 @@
       "runtimeArgs": ["--prefix", "D:/pageturn-nepal/frontend", "run", "start", "--", "--port", "3001"],
       "port": 3001,
       "autoPort": false
+    },
+    {
+      "name": "edunepal-backend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "D:/eduNepal/backend", "run", "dev"],
+      "port": 5001,
+      "autoPort": false
+    },
+    {
+      "name": "edunepal-frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "D:/eduNepal/frontend", "run", "dev", "--", "--port", "5173", "--strictPort"],
+      "port": 5173,
+      "autoPort": false
     }
   ]
 }

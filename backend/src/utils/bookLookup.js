@@ -250,6 +250,11 @@ async function lookupSubjects({ isbn, title, author } = {}) {
     }
   }
 
+  // A doc can name an author while listing no subjects. Subjects are what this
+  // function is for, so keep trying the remaining queries for them — but hold
+  // on to the author so a caller backfilling "Unknown" still gets an answer.
+  let fallbackAuthor;
+
   for (const qs of queries) {
     try {
       const url = `https://openlibrary.org/search.json?${qs}&fields=title,author_name,subject,publisher&limit=1`;
@@ -260,9 +265,14 @@ async function lookupSubjects({ isbn, title, author } = {}) {
       });
       if (!r.ok) continue;
       const doc = (await r.json())?.docs?.[0];
+      const docAuthor = Array.isArray(doc?.author_name)
+        ? doc.author_name[0]
+        : undefined;
+      if (!fallbackAuthor && docAuthor) fallbackAuthor = docAuthor;
       if (Array.isArray(doc?.subject) && doc.subject.length) {
         return {
           subjects: doc.subject.slice(0, 25),
+          author: docAuthor,
           publisher: Array.isArray(doc.publisher)
             ? doc.publisher[0]
             : undefined,
@@ -276,7 +286,7 @@ async function lookupSubjects({ isbn, title, author } = {}) {
       );
     }
   }
-  return null;
+  return fallbackAuthor ? { subjects: [], author: fallbackAuthor } : null;
 }
 
 module.exports = { lookupByIsbn, lookupBook, lookupSubjects };

@@ -20,6 +20,11 @@
  *   node scripts/eliminate-general.js                 # dry run + CSV
  *   node scripts/eliminate-general.js --apply
  *   node scripts/eliminate-general.js --apply --min 2 # stricter auto-apply
+ *
+ * Re-triage the residue later (e.g. once an import has supplied real
+ * descriptions, or GOOGLE_BOOKS_API_KEY has stopped the 429s). Anything that
+ * wins a genre is published, since `unclassified` was the only thing hiding it:
+ *   node scripts/eliminate-general.js --include-holding --drafts --apply
  */
 
 require('dotenv').config({ quiet: true });
@@ -56,9 +61,11 @@ const MIN_SCORE = 3;
 const MIN_MARGIN = 1;
 
 function parseArgs(argv) {
-  const a = { apply: false, min: MIN_MARGIN, minScore: MIN_SCORE };
+  const a = { apply: false, min: MIN_MARGIN, minScore: MIN_SCORE, includeHolding: false, drafts: false };
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === '--apply') a.apply = true;
+    else if (argv[i] === '--include-holding') a.includeHolding = true;
+    else if (argv[i] === '--drafts') a.drafts = true;
     else if (argv[i] === '--min') a.min = Number(argv[i + 1]);
     else if (argv[i] === '--min-score') a.minScore = Number(argv[i + 1]);
   }
@@ -134,8 +141,17 @@ async function main() {
   console.log(`retired-slug renames: ${renamed}${args.apply ? ' (applied)' : ' (would apply)'}\n`);
 
   // ── 2–5. Everything with no real genre ───────────────────
-  const books = await Book.find({ $or: [{ genre: 'general' }, { genre: null }, { genre: '' }] })
-    .select('slug title author description genre category isbn')
+  // `unclassified` is normally this script's OUTPUT, not its input. --include-holding
+  // re-runs the cascade over that residue, which is worth doing after a later
+  // import has given those books better descriptions (or an API key has made
+  // the provider lookups actually answer).
+  const genreFilter = [{ genre: 'general' }, { genre: null }, { genre: '' }];
+  if (args.includeHolding) genreFilter.push({ genre: HOLDING });
+  const bookFilter = { $or: genreFilter };
+  // Triage only the hidden import backlog, leaving live books alone.
+  if (args.drafts) bookFilter.isActive = false;
+  const books = await Book.find(bookFilter)
+    .select('slug title author description genre category isbn isActive')
     .lean();
 
   const fetchedSubjects = loadFetchedSubjects(process.cwd());
@@ -252,7 +268,11 @@ async function main() {
       }
     }
 
-    updates.push({ _id: b._id, genre });
+    // A book only sat hidden because it was unclassified — earning a real
+    // genre is exactly what it was waiting for, so publish it. Books hidden
+    // for any other reason keep whatever state an admin gave them.
+    const publish = b.genre === HOLDING && b.isActive === false && genre !== HOLDING;
+    updates.push({ _id: b._id, genre, publish });
     tally.set(genre, (tally.get(genre) || 0) + 1);
     bySource.set(source, (bySource.get(source) || 0) + 1);
     rows.push([b.slug, b.title, b.author, b.genre, genre, source, confidence, evidence]);
@@ -261,7 +281,10 @@ async function main() {
   if (args.apply) {
     // One bulkWrite instead of ~1500 round trips to Atlas.
     const ops = updates.map((u) => ({
-      updateOne: { filter: { _id: u._id }, update: { $set: { genre: u.genre } } },
+      updateOne: {
+        filter: { _id: u._id },
+        update: { $set: u.publish ? { genre: u.genre, isActive: true } : { genre: u.genre } },
+      },
     }));
     for (let i = 0; i < ops.length; i += 500) {
       await Book.bulkWrite(ops.slice(i, i + 500));

@@ -6,6 +6,10 @@ const nextConfig: NextConfig = {
     // Skip the optimizer in dev (it's slow and intermittently fails on large
     // covers); production keeps full AVIF/WebP optimization + edge caching.
     unoptimized: process.env.NODE_ENV === "development",
+    // Resize at Cloudinary instead of through Vercel's metered optimizer, which
+    // 402s every request once the monthly allowance is spent — see the loader.
+    loader: "custom",
+    loaderFile: "./src/lib/image-loader.ts",
     // Auto-serve AVIF/WebP and the right size per device.
     formats: ["image/avif", "image/webp"],
     remotePatterns: [
