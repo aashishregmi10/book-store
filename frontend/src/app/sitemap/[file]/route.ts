@@ -17,25 +17,48 @@ import {
 
 const base = SITE.url;
 
-function staticUrls(): SitemapUrl[] {
-  const lastmod = new Date().toISOString(); // static pages change on deploy
+// Hand-maintained: bump when the copy on these pages actually changes. A
+// generated timestamp here would be a lie — they change on edit, not on deploy.
+const EVERGREEN_LASTMOD = "2026-08-12";
+
+/**
+ * `lastmod` has to be earned, not stamped. Previously every entry carried
+ * `new Date()`, so the whole sitemap claimed to have changed on every
+ * regeneration — and a field that always says "just now" is one crawlers learn
+ * to ignore, which costs us the only crawl-scheduling hint Google says it uses.
+ *
+ * So: the home and catalogue pages inherit the newest book's `updatedAt` (the
+ * API returns books sorted `updatedAt` desc, so item 0 is the real high-water
+ * mark), the blog index inherits the newest article, and the truly static pages
+ * carry a date maintained by hand.
+ */
+function staticUrls(newestBook?: string, newestArticle?: string): SitemapUrl[] {
   return [
-    { loc: base, lastmod, changefreq: "daily", priority: 1 },
+    { loc: base, lastmod: newestBook, changefreq: "daily", priority: 1 },
     // /books is the canonical catalogue; filtered/sorted/paged variants carry
     // query params, are noindex'd, and are deliberately excluded here.
-    { loc: `${base}/books`, lastmod, changefreq: "daily", priority: 0.9 },
-    { loc: `${base}/about`, lastmod, changefreq: "monthly", priority: 0.5 },
-    { loc: `${base}/contact`, lastmod, changefreq: "monthly", priority: 0.4 },
-    { loc: `${base}/blog`, lastmod, changefreq: "weekly", priority: 0.6 },
+    { loc: `${base}/books`, lastmod: newestBook, changefreq: "daily", priority: 0.9 },
+    { loc: `${base}/about`, lastmod: EVERGREEN_LASTMOD, changefreq: "monthly", priority: 0.5 },
+    { loc: `${base}/contact`, lastmod: EVERGREEN_LASTMOD, changefreq: "monthly", priority: 0.4 },
+    { loc: `${base}/blog`, lastmod: newestArticle, changefreq: "weekly", priority: 0.6 },
   ];
 }
 
-export async function GET(_req: Request, { params }: { params: Promise<{ file: string }> }) {
-  const { file } = await params;
-  const id = file.replace(/\.xml$/, "");
+/** An API failure must not render as "these URLs no longer exist". */
+function unavailable() {
+  return new Response("Sitemap temporarily unavailable", {
+    status: 503,
+    headers: { "Retry-After": "300", "Cache-Control": "no-store" },
+  });
+}
 
+async function renderChild(id: string): Promise<Response> {
   if (id === "static") {
-    return xmlResponse(renderUrlset(staticUrls()), CACHE.static);
+    const [books, articles] = await Promise.all([getBookSitemapPage(1), getBlogArticles()]);
+    return xmlResponse(
+      renderUrlset(staticUrls(books.items[0]?.updatedAt, articles[0]?.publishedAt)),
+      CACHE.static
+    );
   }
 
   if (id === "categories") {
@@ -113,4 +136,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ file: s
   }
 
   return new Response("Sitemap not found", { status: 404 });
+}
+
+export async function GET(_req: Request, { params }: { params: Promise<{ file: string }> }) {
+  const { file } = await params;
+  try {
+    return await renderChild(file.replace(/\.xml$/, ""));
+  } catch {
+    return unavailable();
+  }
 }

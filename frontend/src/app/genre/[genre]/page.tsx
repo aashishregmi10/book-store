@@ -111,11 +111,17 @@ export default async function GenrePage({
     .map(([k, v]) => `${k}=${encodeURIComponent(v as string)}`)
     .join("&");
 
+  // Only show an intro when there is genuinely one to show. `description` is
+  // admin-editable and has historically held placeholders ("Test for fiction")
+  // and empty strings; a length floor is a cheap way to keep those off a public
+  // page without needing a separate "is this real" flag.
+  const hasIntro = (genre.description ?? "").trim().length >= 60;
+
   return (
     <>
       <JsonLd
         data={[
-          itemListLd(genre, items),
+          itemListLd(`Best ${genre.name} Books in Nepal`, items),
           breadcrumbLd([{ name: "Home", path: "/" }, { name: genre.name, path: `/genre/${genre.slug}` }]),
         ]}
       />
@@ -127,17 +133,28 @@ export default async function GenrePage({
           <span className="text-text">{genre.name}</span>
         </nav>
 
-        {/* Genre masthead — the shelf name alone. "Best <Genre> Books in Nepal"
-            reads as keyword stuffing at display size, and the blurb beneath it
-            was the same sentence with one word swapped on most genres. Search
-            still gets the phrase from the <title> tag, the meta description and
-            the ItemList JSON-LD, none of which a visitor has to read past. */}
+        {/* Genre masthead. The H1 carries "Books in Nepal" — the phrase the page
+            is actually competing for, and the same wording the taxonomy already
+            uses for metaTitle. "Best <Genre> Books in Nepal" would read as
+            keyword stuffing at display size; this doesn't.
+
+            The intro is back, but on a condition: the old blurb was dropped
+            because it was one sentence with a word swapped on every genre, and
+            because the field then filled up with placeholders ("Test for
+            fiction"). It renders only when there is real copy behind it, so a
+            half-written genre shows nothing rather than something embarrassing.
+            Without it these pages were an H1 and a product grid — thin, on the
+            exact URLs meant to rank for "{genre} books in nepal". */}
         <header className="mt-4 border-l-2 border-accent bg-surface py-7 pl-6 pr-6 sm:py-9 sm:pl-9">
           {/* No count here — the toolbar directly below already reports how many
               books are showing, and it tracks the active filters. */}
           <h1 className="max-w-4xl font-display text-4xl leading-[1.12] text-text sm:text-5xl lg:text-[3.25rem]">
-            {genre.name}
+            {genre.name} Books in Nepal
           </h1>
+
+          {hasIntro && (
+            <p className="mt-5 max-w-3xl font-body leading-relaxed text-text">{genre.description}</p>
+          )}
 
           {/* Kept: unlike the generic blurb, a curator note is written per genre
               and only renders where someone actually wrote one. */}

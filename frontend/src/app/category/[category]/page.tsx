@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { apiGet } from "@/lib/api";
-import type { BookCardData, Genre, Paged } from "@/lib/types";
+import type { BookCardData, Paged } from "@/lib/types";
 import { itemListLd, breadcrumbLd } from "@/lib/seo";
 import { JsonLd } from "@/components/JsonLd";
 import { BooksFilters } from "@/components/books/BooksFilters";
@@ -119,14 +119,11 @@ export default async function CategoryPage({
     .map(([k, v]) => `${k}=${encodeURIComponent(v as string)}`)
     .join("&");
 
-  // itemListLd only reads `name`; pass a minimal section object.
-  const listGenre = { name: s.name, slug: category } as unknown as Genre;
-
   return (
     <>
       <JsonLd
         data={[
-          itemListLd(listGenre, items),
+          itemListLd(`Best ${s.name} Books in Nepal`, items),
           breadcrumbLd([{ name: "Home", path: "/" }, { name: s.name, path: `/category/${category}` }]),
         ]}
       />

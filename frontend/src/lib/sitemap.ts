@@ -39,29 +39,45 @@ export const CACHE = {
   blog: DAY / 2, // 12h
 } as const;
 
+// These deliberately do NOT swallow errors. Returning an empty list on failure
+// renders a valid-but-empty <urlset>, which tells crawlers every URL in it is
+// gone — far worse than serving nothing. The route turns a throw into a 503 so
+// Google retries and keeps the last good copy it has.
+
 /** A single 50k page of indexable books. Page is 1-based. */
 export function getBookSitemapPage(page: number): Promise<BookSitemapPage> {
   return apiGet<BookSitemapPage>("/books/sitemap", {
     revalidate: CACHE.books,
     searchParams: { page, limit: BOOKS_PER_SITEMAP },
-  }).catch(() => ({ total: 0, items: [] })); // resilient: empty-but-valid sitemap if the API is down
+  });
 }
 
 /** Category + genre slugs that hold ≥1 indexable book, with their freshness. */
 export function getSitemapSections(): Promise<SitemapSections> {
-  return apiGet<SitemapSections>("/books/sitemap/sections", { revalidate: CACHE.categories }).catch(
-    () => ({ categories: [], genres: [] })
-  );
+  return apiGet<SitemapSections>("/books/sitemap/sections", { revalidate: CACHE.categories });
 }
 
-/** Published blog articles (few enough to never need sharding). */
-export function getBlogArticles(): Promise<ArticleCard[]> {
-  return apiGet<Paged<ArticleCard>>("/articles", {
-    revalidate: CACHE.blog,
-    searchParams: { limit: 1000 },
-  })
-    .then((p) => p.items)
-    .catch(() => []);
+/** The API's per-request ceiling for article lists (see articles.route.js). */
+const ARTICLES_PER_REQUEST = 100;
+
+/**
+ * Published blog articles (few enough to never need sharding).
+ *
+ * Pages through the list rather than asking for everything at once: the API
+ * rejects an over-large `limit` outright, and a rejected request here used to
+ * come back as an empty array, which rendered a valid-but-empty <urlset> and
+ * quietly de-listed every article from the sitemap.
+ */
+export async function getBlogArticles(): Promise<ArticleCard[]> {
+  const out: ArticleCard[] = [];
+  for (let page = 1; ; page += 1) {
+    const res = await apiGet<Paged<ArticleCard>>("/articles", {
+      revalidate: CACHE.blog,
+      searchParams: { page, limit: ARTICLES_PER_REQUEST },
+    });
+    out.push(...res.items);
+    if (page >= (res.pages || 1) || !res.items.length) return out;
+  }
 }
 
 // ── XML rendering ────────────────────────────────────────

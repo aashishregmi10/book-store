@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { apiGet, CACHE_TTL } from "@/lib/api";
+import { itemListLd, breadcrumbLd } from "@/lib/seo";
+import { JsonLd } from "@/components/JsonLd";
 import type { BookCardData, Genre, Paged } from "@/lib/types";
 import { BooksFilters } from "@/components/books/BooksFilters";
 import { BooksToolbar } from "@/components/books/BooksToolbar";
@@ -90,14 +92,42 @@ export default async function BooksPage({
     .map(([k, v]) => `${k}=${encodeURIComponent(v as string)}`)
     .join("&");
 
+  const items = data?.items ?? [];
+  // The unfiltered catalogue is the page competing for "books in nepal" and is
+  // the strongest internal hub on the site, yet it was the only major template
+  // emitting no structured data and no breadcrumb at all. Filtered and searched
+  // views are noindex'd (see generateMetadata), so they get no markup either —
+  // describing a transient result set as a catalogue would be a lie.
+  const isCanonicalView = !FILTER_PARAMS.some((k) => sp[k]);
+
   return (
     <div className="shell py-10">
+      {isCanonicalView && (
+        <JsonLd
+          data={[
+            itemListLd("Books available in Nepal", items),
+            breadcrumbLd([
+              { name: "Home", path: "/" },
+              { name: "All books", path: "/books" },
+            ]),
+          ]}
+        />
+      )}
+
+      {/* Breadcrumb matches the JSON-LD above — Google expects the markup to
+          reflect something actually on the page. */}
+      <nav aria-label="Breadcrumb" className="mb-4 font-data text-xs uppercase tracking-wide text-muted">
+        <Link href="/" className="hover:text-accent">Home</Link>
+        <span className="px-2">/</span>
+        <span className="text-text">All books</span>
+      </nav>
+
       {/* The catalogue had no <h1> at all — the outline started at the toolbar's
           h2 and screen-reader users landed on a page with no stated subject.
           It reflects the active search, since "All books" is a lie once a
           query is applied. */}
       <h1 className="mb-5 font-display text-3xl text-text sm:text-4xl">
-        {sp.q ? <>Search: <span className="text-accent">{sp.q}</span></> : "All books"}
+        {sp.q ? <>Search: <span className="text-accent">{sp.q}</span></> : "Buy Books Online in Nepal"}
       </h1>
 
       {/* Quick genre chips — mobile-first browse without opening the filter panel */}

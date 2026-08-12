@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import type { BookDetail, BookCardData, Genre, ReviewData } from "./types";
+import type { BookDetail, BookCardData, ReviewData } from "./types";
 
 export const SITE = {
   name: "Books Temple Nepal",
@@ -238,12 +238,16 @@ export function breadcrumbLd(items: { name: string; path: string }[]) {
   };
 }
 
-// ── ItemList (genre silo page) ──────────────────────────
-export function itemListLd(genre: Genre, books: BookCardData[]) {
+// ── ItemList (genre silo, section and catalogue pages) ──────────────────────
+// Takes the finished list name rather than a Genre. It only ever read `name`,
+// which meant the section page had to launder a `{name, slug}` object through
+// `as unknown as Genre` to call it, and the catalogue page — which has no genre
+// at all — could not call it without inventing one.
+export function itemListLd(name: string, books: BookCardData[]) {
   return {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    name: `Best ${genre.name} Books in Nepal`,
+    name,
     numberOfItems: books.length,
     itemListElement: books.map((b, i) => ({
       "@type": "ListItem",

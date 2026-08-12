@@ -66,8 +66,21 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       book.metaDescription ||
       `Buy ${book.title} by ${book.author} online in Nepal for ${npr(book.price)}. ${soldOut ? "Currently out of stock. See similar titles." : "In stock, cash on delivery across Nepal."}`,
     alternates: { canonical: `/books/${book.slug}` },
-    // Out-of-stock pages stay live but temporarily noindex (SEO Guide §8.1).
-    robots: soldOut ? { index: false, follow: true } : undefined,
+    // Only `discontinued` — permanently gone — is noindexed. Merely being out of
+    // stock is not.
+    //
+    // This is a deliberate divergence from CLAUDE.md §"Out-of-stock books stay
+    // 200 … + temporary noindex", agreed with the shop owner. The reason is the
+    // stock model: titles are held at ~2 copies, so a book crosses in and out of
+    // stock constantly. Under the old rule each crossing pulled the URL from the
+    // index and every restock made it re-earn its ranking from nothing — churn
+    // across hundreds of pages, and no page ever accumulating history. Google's
+    // guidance for temporarily unavailable products is to keep them indexable
+    // and say so in the markup, which `bookLd()` already does via
+    // `availability: OutOfStock`. Please don't "restore" the noindex here
+    // without re-reading that reasoning.
+    robots:
+      book.stockStatus === "discontinued" ? { index: false, follow: true } : undefined,
     openGraph: {
       type: "website",
       title: `${book.title} by ${book.author}`,
@@ -171,7 +184,21 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
                     fake-urgency tactic. In stock or not, nothing in between. */}
                 <p className="mt-2 font-data text-sm">
                   {soldOut ? (
-                    <span className="text-sale">Currently out of stock</span>
+                    <>
+                      <span className="text-sale">Currently out of stock</span>
+                      {/* This page stays indexed while out of stock, so someone
+                          can land here from search and find nothing to buy.
+                          Point them at the same-silo alternatives already on the
+                          page rather than letting them bounce. */}
+                      {related.length > 0 && (
+                        <>
+                          {" · "}
+                          <a href="#more-like-this" className="text-accent underline underline-offset-4">
+                            see similar titles
+                          </a>
+                        </>
+                      )}
+                    </>
                   ) : (
                     <span className="text-accent">In stock · ships today from Kathmandu</span>
                   )}
@@ -285,7 +312,7 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
 
         {/* Same-silo related */}
         {related.length > 0 && (
-          <section className="mt-14">
+          <section id="more-like-this" className="mt-14" style={{ scrollMarginTop: "5rem" }}>
             <h2 className="font-display text-2xl text-text">
               {book.genre === HOLDING_GENRE && !book.category
                 ? "More books"

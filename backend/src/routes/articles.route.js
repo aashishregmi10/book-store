@@ -13,7 +13,12 @@ const router = express.Router();
 const LIST = 'slug title excerpt coverImage author category tags publishedAt readingTime';
 const BOOK_FIELDS = 'slug title author price comparePrice coverImage avgRating reviewCount stockStatus genre isBestseller isNewArrival';
 
-const pageQuery = z.object({ page: intQuery({ min: 1 }).optional(), limit: intQuery({ min: 1, max: 50 }).optional() });
+// max 200 rather than 50 so the sitemap can pull the whole article list in one
+// or two pages. At 50 the sitemap's request was rejected outright and the
+// frontend's .catch() turned that 400 into an empty <urlset> — every published
+// article silently vanished from the sitemap. Still bounded: this is a public,
+// cached endpoint and an unbounded limit is a cheap way to make it expensive.
+const pageQuery = z.object({ page: intQuery({ min: 1 }).optional(), limit: intQuery({ min: 1, max: 200 }).optional() });
 const slugParams = z.object({ slug: trimmedString() });
 
 // ── GET /api/articles — published list (blog index) ──

@@ -18,6 +18,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { apiGet, CACHE_TTL } from "@/lib/api";
+import { itemListLd } from "@/lib/seo";
+import { JsonLd } from "@/components/JsonLd";
 import type { BookCardData, Genre } from "@/lib/types";
 import { BookShelf } from "@/components/books/BookShelf";
 import { CategoryCircles } from "@/components/home/CategoryCircles";
@@ -94,8 +96,19 @@ async function getQuickBrowse() {
 export default async function HomePage() {
   const [data, quickBrowse] = await Promise.all([getFeatured(), getQuickBrowse()]);
 
+  // The three shelves are the only concrete products on the homepage, and the
+  // homepage is where the domain's authority concentrates — worth telling
+  // crawlers which titles they are rather than leaving them as anonymous cards.
+  // Organization/WebSite already come from ChromeGate on every page.
+  const shelves = [
+    { name: "Bestsellers in Nepal", books: data?.bestsellers ?? [] },
+    { name: "New arrivals", books: data?.newArrivals ?? [] },
+    { name: "Staff favourites", books: data?.featured ?? [] },
+  ].filter((s) => s.books.length);
+
   return (
     <>
+      {shelves.length > 0 && <JsonLd data={shelves.map((s) => itemListLd(s.name, s.books))} />}
       {/* Welcome strip. Takes the place the hero used to occupy, at a fraction
           of its height: the hero was a full-bleed shelf photo carrying one
           headline and one CTA, and it pushed every actual book below the fold.
@@ -108,12 +121,25 @@ export default async function HomePage() {
           {/* This is the homepage <h1>, not a decorative line. Removing the old
               hero took the only h1 on the site's most important page with it,
               leaving the document outline starting at h2. Styled to sit quietly
-              in the strip — heading level and type scale are separate calls. */}
+              in the strip — heading level and type scale are separate calls.
+
+              It says what the shop is, because after <title> this is the
+              strongest relevance signal on the page the domain's authority
+              concentrates on, and "Welcome in. Pull up a chair" said nothing a
+              search for "buy books online in nepal" could match. The warmth
+              didn't have to be sacrificed for that — it moved one line down.
+
+              The sentence beneath is deliberately extractable: entity, then
+              category, then geography, then three concrete facts. That is the
+              shape an answer engine can lift whole and attribute, and it is
+              doing double duty as the page's opening line. */}
           <h1 className="font-display text-lg font-semibold text-text sm:text-xl">
-            Welcome in. Pull up a chair and have a browse.
+            Buy books online in Nepal
           </h1>
           <p className="mt-1 font-body text-sm text-muted">
-            Nepal&apos;s bookshop that never closes. Whatever you&apos;re in the mood for, it&apos;s on a shelf here somewhere.
+            Books Temple Nepal is an online bookstore delivering to all seven provinces — prices in
+            NPR, cash on delivery, 1&ndash;2 days inside the Kathmandu Valley and 3&ndash;5 days
+            elsewhere. Pull up a chair and have a browse.
           </p>
         </div>
       </section>
