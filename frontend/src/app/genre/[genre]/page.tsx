@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 
 import { apiGet, apiGetOrNull, CACHE_TTL } from "@/lib/api";
 import type { Genre, BookCardData, Paged } from "@/lib/types";
-import { itemListLd, breadcrumbLd } from "@/lib/seo";
+import { itemListLd, breadcrumbLd, listingIndexing } from "@/lib/seo";
 import { JsonLd } from "@/components/JsonLd";
 import { BooksFilters } from "@/components/books/BooksFilters";
 import { BooksToolbar } from "@/components/books/BooksToolbar";
@@ -45,12 +45,12 @@ export async function generateMetadata({
   const data = await getGenre(slug);
   if (!data) return { title: "Genre not found" };
   const { genre } = data;
-  const filtered = FILTER_PARAMS.some((k) => sp[k]);
+  const page = Math.max(1, Number(sp.page) || 1);
+  const base = genre.metaTitle || `Best ${genre.name} Books in Nepal`;
   return {
-    title: genre.metaTitle || `Best ${genre.name} Books in Nepal`,
+    title: page > 1 ? `${base} — page ${page}` : base,
     description: genre.metaDesc || `Buy ${genre.name} books online in Nepal with cash on delivery.`,
-    alternates: { canonical: `/genre/${genre.slug}` },
-    ...(filtered ? { robots: { index: false, follow: true } } : {}),
+    ...listingIndexing(`/genre/${genre.slug}`, sp, FILTER_PARAMS),
   };
 }
 

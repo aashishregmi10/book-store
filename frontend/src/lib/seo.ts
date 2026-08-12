@@ -238,6 +238,39 @@ export function breadcrumbLd(items: { name: string; path: string }[]) {
   };
 }
 
+/**
+ * Canonical + robots for a paginated listing (/books, /genre/x, /category/x).
+ *
+ * Pagination is not a filter, and treating it as one was quietly costing us the
+ * catalogue. `?page=2` is a distinct, non-duplicate slice of the shelf and the
+ * only crawl path to the ~2,600 books that sit past page 1 — but it was lumped
+ * in with the facets and served `noindex`. Google eventually stops following
+ * links on pages it has long been told not to index, so that path was set to
+ * decay and take most of the catalogue's discoverability with it.
+ *
+ * So: a clean page N indexes itself and canonicalises to itself. Anything with
+ * a real facet or a non-default sort is a narrowed, near-duplicate view — those
+ * still consolidate onto the bare path and stay out of the index, with links
+ * followable so the crawl continues through them.
+ *
+ * Keeping the rule here rather than in three route files is deliberate: the
+ * three filter lists had already drifted (a `?author=` on a section page was
+ * neither handled nor noindexed), which is exactly the bug this prevents.
+ */
+export function listingIndexing(
+  path: string,
+  sp: Record<string, string | undefined>,
+  filterKeys: readonly string[]
+): Pick<Metadata, "alternates" | "robots"> {
+  const page = Math.max(1, Number(sp.page) || 1);
+  const narrowed = filterKeys.some((k) => k !== "page" && sp[k]);
+
+  if (narrowed) {
+    return { alternates: { canonical: path }, robots: { index: false, follow: true } };
+  }
+  return { alternates: { canonical: page > 1 ? `${path}?page=${page}` : path } };
+}
+
 // ── ItemList (genre silo, section and catalogue pages) ──────────────────────
 // Takes the finished list name rather than a Genre. It only ever read `name`,
 // which meant the section page had to launder a `{name, slug}` object through
@@ -254,6 +287,23 @@ export function itemListLd(name: string, books: BookCardData[]) {
       position: i + 1,
       url: abs(`/books/${b.slug}`),
       name: b.title,
+    })),
+  };
+}
+
+// ── FAQPage (the shop's standing answers) ───────────────────────────────────
+// Emitted on /faq only. The same questions appear as plain copy elsewhere on
+// the site, but marking them up in more than one place asks Google to decide
+// which URL owns the answer, and it tends to trust none of them.
+export function faqLd(faqs: { question: string; answer: string }[]) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "@id": abs("/faq") + "#faq",
+    mainEntity: faqs.map((f) => ({
+      "@type": "Question",
+      name: f.question,
+      acceptedAnswer: { "@type": "Answer", text: f.answer },
     })),
   };
 }

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { apiGet } from "@/lib/api";
 import type { BookCardData, Paged } from "@/lib/types";
-import { itemListLd, breadcrumbLd } from "@/lib/seo";
+import { itemListLd, breadcrumbLd, listingIndexing } from "@/lib/seo";
 import { JsonLd } from "@/components/JsonLd";
 import { BooksFilters } from "@/components/books/BooksFilters";
 import { BooksGrid } from "@/components/books/BooksGrid";
@@ -14,7 +14,13 @@ import { BooksGrid } from "@/components/books/BooksGrid";
 
 // Filters relevant to a fixed section page (genre is excluded — the section IS
 // the silo; author/publisher omitted to keep it focused).
-const FILTER_KEYS = ["language", "format", "year", "minPrice", "maxPrice", "minRating", "sort", "page"] as const;
+// Kept in step with the sibling lists in /books and /genre. This one used to be
+// narrower, so an `?author=` on a section URL was neither applied as a filter
+// nor kept out of the index — a crawlable, near-duplicate view of the section.
+const FILTER_KEYS = [
+  "language", "format", "year", "minPrice", "maxPrice", "minRating", "sort", "page",
+  "author", "publisher", "q",
+] as const;
 
 // The browse sections (separate from the literary genre silo). Slugs match the
 // backend Book.category enum.
@@ -77,12 +83,11 @@ export async function generateMetadata({
   if (!isSection(category)) return { title: "Section not found" };
   const sp = await searchParams;
   const s = SECTIONS[category];
-  const filtered = FILTER_KEYS.some((k) => sp[k]);
+  const page = Math.max(1, Number(sp.page) || 1);
   return {
-    title: `${s.heading} | Buy Online`,
+    title: page > 1 ? `${s.heading} — page ${page} | Buy Online` : `${s.heading} | Buy Online`,
     description: s.blurb,
-    alternates: { canonical: `/category/${category}` },
-    ...(filtered ? { robots: { index: false, follow: true } } : {}),
+    ...listingIndexing(`/category/${category}`, sp, FILTER_KEYS),
   };
 }
 

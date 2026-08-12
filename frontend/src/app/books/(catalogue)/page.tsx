@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { apiGet, CACHE_TTL } from "@/lib/api";
-import { itemListLd, breadcrumbLd } from "@/lib/seo";
+import { itemListLd, breadcrumbLd, listingIndexing } from "@/lib/seo";
 import { JsonLd } from "@/components/JsonLd";
 import type { BookCardData, Genre, Paged } from "@/lib/types";
 import { BooksFilters } from "@/components/books/BooksFilters";
@@ -32,12 +32,11 @@ export async function generateMetadata({
   searchParams: Promise<Record<string, string | undefined>>;
 }): Promise<Metadata> {
   const sp = await searchParams;
-  const filtered = FILTER_PARAMS.some((k) => sp[k]);
+  const page = Math.max(1, Number(sp.page) || 1);
   return {
-    title: sp.q ? `Search: ${sp.q}` : "All Books",
+    title: sp.q ? `Search: ${sp.q}` : page > 1 ? `All Books — page ${page}` : "All Books",
     description: "Browse every title at Books Temple Nepal. NPR prices, cash on delivery across all seven provinces.",
-    alternates: { canonical: "/books" },
-    ...(filtered ? { robots: { index: false, follow: true } } : {}),
+    ...listingIndexing("/books", sp, FILTER_PARAMS),
   };
 }
 
@@ -97,8 +96,9 @@ export default async function BooksPage({
   // the strongest internal hub on the site, yet it was the only major template
   // emitting no structured data and no breadcrumb at all. Filtered and searched
   // views are noindex'd (see generateMetadata), so they get no markup either —
-  // describing a transient result set as a catalogue would be a lie.
-  const isCanonicalView = !FILTER_PARAMS.some((k) => sp[k]);
+  // describing a transient result set as a catalogue would be a lie. Page 2+ of
+  // the plain catalogue does get it: it is indexed, and it is a real list.
+  const isCanonicalView = !FILTER_PARAMS.some((k) => k !== "page" && sp[k]);
 
   return (
     <div className="shell py-10">

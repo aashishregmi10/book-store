@@ -1,5 +1,6 @@
 import { SITE } from "@/lib/seo";
 import { apiGet } from "@/lib/api";
+import { FAQS } from "@/lib/faq";
 import type { Genre } from "@/lib/types";
 
 // /llms.txt — an emerging convention that gives AI crawlers a clean, curated
@@ -28,6 +29,7 @@ delivery in 1–2 days inside the Kathmandu Valley and 3–5 days elsewhere.
 
 ## Key pages
 - [Full catalogue](${SITE.url}/books): every title in stock, filterable by genre, language, format and year.
+- [Questions](${SITE.url}/faq): delivery times, courier charges, cash on delivery, cancellations and replacements.
 - [Our story](${SITE.url}/about): who we are and how we curate.
 - [Contact](${SITE.url}/contact): reach the shop.
 - [Reading guides & articles](${SITE.url}/blog): book recommendations and buying guides for Nepali readers.
@@ -41,6 +43,9 @@ ${genreLines || `- [Browse all genres](${SITE.url}/books)`}
   on handover, based on the destination. The shop does not set or collect it.
 - Delivery: 1–2 days in Kathmandu Valley, 3–5 days to the rest of Nepal.
 - Every order is carefully packed and shipped safely.
+
+## Common questions
+${FAQS.map((f) => `- ${f.question}\n  ${f.answer}`).join("\n")}
 
 ## Contact
 - Email: ${SITE.email}

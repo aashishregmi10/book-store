@@ -59,7 +59,11 @@ async function buildIndex() {
     if (id === "categories") return newest(sections.categories.map((c) => c.lastmod));
     if (id === "genres") return newest(sections.genres.map((g) => g.lastmod));
     if (id === "blog") return blogLastmod;
-    return booksLastmod; // books-N
+    // Books are sorted updatedAt desc, so only shard 0 has a lastmod we already
+    // know. Establishing it for the rest would mean fetching every shard just to
+    // read its first row. An omitted lastmod costs a crawl hint; a wrong one
+    // costs the field's credibility everywhere, so the later shards say nothing.
+    return id === "books-0" ? booksLastmod : undefined;
   };
 
   const ids = [

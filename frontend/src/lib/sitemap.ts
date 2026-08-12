@@ -5,8 +5,13 @@
 import { apiGet } from "./api";
 import type { ArticleCard, Paged } from "./types";
 
-// Google's hard limit is 50,000 URLs per sitemap file — must match the backend.
-export const BOOKS_PER_SITEMAP = 50000;
+// Google's hard limit is 50,000 URLs per file, but the useful limit is much
+// lower: Search Console reports indexed-vs-submitted *per sitemap file*, so one
+// file holding the whole catalogue yields a single number that says nothing
+// about which pages are struggling. At 1,000 the shards are ordered by
+// updatedAt, so a shard is a cohort — and "shard 3 is indexing at 20% while
+// shard 0 is at 90%" is a finding you can act on.
+export const BOOKS_PER_SITEMAP = 1000;
 
 export interface BookSitemapItem {
   slug: string;

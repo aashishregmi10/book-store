@@ -59,7 +59,12 @@ router.get(
   async (req, res, next) => {
     try {
       const page = req.query.page || 1;
-      const limit = req.query.limit || 25;
+      // 48, not 25: at 25 the catalogue ran to ~122 pages and most of it sat
+      // far enough down the chain that crawlers rarely walked it. This nearly
+      // halves that depth. It costs transfer bytes, not LCP — covers below the
+      // fold are lazy-loaded, so the largest element in the viewport is
+      // unchanged, and the extra rows are markup rather than images.
+      const limit = req.query.limit || 48;
       const sort = SORTS[req.query.sort] || SORTS.newest;
 
       const filter = { isActive: true };
@@ -373,12 +378,20 @@ router.get('/:slug', validate({ params: slugParams }), async (req, res, next) =>
 
     // Related: prefer explicit relatedSlugs (same silo); then fill from the same
     // section (Manga/Kids/Loksewa) when the book has one, else the same genre.
+    //
+    // RELATED_LIMIT is the lateral crawl graph. Most of the catalogue sits well
+    // past page 1 of any listing, so these same-silo links are how a crawler
+    // (and a browsing reader) actually reaches the middle of the shelf. At 4 the
+    // graph was sparse enough that large stretches of the catalogue were only
+    // reachable via the sitemap; 10 roughly triples the link density for the
+    // cost of a larger $sample, and still fits the 5-column grid at two rows.
+    const RELATED_LIMIT = 10;
     const related = await (async () => {
       let books = [];
       if (book.relatedSlugs?.length) {
-        books = await Book.find({ slug: { $in: book.relatedSlugs }, isActive: true }).select(LIST_FIELDS).limit(4).lean();
+        books = await Book.find({ slug: { $in: book.relatedSlugs }, isActive: true }).select(LIST_FIELDS).limit(RELATED_LIMIT).lean();
       }
-      if (books.length < 4) {
+      if (books.length < RELATED_LIMIT) {
         const have = new Set(books.map((b) => b.slug));
         have.add(book.slug);
         const siblingFilter = book.category ? { category: book.category } : { genre: book.genre };
@@ -387,7 +400,7 @@ router.get('/:slug', validate({ params: slugParams }), async (req, res, next) =>
         const project = LIST_FIELDS.split(' ').reduce((o, f) => ((o[f] = 1), o), {});
         const fill = await Book.aggregate([
           { $match: { ...siblingFilter, isActive: true, slug: { $nin: [...have] } } },
-          { $sample: { size: 4 - books.length } },
+          { $sample: { size: RELATED_LIMIT - books.length } },
           { $project: project },
         ]);
         books = books.concat(fill);

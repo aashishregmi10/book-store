@@ -56,8 +56,11 @@ export function Footer() {
             height={427}
             className="h-16 w-auto sm:h-20"
           />
+          {/* Keep this number honest and rounded down. It was "over 2,000" long
+              after the catalogue passed 3,000, and a figure like this gets
+              repeated back at us by AI answers and customers alike. */}
           <p className="mt-4 max-w-md font-body text-sm leading-relaxed text-muted">
-            A bookshop for Nepali readers. Over 2,000 titles in English and Nepali, carefully packed and
+            A bookshop for Nepali readers. Over 3,000 titles in English and Nepali, carefully packed and
             carried to all 77 districts.
           </p>
 
@@ -83,10 +86,19 @@ export function Footer() {
         <div>
           <div className="font-display text-sm uppercase tracking-[0.2em] text-text">Read</div>
           <ul className="mt-4 space-y-2 font-body text-sm text-muted">
+            {/* Sitewide links into the silo hubs. The footer appears on every
+                page, so these are the cheapest way to keep each genre within
+                one hop of the whole site instead of only the mega-menu.
+                "Mystery box" used to sit here pointing at /account, which is
+                noindexed and behind a login: a dead end for crawlers and a
+                misleading label for readers. */}
             <li><Link href="/books" className="hover:text-accent">Catalogue</Link></li>
             <li><Link href="/genre/nepali-literature" className="hover:text-accent">Nepali literature</Link></li>
+            <li><Link href="/genre/fiction" className="hover:text-accent">Fiction</Link></li>
+            <li><Link href="/genre/self-help" className="hover:text-accent">Self-help</Link></li>
+            <li><Link href="/category/kids" className="hover:text-accent">Children&apos;s books</Link></li>
+            <li><Link href="/category/loksewa" className="hover:text-accent">Loksewa</Link></li>
             <li><Link href="/blog" className="hover:text-accent">Reading guides</Link></li>
-            <li><Link href="/account" className="hover:text-accent">Mystery box</Link></li>
           </ul>
         </div>
 
@@ -94,8 +106,8 @@ export function Footer() {
           <div className="font-display text-sm uppercase tracking-[0.2em] text-text">Shop</div>
           <ul className="mt-4 space-y-2 font-body text-sm text-muted">
             <li><Link href="/about" className="hover:text-accent">Our story</Link></li>
+            <li><Link href="/faq" className="hover:text-accent">Questions</Link></li>
             <li><Link href="/contact" className="hover:text-accent">Contact</Link></li>
-            <li><Link href="/account" className="hover:text-accent">Rewards &amp; tiers</Link></li>
             <li><Link href="/track" className="hover:text-accent">Track an order</Link></li>
             <li><Link href="/terms" className="hover:text-accent">Terms &amp; returns</Link></li>
             <li><Link href="/privacy" className="hover:text-accent">Privacy</Link></li>
