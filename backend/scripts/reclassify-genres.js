@@ -36,7 +36,13 @@ const { detectOrigin } = require('../src/utils/bookOrigin');
 
 // A book must beat the runner-up genre by at least this much to be auto-applied.
 // 2 means "won by a full strong signal", not "edged it by a hint".
-const MIN_CONFIDENCE = 2;
+// Margin between the winning genre's score and the runner-up's, not an absolute
+// score — so a book whose subjects point clearly at one genre but brush a second
+// scores 3 vs 2 and lands at 1. At the default of 2 that book goes to review,
+// which is why a sample of 60 drafts auto-applied only 4. Tunable with --min so
+// a backlog can be cleared at 1 (a strict winner, ties still rejected) without
+// loosening the default for routine runs.
+const DEFAULT_MIN_CONFIDENCE = 2;
 const CONCURRENCY = 5;
 
 // Genres being retired by the restructure — books sitting on these are
@@ -49,12 +55,13 @@ const RETIRED = ['general', 'games', 'strategy', 'horror', 'law', 'educational',
 const HOLDING = ['unclassified'];
 
 function parseArgs(argv) {
-  const a = { apply: false, all: false, drafts: false, limit: Infinity };
+  const a = { apply: false, all: false, drafts: false, limit: Infinity, min: DEFAULT_MIN_CONFIDENCE };
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === '--apply') a.apply = true;
     else if (argv[i] === '--all') a.all = true;
     else if (argv[i] === '--drafts') a.drafts = true;
     else if (argv[i] === '--limit') a.limit = Number(argv[i + 1]);
+    else if (argv[i] === '--min') a.min = Math.max(1, Number(argv[i + 1]) || DEFAULT_MIN_CONFIDENCE);
   }
   return a;
 }
@@ -86,7 +93,7 @@ async function main() {
     .lean();
 
   console.log(`${args.apply ? 'APPLY' : 'DRY RUN'} — examining ${books.length} book(s)`);
-  console.log(`auto-apply threshold: confidence >= ${MIN_CONFIDENCE}\n`);
+  console.log(`auto-apply threshold: confidence >= ${args.min}\n`);
 
   const applied = [];
   const review = [];
@@ -131,7 +138,7 @@ async function main() {
       });
       return;
     }
-    if (mapped.confidence < MIN_CONFIDENCE) {
+    if (mapped.confidence < args.min) {
       review.push({
         ...b,
         reason: `ambiguous (runner-up ${mapped.runnerUp || 'n/a'})`,
