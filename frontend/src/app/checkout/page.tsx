@@ -9,6 +9,12 @@ import { clientApi, ClientApiError } from "@/lib/client-api";
 import { npr } from "@/lib/format";
 import { isNepaliPhone } from "@/lib/phone";
 
+// Mirrors POINTS_REDEMPTION_ENABLED in backend/src/services/pricing.js, which
+// is the authority — pricing is computed server-side and a redeem request is
+// ignored there regardless of what this page shows. This flag only decides
+// whether the customer is offered a control that would work. Flip both together.
+const POINTS_REDEMPTION_ENABLED = false;
+
 const PROVINCES = ["Koshi", "Madhesh", "Bagmati", "Gandaki", "Lumbini", "Karnali", "Sudurpashchim"];
 // Only one delivery speed is offered right now, so there's nothing for a
 // shopper to choose — "standard" is sent as a fixed value, not a picked one.
@@ -212,7 +218,23 @@ export default function CheckoutPage() {
           )}
           {priced?.couponError && <p className="font-body text-sm text-sale">{priced.couponError}</p>}
 
-          {user && balance > 0 && (
+          {/* Redemption is paused while the launch discount runs (see
+              POINTS_REDEMPTION_ENABLED in backend services/pricing.js). Points
+              still accrue, so the balance is worth showing — but offering a
+              checkbox the server will ignore would read as a broken checkout.
+              Say plainly that they are banked instead. */}
+          {user && balance > 0 && !POINTS_REDEMPTION_ENABLED && (
+            <>
+              <h2 className="pt-2 font-display text-xl text-text">Your points</h2>
+              <p className="border border-border px-4 py-3 font-body text-sm text-muted">
+                You have <span className="text-text">{balance} points</span> saved up. Spending them
+                is paused for now while every book carries a launch discount, and they keep adding
+                up in the meantime.
+              </p>
+            </>
+          )}
+
+          {user && balance > 0 && POINTS_REDEMPTION_ENABLED && (
             <>
               <h2 className="pt-2 font-display text-xl text-text">Your points</h2>
               <label className="flex cursor-pointer items-start gap-3 border border-border px-4 py-3 has-[:checked]:border-accent">

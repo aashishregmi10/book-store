@@ -16,6 +16,15 @@ const DELIVERY_METHODS = ['standard', 'express', 'same-day'];
 const POINTS_EARN_RATE = 0.02; // 1 point per NPR 50 spent
 const POINTS_REDEEM_VALUE = 1; // 1 point == NPR 1 at checkout
 
+// Redemption is paused while the shop runs an across-the-board launch discount;
+// stacking points on top of that gives away more margin than a new shop can
+// carry. Earning stays on, so balances keep growing and nothing a customer has
+// already accrued is lost — this only stops points being spent at checkout.
+// Enforced here because pricing is server-authoritative: the checkout UI hides
+// the control, but a hand-made request must not be able to redeem either.
+// Flip to true to bring redemption back; no other change is needed.
+const POINTS_REDEMPTION_ENABLED = false;
+
 /**
  * Validate a coupon for a given cart context. Returns
  * { ok, discount, freeShipping, coupon } or { ok:false, reason }.
@@ -150,7 +159,7 @@ async function priceCart({ items = [], deliveryMethod = 'standard', couponCode, 
 
   // Points redemption (logged-in only). Cannot exceed remaining payable.
   let pointsApplied = 0;
-  if (user && pointsUsed > 0) {
+  if (POINTS_REDEMPTION_ENABLED && user && pointsUsed > 0) {
     const maxRedeemable = Math.min(user.points || 0, Math.floor((subtotal - couponDiscount) / POINTS_REDEEM_VALUE));
     pointsApplied = Math.max(0, Math.min(Number(pointsUsed), maxRedeemable));
   }
