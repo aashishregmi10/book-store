@@ -32,6 +32,7 @@ const Book = require('../src/models/book.model');
 const Genre = require('../src/models/genre.model');
 const { lookupByIsbn } = require('../src/utils/bookLookup');
 const { normalizeIsbns } = require('../src/utils/isbn');
+const { romanise } = require('../src/utils/devanagariSlug');
 const { detectOrigin } = require('../src/utils/bookOrigin');
 const { mapGenre } = require('../src/utils/genreMap');
 const { uploadCover } = require('../src/utils/coverUpload');
@@ -74,8 +75,14 @@ const STAGGER_MS = 600; // spacing for Google lookups (only blank-description ro
 async function importBook(b, opts) {
   const norm = b.isbn13 ? normalizeIsbns(b.isbn13) : null;
   const isbn13 = norm?.isbn13 && /^\d{13}$/.test(norm.isbn13) ? norm.isbn13 : '';
-  const slug = slugify(b.title || '');
-  if (!slug) return { status: 'failed', title: b.title, error: 'no title' };
+  // A Devanagari title slugifies to nothing, because slugify keeps only
+  // [a-z0-9] — so books titled purely in Nepali or Hindi failed outright, which
+  // is precisely the stock no international retailer carries. Romanise first,
+  // and fall back to the ISBN only if even that yields nothing.
+  let slug = slugify(b.title || '');
+  if (!slug) slug = slugify(romanise(b.title || ''));
+  if (!slug && isbn13) slug = `book-${isbn13}`;
+  if (!slug) return { status: 'failed', title: b.title, error: 'no usable slug from title or ISBN' };
 
   // Resume / dedupe.
   const exists = await Book.exists({ $or: [...(isbn13 ? [{ isbn: isbn13 }] : []), { slug }] });
