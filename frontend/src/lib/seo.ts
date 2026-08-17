@@ -31,6 +31,28 @@ export const SAME_AS = Object.values(SITE.social);
 const abs = (path: string) => `${SITE.url}${path}`;
 
 /**
+ * True when `raw` is a checksum-valid ISBN-13.
+ *
+ * `gtin13` is a GTIN, and Google validates the check digit: a malformed one
+ * invalidates the whole Product node, so the book loses its rich result
+ * entirely rather than just its ISBN. Sixteen catalogue books carry a 13-digit
+ * ISBN that fails its check digit — placeholders like 9789386000000 and a few
+ * mistyped real ones — and the supplier feed they came from has the same bad
+ * numbers, so there is nothing to correct them against.
+ *
+ * Validating here rather than deleting the data keeps the number visible in the
+ * admin (where someone can look up the right one) while never publishing an
+ * invalid GTIN. It also covers any future bad import for free.
+ */
+function isValidIsbn13(raw: string): boolean {
+  const s = raw.replace(/[\s-]/g, "");
+  if (!/^\d{13}$/.test(s)) return false;
+  let sum = 0;
+  for (let i = 0; i < 13; i += 1) sum += Number(s[i]) * (i % 2 === 0 ? 1 : 3);
+  return sum % 10 === 0;
+}
+
+/**
  * Metadata for a private/functional page: login, register, cart, checkout,
  * account, wishlist, order tracking, password reset.
  *
@@ -175,7 +197,7 @@ export function bookLd(book: BookDetail, reviews: ReviewData[] = []) {
     author: { "@type": "Person", name: book.author },
     image: book.coverImage.secureUrl,
     sku: book._id,
-    ...(book.isbn ? { isbn: book.isbn, gtin13: book.isbn } : {}),
+    ...(book.isbn && isValidIsbn13(book.isbn) ? { isbn: book.isbn, gtin13: book.isbn } : {}),
     ...(book.specifications?.pages ? { numberOfPages: book.specifications.pages } : {}),
     inLanguage: book.specifications?.language || "en",
     bookFormat:
