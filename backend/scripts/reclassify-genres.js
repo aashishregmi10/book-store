@@ -43,7 +43,12 @@ const { detectOrigin } = require('../src/utils/bookOrigin');
 // a backlog can be cleared at 1 (a strict winner, ties still rejected) without
 // loosening the default for routine runs.
 const DEFAULT_MIN_CONFIDENCE = 2;
-const CONCURRENCY = 5;
+// Google Books rate-limits hard on an unkeyed or low-quota project, and a 429
+// surfaces here as "no subject data from provider" — indistinguishable in the
+// report from a book the provider genuinely does not hold. That turns a
+// throttled run into a false conclusion that the lookup route is exhausted, so
+// this is tunable rather than fixed.
+const DEFAULT_CONCURRENCY = 5;
 
 // Genres being retired by the restructure — books sitting on these are
 // re-examined even without --all, since their slug is going away.
@@ -55,13 +60,17 @@ const RETIRED = ['general', 'games', 'strategy', 'horror', 'law', 'educational',
 const HOLDING = ['unclassified'];
 
 function parseArgs(argv) {
-  const a = { apply: false, all: false, drafts: false, limit: Infinity, min: DEFAULT_MIN_CONFIDENCE };
+  const a = {
+    apply: false, all: false, drafts: false, limit: Infinity,
+    min: DEFAULT_MIN_CONFIDENCE, concurrency: DEFAULT_CONCURRENCY,
+  };
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === '--apply') a.apply = true;
     else if (argv[i] === '--all') a.all = true;
     else if (argv[i] === '--drafts') a.drafts = true;
     else if (argv[i] === '--limit') a.limit = Number(argv[i + 1]);
     else if (argv[i] === '--min') a.min = Math.max(1, Number(argv[i + 1]) || DEFAULT_MIN_CONFIDENCE);
+    else if (argv[i] === '--concurrency') a.concurrency = Math.max(1, Number(argv[i + 1]) || DEFAULT_CONCURRENCY);
   }
   return a;
 }
@@ -100,7 +109,7 @@ async function main() {
   const tally = new Map();
   let done = 0;
 
-  await pool(books, CONCURRENCY, async (b) => {
+  await pool(books, args.concurrency, async (b) => {
     done += 1;
     if (done % 200 === 0) console.log(`  … ${done}/${books.length}`);
 
