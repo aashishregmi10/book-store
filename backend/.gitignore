@@ -32,3 +32,7 @@ strip-spec-headers-toothin-*.csv
 factual-descriptions-*.csv
 factual-rejected-*.csv
 supplier-sync-*.csv
+author-decided-*.csv
+author-held-*.csv
+repair-from-scrape-*.csv
+published-drafts-*.csv

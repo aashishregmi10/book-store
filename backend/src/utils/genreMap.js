@@ -53,7 +53,11 @@ const RULES = [
 
   ['young-adult', 3, 'young adult', 'ya fiction', 'teen', 'coming of age'],
 
-  ['biography-memoir', 3, 'biography', 'autobiography', 'memoir'],
+  // Stems, not whole words. The supplier's own "Genre :" labels are plural —
+  // "Biographies & Autobiographies" is the single commonest one in the New Book
+  // House feed — and 'biography' does not appear in "biographies". Every book
+  // carrying that label matched no rule at all.
+  ['biography-memoir', 3, 'biograph', 'autobiograph', 'memoir'],
   ['biography-memoir', 2, 'personal memoirs', 'letters', 'diaries'],
 
   // Stems, not whole words: 'econom' catches economics/economic/economy,
@@ -65,19 +69,24 @@ const RULES = [
   ['business-economics', 2, 'leadership', 'negotiation', 'startup', 'strategy', 'corporate', 'accounting', 'trade',
     'consumer behavior', 'consumer behaviour', 'decision making', 'money', 'millionaire', 'stock market', 'new products'],
 
-  ['self-help', 3, 'self-help', 'self help', 'personal development', 'personal growth', 'motivational'],
-  ['self-help', 2, 'habits', 'productivity', 'success', 'time management', 'self-improvement'],
+  // 'selfhelp' unseparated is how the supplier feed spells it, and it is the
+  // single most common label in that feed. It matched nothing before.
+  ['self-help', 3, 'self-help', 'self help', 'selfhelp', 'personal development', 'personal growth', 'motivational',
+    'personal transformation'],
+  ['self-help', 2, 'habits', 'productivity', 'success', 'time management', 'self-improvement',
+    'healthy living', 'wellness', 'family & relationships', 'family and relationships'],
 
   ['psychology', 3, 'psychology', 'psychoanalysis', 'behavioural science', 'behavioral science'],
   ['psychology', 2, 'cognitive', 'neuroscience', 'mental health', 'emotions'],
 
-  ['spirituality-religion', 3, 'religion', 'spiritual', 'hindu', 'buddhis', 'islam', 'christian', 'yoga', 'meditation'],
+  // 'religio' rather than 'religion' so "Religious Studies" matches too.
+  ['spirituality-religion', 3, 'religio', 'spiritual', 'hindu', 'buddhis', 'islam', 'christian', 'yoga', 'meditation'],
   ['spirituality-religion', 2, 'mysticism', 'vedanta', 'scripture', 'theology', 'gita', 'sufi', 'dharma'],
 
   ['philosophy', 3, 'philosophy', 'philosophical', 'ethics', 'metaphysics', 'existential'],
   ['philosophy', 2, 'logic', 'stoic', 'epistemolog'],
 
-  ['politics-society', 3, 'political science', 'politics', 'current affairs', 'history', 'social science', 'sociology'],
+  ['politics-society', 3, 'political', 'politics', 'current affairs', 'history', 'social science', 'sociology'],
   ['politics-society', 2, 'government', 'international relations', 'law', 'war', 'anthropology', 'journalism', 'feminism'],
 
   // NB: bare 'science' is handled separately below — "Political Science" and
@@ -86,8 +95,13 @@ const RULES = [
   ['science-technology', 2, 'physics', 'biology', 'chemistry', 'astronomy', 'artificial intelligence', 'nature', 'education', 'study aids'],
 
   // Deliberately weak: providers stamp "Fiction" on nearly every novel, so it
-  // must lose to any specific fiction sub-genre that also matched.
-  ['fiction', 1, 'literary', 'novel', 'short stories', 'classics'],
+  // must lose to any specific fiction sub-genre that also matched. The supplier
+  // labels here ("Story", "Action & Adventure", "Plays") are the same kind of
+  // broad signal, so they sit at the same weight rather than outranking a real
+  // sub-genre match.
+  ['fiction', 1, 'literary', 'novel', 'short stories', 'classics', 'literature',
+    'story', 'stories', 'action & adventure', 'action and adventure', 'adventure',
+    'plays', 'drama', 'humor', 'humour', 'satire'],
 ];
 
 /**
