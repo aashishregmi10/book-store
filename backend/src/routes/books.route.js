@@ -13,6 +13,7 @@ const { validate } = require('../middleware/validate');
 const { authenticate, optionalAuth } = require('../middleware/auth');
 const { z, trimmedString, intQuery, email: emailSchema } = require('../utils/zod');
 const { withCache } = require('../utils/cache');
+const { isbnSearchForms } = require('../utils/isbn');
 const { cacheDel } = require('../config/redis');
 const { ok, created, fail } = require('../utils/apiResponse');
 
@@ -119,7 +120,19 @@ router.get(
         const term = String(req.query.search).trim();
         if (term) {
           const rx = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-          and.push({ $or: [{ title: rx }, { author: rx }, { isbn: rx }, { 'specifications.isbn10': rx }] });
+          const or = [{ title: rx }, { author: rx }];
+          // A complete ISBN is matched by value, not by substring: covers print
+          // it with hyphens and the schema stores it stripped, so the escaped
+          // regex (hyphens are not metacharacters) could never match. The forms
+          // list also covers a shopper typing the 10-digit number off an older
+          // cover for a book we file under its 13-digit form.
+          const forms = isbnSearchForms(term);
+          if (forms.length) {
+            or.push({ isbn: { $in: forms } }, { 'specifications.isbn10': { $in: forms } });
+          } else {
+            or.push({ isbn: rx }, { 'specifications.isbn10': rx });
+          }
+          and.push({ $or: or });
         }
       }
       if (and.length) filter.$and = and;
@@ -151,8 +164,16 @@ router.get('/search-suggestions', validate({ query: suggestQuery }), async (req,
     const key = `suggestions:${q.toLowerCase()}`;
     const data = await withCache(key, 300, async () => {
       const rx = new RegExp(escapeRegex(q), 'i');
+      // Autocomplete matched title and author only, so typing an ISBN offered
+      // nothing until the shopper hit enter. The search results page has
+      // matched ISBNs for a while; the box in front of it did not.
+      const isbnForms = isbnSearchForms(q);
+      const bookOr = [{ title: rx }, { author: rx }];
+      if (isbnForms.length) {
+        bookOr.push({ isbn: { $in: isbnForms } }, { 'specifications.isbn10': { $in: isbnForms } });
+      }
       const [books, genres, authors] = await Promise.all([
-        Book.find({ isActive: true, $or: [{ title: rx }, { author: rx }] })
+        Book.find({ isActive: true, $or: bookOr })
           .select('slug title author coverImage')
           .limit(6)
           .lean(),

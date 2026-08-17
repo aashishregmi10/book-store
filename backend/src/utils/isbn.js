@@ -68,4 +68,44 @@ function normalizeIsbns(raw) {
   };
 }
 
-module.exports = { clean, isValidIsbn10, isValidIsbn13, toIsbn10, toIsbn13, normalizeIsbns };
+/**
+ * Every stored form a search term could be trying to reach, or [] when the
+ * term is not ISBN-shaped.
+ *
+ * Two mismatches make a raw regex search miss real books. ISBNs are printed on
+ * covers with separators ("978-0-241-34427-7") while the schema setter strips
+ * them, and a hyphen is not a regex metacharacter, so the escaped term keeps
+ * its hyphens and can never match the stored digits. Separately, a customer
+ * reading the 10-digit number off an older cover is searching for a book the
+ * catalogue files under its 13-digit form.
+ *
+ * So: strip separators, then return the cleaned term together with whichever
+ * counterparts are derivable. Callers match these against `isbn` and
+ * `specifications.isbn10` with $in rather than a regex.
+ *
+ * Deliberately returns [] for anything that is not a complete, valid ISBN —
+ * a partial number is still better served by the substring regex, and a
+ * checksum-failing string should not be silently "corrected" into a different
+ * book's number.
+ */
+function isbnSearchForms(term) {
+  const s = clean(term);
+  if (!/^[\dX]{10}$|^\d{13}$/.test(s)) return [];
+  if (!isValidIsbn10(s) && !isValidIsbn13(s)) return [];
+  const forms = new Set([s]);
+  const t13 = toIsbn13(s);
+  const t10 = toIsbn10(s);
+  if (t13) forms.add(t13);
+  if (t10) forms.add(t10);
+  return [...forms];
+}
+
+module.exports = {
+  clean,
+  isValidIsbn10,
+  isValidIsbn13,
+  toIsbn10,
+  toIsbn13,
+  normalizeIsbns,
+  isbnSearchForms,
+};

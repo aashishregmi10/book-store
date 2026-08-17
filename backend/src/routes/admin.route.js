@@ -24,7 +24,7 @@ const { pingIndexNow } = require('../utils/indexnow');
 const { uploadCoverFromUrl } = require('../utils/coverUpload');
 const { deleteImage } = require('../config/cloudinary');
 const { lookupBook } = require('../utils/bookLookup');
-const { normalizeIsbns } = require('../utils/isbn');
+const { normalizeIsbns, isbnSearchForms } = require('../utils/isbn');
 const { detectOrigin, scoreConfidence } = require('../utils/bookOrigin');
 const { randomUUID } = require('crypto');
 
