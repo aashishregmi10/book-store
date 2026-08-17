@@ -325,8 +325,22 @@ router.get('/sitemap/sections', async (_req, res, next) => {
           },
         },
       ]);
+      // Holding a book is necessary but not sufficient: the genre must also be
+      // browsable. `unclassified` is the hidden holding pen (isActive:false, see
+      // /CLAUDE.md) and 247 live books still sit in it, so grouping by $genre
+      // alone emitted /genre/unclassified into the sitemap — a URL that renders
+      // "Genre not found". Google reports that as a sitemap error, and it is the
+      // kind of dead entry that makes it trust the rest of the file less.
+      // Checking the Genre collection rather than hardcoding the slug means any
+      // future retired or draft genre is excluded for free.
+      const live = new Set(
+        (await Genre.find({ isActive: true }).select('slug').lean()).map((g) => g.slug)
+      );
       const shape = (arr) => arr.filter((x) => x._id).map((x) => ({ slug: x._id, lastmod: x.lastmod }));
-      return { categories: shape(agg.categories), genres: shape(agg.genres) };
+      return {
+        categories: shape(agg.categories),
+        genres: shape(agg.genres).filter((g) => live.has(g.slug)),
+      };
     });
     res.set('Cache-Control', 'public, s-maxage=43200, stale-while-revalidate=86400'); // 12h / 24h
     return ok(res, data, 'Sitemap sections');

@@ -64,8 +64,9 @@ const MIN_DESC_CHARS = 200;
 // `nepal` and `nepali` on every single book that has one — 1,044 of the hidden
 // drafts. That is how a loosened gate proposed 36 books for nepali-literature
 // on the strength of our own boilerplate rather than anything about the book.
-// Treat these as having no description at all.
-const TEMPLATE_MARKERS = /fuller description is on the way|available now at Books Temple Nepal/i;
+// Treat these as having no description at all. The test now lives beside the
+// generator in cleanDescription.js, so it cannot drift from what it detects.
+const { isTemplateDescription } = require('../src/utils/cleanDescription');
 
 function parseArgs(argv) {
   const a = { apply: false, minScore: DEFAULT_MIN_SCORE, minMargin: DEFAULT_MIN_MARGIN, limit: Infinity };
@@ -101,7 +102,7 @@ const csvCell = (v) => `"${String(v ?? '').replace(/"/g, '""').replace(/\s+/g, '
 
     for (const b of books) {
       const desc = (b.description || '').trim();
-      if (TEMPLATE_MARKERS.test(desc)) {
+      if (isTemplateDescription(desc)) {
         held.push({ ...b, reason: 'placeholder blurb, not a real description' });
         continue;
       }

@@ -34,6 +34,7 @@ const { connectMongo, disconnectMongo } = require('../src/config/database');
 const logger = require('../src/config/logger');
 const Book = require('../src/models/book.model');
 const { lookupByIsbn } = require('../src/utils/bookLookup');
+const { isTemplateDescription } = require('../src/utils/cleanDescription');
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -96,8 +97,16 @@ async function pool(items, size, worker) {
   await connectMongo();
   try {
     const all = await Book.find({}).select('title author isbn description isActive soldCount').lean();
+    // "Thin" is not only about length. Our own templateDescription() placeholder
+    // runs ~300 chars — comfortably over any sane minimum — so 510 books wearing
+    // one were skipped by this script on every previous run, which is why they
+    // are still wearing one. It carries no information about the book, so it is
+    // thin in the only sense that matters here.
     const thin = all
-      .filter((b) => (b.description || '').trim().length < args.minLength)
+      .filter((b) => {
+        const d = (b.description || '').trim();
+        return d.length < args.minLength || isTemplateDescription(d);
+      })
       // Best-sellers first: if a run is cut short, it stopped after fixing the
       // pages that get the most traffic.
       .sort((a, b) => (b.soldCount || 0) - (a.soldCount || 0))

@@ -126,7 +126,16 @@ describe('POST /api/orders (COD)', () => {
     expect(b.stock).toBe(1); // untouched
   });
 
-  it('redeems points; delivery is never charged by us', async () => {
+  // Redemption is paused (POINTS_REDEMPTION_ENABLED in services/pricing.js) while
+  // the launch discount runs. This test deliberately sends `pointsUsed` anyway:
+  // the checkout UI hides the control, so the only thing standing between a
+  // hand-made request and free margin is the server-side gate. That gate is what
+  // is under test here — not arithmetic.
+  //
+  // When redemption is switched back on, this test SHOULD fail. Restore the
+  // spending assertions then (pointsUsed 100, total 899-100, balance
+  // 500-100+earned) rather than deleting it.
+  it('refuses to spend points while redemption is paused; delivery is never charged by us', async () => {
     const { token, userId } = await makeUser();
     await User.updateOne({ _id: userId }, { points: 500 });
     const res = await request(app)
@@ -137,10 +146,12 @@ describe('POST /api/orders (COD)', () => {
     expect(res.status).toBe(201);
     const { order } = res.body.data;
     expect(order.deliveryFee).toBe(0); // courier bills the customer directly, not us
-    expect(order.pointsUsed).toBe(100);
-    expect(order.total).toBe(899 - 100);
+    expect(order.pointsUsed).toBe(0);
+    expect(order.total).toBe(899); // nothing came off the total
     const user = await User.findById(userId);
-    expect(user.points).toBe(500 - 100 + earned(899));
+    // Earning stays on, so the balance still grows — the pause only stops
+    // points being spent, it never confiscates what a customer has accrued.
+    expect(user.points).toBe(500 + earned(899));
   });
 
   it('pays the referrer 100 points on the referred friend\'s first purchase, once only', async () => {
@@ -169,21 +180,29 @@ describe('POST /api/orders (COD)', () => {
     notify.mockRestore();
   });
 
-  it('lets the friend spend their referral credit on that first order', async () => {
+  // Same pause, from the referred friend's side. The invite advertises an NPR 50
+  // credit, so this is the case where the pause is most visible to a customer:
+  // the credit is banked and keeps its value, but cannot be spent yet.
+  //
+  // When redemption is switched back on, restore the spending assertions
+  // (pointsUsed 50, total 899-50) rather than deleting this test.
+  it('banks the friend\'s referral credit but will not spend it while redemption is paused', async () => {
     jest.spyOn(emailService, 'sendReferralBonus').mockResolvedValue(undefined);
     const ref = await User.create({ email: 'ref2@test.com', password: 'supersecret', fullName: 'Ref Errer' });
     const reg = await request(app).post('/api/auth/register').send({ email: 'friend2@test.com', password: 'supersecret', fullName: 'New Friend', referralCode: ref.referralCode });
 
-    // 115 points on hand, but only the 50 promised by the referral is what the
-    // invite advertises — spending them has to actually come off the total.
     const res = await request(app)
       .post('/api/orders')
       .set('Authorization', `Bearer ${reg.body.data.accessToken}`)
       .send({ items: [{ bookId: bookA.id, quantity: 1 }], deliveryAddress: ADDR, pointsUsed: 50 });
 
     expect(res.status).toBe(201);
-    expect(res.body.data.order.pointsUsed).toBe(50);
-    expect(res.body.data.order.total).toBe(899 - 50);
+    expect(res.body.data.order.pointsUsed).toBe(0);
+    expect(res.body.data.order.total).toBe(899); // the credit did not come off
+
+    // The 115 they signed up with is untouched, and the order still earns on top.
+    const friend = await User.findOne({ email: 'friend2@test.com' });
+    expect(friend.points).toBe(115 + earned(899));
   });
 
   it('applies a percentage coupon', async () => {

@@ -64,6 +64,24 @@ function templateDescription({ title, author, pages, format, language }) {
   ).trim();
 }
 
+/**
+ * True when `text` is one of our own `templateDescription()` placeholders rather
+ * than a real blurb.
+ *
+ * These read as prose and clear any length check, so every "is this description
+ * thin?" test in the codebase silently passed them and left the placeholder in
+ * place. They also poison anything that reads the text as evidence: the blurb
+ * names "Books Temple Nepal" and "ships across Nepal" on every book that has
+ * one, which is how a loosened classifier gate once proposed 36 books for
+ * nepali-literature on the strength of our own boilerplate (see
+ * scripts/activate-drafts.js).
+ *
+ * Matches on the two fixed sentences the template always emits, so a real
+ * description that happens to mention the shop is not caught.
+ */
+const TEMPLATE_MARKERS = /fuller description is on the way|available now at Books Temple Nepal/i;
+const isTemplateDescription = (text) => TEMPLATE_MARKERS.test(String(text || ''));
+
 /** Pull a "Genre : X" hint from the raw Daraz text, if present. */
 function genreHint(raw) {
   if (!raw) return '';
@@ -72,4 +90,11 @@ function genreHint(raw) {
   return m[1].split(/[,/]/)[0].trim(); // first genre token, e.g. "Hinduism, Religion" → "Hinduism"
 }
 
-module.exports = { cleanDaraz, isMeaningful, templateDescription, genreHint };
+module.exports = {
+  cleanDaraz,
+  isMeaningful,
+  templateDescription,
+  isTemplateDescription,
+  TEMPLATE_MARKERS,
+  genreHint,
+};

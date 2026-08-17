@@ -19,3 +19,16 @@ uploads/tmp/
 # Generated classification reports (timestamped; regenerate with the scripts)
 genre-review-*.csv
 general-assignment-*.csv
+activate-decided-*.csv
+activate-held-*.csv
+llm-decided-*.csv
+llm-held-*.csv
+
+# Timestamped backups written before a bulk description edit. These are
+# recovery artifacts, not source: they carry a full copy of the catalogue text
+# and would bloat the repo on every run.
+strip-spec-headers-backup-*.csv
+strip-spec-headers-toothin-*.csv
+factual-descriptions-*.csv
+factual-rejected-*.csv
+supplier-sync-*.csv
