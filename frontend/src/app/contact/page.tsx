@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Mail, MessageCircle, Clock, Truck } from "lucide-react";
 import { ContactForm } from "@/components/contact/ContactForm";
+import { SITE } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Contact",
@@ -11,11 +12,11 @@ export const metadata: Metadata = {
   alternates: { canonical: "/contact" },
 };
 
-// Set NEXT_PUBLIC_CONTACT_PHONE to the shop's real number (E.164, e.g.
-// +9779800000000) to show the phone/WhatsApp row. It is deliberately hidden
-// while unset: the page previously shipped a literal "+977 1-4XXXXXX"
-// placeholder wired to a tel: link, so anyone who tapped it dialled nonsense.
-const PHONE = process.env.NEXT_PUBLIC_CONTACT_PHONE;
+// SITE.phone is the Google Business Profile's public number (env still
+// overrides it there) — a real value now, so the row always renders. Keeping
+// this the same number customers see on Google is deliberate: matching
+// name/phone across site and Business Profile is a local-ranking signal.
+const PHONE = SITE.phone;
 
 export default function ContactPage() {
   return (

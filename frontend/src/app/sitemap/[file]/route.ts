@@ -38,6 +38,9 @@ function staticUrls(newestBook?: string, newestArticle?: string): SitemapUrl[] {
     // /books is the canonical catalogue; filtered/sorted/paged variants carry
     // query params, are noindex'd, and are deliberately excluded here.
     { loc: `${base}/books`, lastmod: newestBook, changefreq: "daily", priority: 0.9 },
+    // Kathmandu landing page — carries a live bestsellers shelf, so it
+    // inherits the newest book's timestamp the same way home and /books do.
+    { loc: `${base}/kathmandu`, lastmod: newestBook, changefreq: "weekly", priority: 0.8 },
     // /faq answers the questions people search before buying, so it earns a
     // higher priority than the other evergreen pages.
     { loc: `${base}/faq`, lastmod: EVERGREEN_LASTMOD, changefreq: "monthly", priority: 0.7 },

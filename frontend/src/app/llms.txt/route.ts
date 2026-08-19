@@ -29,6 +29,7 @@ delivery in 1–2 days inside the Kathmandu Valley and 3–5 days elsewhere.
 
 ## Key pages
 - [Full catalogue](${SITE.url}/books): every title in stock, filterable by genre, language, format and year.
+- [Buying books in Kathmandu](${SITE.url}/kathmandu): Valley delivery times, cash on delivery, and what's selling right now.
 - [Questions](${SITE.url}/faq): delivery times, courier charges, cash on delivery, cancellations and replacements.
 - [Our story](${SITE.url}/about): who we are and how we curate.
 - [Contact](${SITE.url}/contact): reach the shop.

@@ -107,6 +107,9 @@ export function Footer() {
           <ul className="mt-4 space-y-2 font-body text-sm text-muted">
             <li><Link href="/about" className="hover:text-accent">Our story</Link></li>
             <li><Link href="/faq" className="hover:text-accent">Questions</Link></li>
+            {/* Sitewide link into the Kathmandu landing page — the anchor text
+                is the intent it targets, not "click here". */}
+            <li><Link href="/kathmandu" className="hover:text-accent">Delivery in Kathmandu</Link></li>
             <li><Link href="/contact" className="hover:text-accent">Contact</Link></li>
             <li><Link href="/track" className="hover:text-accent">Track an order</Link></li>
             <li><Link href="/terms" className="hover:text-accent">Terms &amp; returns</Link></li>

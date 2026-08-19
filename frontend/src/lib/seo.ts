@@ -12,9 +12,16 @@ export const SITE = {
   // it used to read bookstemplenepal.com, which is not even the domain the
   // shop runs on. No trailing slash — `abs()` joins paths straight onto it.
   url: process.env.NEXT_PUBLIC_SITE_URL || "https://www.bookstemple.com",
-  description: "Nepal's online bookstore. Books worth reading, delivered across all seven provinces. NPR prices, cash on delivery.",
+  description: "Nepal's online bookstore. Books worth reading, delivered in Kathmandu and across all seven provinces. NPR prices, cash on delivery.",
   locale: "en_NP",
   email: "bookstemple01@gmail.com",
+  // The shop's public number, exactly as customers already see it on the
+  // Google Business Profile. NAP consistency — the same name/address/phone on
+  // the site, the Business Profile and directories — is a local-ranking input,
+  // and env-only meant the site showed no number anywhere while the var was
+  // unset (the failure mode Analytics.tsx hardcodes its GA ID against).
+  // NEXT_PUBLIC_CONTACT_PHONE still overrides. E.164, no spaces.
+  phone: process.env.NEXT_PUBLIC_CONTACT_PHONE || "+9779869412926",
   // Social/profile URLs strengthen the entity in Google's & AI engines' knowledge
   // graphs. These are the real, live accounts — an unclaimed handle here is worse
   // than no entry, since it points the graph at someone else's page.
@@ -22,6 +29,11 @@ export const SITE = {
     facebook: "https://www.facebook.com/profile.php?id=61591817207908",
     instagram: "https://www.instagram.com/bookstemplenepal/",
     tiktok: "https://www.tiktok.com/@bookstemple",
+    // The Google Business Profile's stable Maps URL (the ?cid= form survives
+    // profile renames). Via SAME_AS it lands in Organization.sameAs, telling
+    // Google the Maps listing that already ranks for "books temple" and this
+    // site are one entity — the reconciliation brand queries key on.
+    googleMaps: "https://maps.google.com/?cid=17514348426365338694",
   },
 };
 
@@ -102,6 +114,7 @@ export function organizationLd() {
     image: abs("/logo.png"),
     description: SITE.description,
     email: SITE.email,
+    telephone: SITE.phone,
     foundingDate: "2026",
     sameAs: SAME_AS,
     areaServed: { "@type": "Country", name: "Nepal" },
@@ -116,6 +129,7 @@ export function organizationLd() {
       "@type": "ContactPoint",
       contactType: "customer service",
       email: SITE.email,
+      telephone: SITE.phone,
       areaServed: "NP",
       availableLanguage: ["en", "ne"],
     },

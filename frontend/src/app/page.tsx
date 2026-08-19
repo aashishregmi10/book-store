@@ -138,8 +138,11 @@ export default async function HomePage() {
           </h1>
           <p className="mt-1 font-body text-sm text-muted">
             Books Temple Nepal is an online bookstore delivering to all seven provinces. Prices in
-            NPR, cash on delivery, 1&ndash;2 days inside the Kathmandu Valley and 3&ndash;5 days
-            elsewhere. Pull up a chair and have a browse.
+            NPR, cash on delivery, 1&ndash;2 days inside the{" "}
+            <Link href="/kathmandu" className="text-accent underline-offset-4 hover:underline">
+              Kathmandu Valley
+            </Link>{" "}
+            and 3&ndash;5 days elsewhere. Pull up a chair and have a browse.
           </p>
         </div>
       </section>
