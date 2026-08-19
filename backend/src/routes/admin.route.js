@@ -184,6 +184,7 @@ router.get('/overview', async (req, res, next) => {
       totalOrders, monthOrders, todayOrders,
       lifetimeAgg, monthAgg, lastMonthAgg, todayAgg,
       customers, newCustomers, books,
+      hiddenBooks, unshelvedBooks,
       lowStock, pendingReviews, unansweredQuestions,
       statusAgg, seriesAgg, topBooks, mostWishlisted,
       recentOrders, recentCustomers,
@@ -198,6 +199,11 @@ router.get('/overview', async (req, res, next) => {
       User.countDocuments({ isAdmin: false }),
       User.countDocuments({ isAdmin: false, createdAt: { $gte: startOfMonth } }),
       Book.countDocuments({ isActive: true }),
+      // The import backlog. It was invisible from here, which is how ~1,200
+      // bought-and-paid-for books sat hidden without anyone being reminded:
+      // the dashboard only ever counted what was already live.
+      Book.countDocuments({ isActive: false }),
+      Book.countDocuments({ isActive: false, genre: 'unclassified' }),
       Book.find({ isActive: true, stock: { $lte: 5 } }).select('title slug stock').sort({ stock: 1 }).limit(8).lean(),
       Review.countDocuments({ isApproved: false }),
       Question.countDocuments({ isAnswered: false, isActive: true }),
@@ -257,6 +263,8 @@ router.get('/overview', async (req, res, next) => {
           customers,
           newCustomers,
           books,
+          hiddenBooks,
+          unshelvedBooks,
           lowStockCount: lowStock.length,
           pendingReviews,
           unansweredQuestions,
@@ -290,6 +298,12 @@ const adminBooksQuery = z.object({
   limit: intQuery({ min: 1, max: 100 }).optional(),
   search: z.string().trim().optional(),
   filter: z.enum(['all', 'active', 'inactive', 'bestseller', 'featured', 'new-arrival']).optional(),
+  // Free-form rather than an enum of the live taxonomy on purpose: the holding
+  // pen `unclassified` is not a live genre (seed-taxonomy.js never publishes
+  // it), and filtering to it is the single most useful view in here — it is the
+  // backlog worklist. An enum built from live genres would exclude the one
+  // value an admin most needs to select.
+  genre: z.string().trim().optional(),
 });
 
 // Map a tab name → the Mongo filter clause it adds.
@@ -308,6 +322,7 @@ router.get('/books', validate({ query: adminBooksQuery }), async (req, res, next
     const page = req.query.page || 1;
     const limit = req.query.limit || 20;
     const filter = { ...(BOOK_FILTERS[req.query.filter] || {}) };
+    if (req.query.genre) filter.genre = req.query.genre;
     if (req.query.search) {
       const rx = new RegExp(escapeRegex(req.query.search), 'i'); // escaped: search is user input
       filter.$or = [{ title: rx }, { author: rx }];
@@ -575,6 +590,95 @@ router.post('/books/bulk-create', validate({ body: bulkCreateBody }), async (req
       { total: results.length, created: createdCount, failed: results.length - createdCount, results },
       'Bulk create'
     );
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ── PATCH /api/admin/books/bulk — shelve or publish many at once ──
+//
+// The hidden backlog is ~1,200 books, and every existing route through it is a
+// script with a database connection: activate-drafts.js, classify-by-author.js,
+// publish-ready-drafts.js. Those handle the cases a rule can decide. What was
+// left had no route at all — a person who can look at twenty titles and know
+// they are cookbooks had to edit them one at a time through a form, which is
+// why the backlog stopped moving.
+//
+// Deliberately narrow: genre, category and isActive only. Anything that needs
+// per-book judgement (price, description, cover) stays on the single-book form,
+// where you can see what you are changing.
+const bulkUpdateBody = z.object({
+  ids: z.array(objectId()).min(1).max(100),
+  set: z
+    .object({
+      genre: trimmedString().optional(),
+      category: z.enum(['kids', 'manga', 'loksewa', '']).optional(),
+      isActive: z.boolean().optional(),
+    })
+    .refine((s) => Object.keys(s).length > 0, { message: 'Nothing to change.' }),
+});
+
+router.patch('/books/bulk', validate({ body: bulkUpdateBody }), async (req, res, next) => {
+  try {
+    const { ids, set } = req.body;
+    const update = {};
+
+    if ('genre' in set) {
+      // Only a genre that actually renders a page. Publishing into a genre with
+      // no Genre document gives the book a breadcrumb and JSON-LD pointing at
+      // "Genre not found" — the exact bug publish-ready-drafts.js guards.
+      const genre = await Genre.findOne({ slug: set.genre, isActive: true }).select('slug').lean();
+      if (!genre) return fail(res, 'Not a live genre.', 400, [{ field: 'genre', code: 'UNKNOWN_GENRE' }]);
+      update.genre = genre.slug;
+    }
+    if ('category' in set) update.category = set.category || null;
+    if ('isActive' in set) update.isActive = set.isActive;
+
+    // Publishing is the one direction that can break a public page, so it gets
+    // the same gate publish-ready-drafts.js applies rather than trusting the
+    // click: a book with no browsable genre, no cover or no price must not go
+    // live just because it was in a selection.
+    if (update.isActive === true) {
+      const candidates = await Book.find({ _id: { $in: ids } })
+        .select('slug title genre category coverImage price')
+        .lean();
+      const liveGenres = new Set((await Genre.find({ isActive: true }).select('slug').lean()).map((g) => g.slug));
+      const targetGenre = update.genre;
+      const notReady = candidates.filter((b) => {
+        const genre = targetGenre || b.genre;
+        const genreOk = genre && genre !== 'unclassified' && liveGenres.has(genre);
+        const category = 'category' in update ? update.category : b.category;
+        if (!genreOk && !category) return true;
+        if (!b.coverImage?.secureUrl) return true;
+        if (!b.price || b.price < 1) return true;
+        return false;
+      });
+      if (notReady.length) {
+        return fail(
+          res,
+          `${notReady.length} of ${candidates.length} can't be published yet — they need a genre, a cover and a price.`,
+          400,
+          notReady.slice(0, 10).map((b) => ({ code: 'NOT_PUBLISHABLE', slug: b.slug, title: b.title }))
+        );
+      }
+    }
+
+    const result = await Book.updateMany({ _id: { $in: ids } }, { $set: update });
+    const touched = await Book.find({ _id: { $in: ids } }).select('slug genre category').lean();
+
+    await invalidateCatalogCaches(null);
+    // Only ping when something became publicly visible — an IndexNow ping for a
+    // book we just hid asks Google to recrawl a page that now 404s.
+    if (update.isActive === true) {
+      pingIndexNow([
+        '/books',
+        ...touched.map((b) => `/books/${b.slug}`),
+        ...[...new Set(touched.map((b) => b.genre).filter(Boolean))].map((g) => `/genre/${g}`),
+      ]);
+    }
+
+    logger.info({ count: result.modifiedCount, set: update, admin: req.user?._id }, 'bulk book update');
+    return ok(res, { matched: result.matchedCount, modified: result.modifiedCount }, 'Books updated');
   } catch (err) {
     return next(err);
   }

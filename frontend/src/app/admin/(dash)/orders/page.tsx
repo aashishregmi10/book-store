@@ -6,7 +6,7 @@ import { ChevronRight } from "lucide-react";
 
 import { clientApi } from "@/lib/client-api";
 import { npr } from "@/lib/format";
-import { FLOW, STATUSES, type AdminOrder } from "./types";
+import { STATUSES, TERMINAL, nextStatus, type AdminOrder } from "./types";
 
 /**
  * Orders list. Rows link through to /admin/orders/[id].
@@ -24,13 +24,29 @@ export default function AdminOrders() {
   const [status, setStatus] = useState("all");
   const [busy, setBusy] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  // A failed status change used to be completely silent: `act` had no catch, so
+  // the promise rejected unhandled, the row never moved, and the only clue was
+  // the console. Anything that touches an order now reports what happened.
+  const [error, setError] = useState("");
 
   useEffect(() => {
     let active = true;
+    // Clear stale rows while the new filter loads, so the skeleton replaces the
+    // previous status's orders instead of appearing underneath them. Same
+    // deliberate exception the books list documents: this is synchronising to
+    // an external source (the API), and the alternative is showing one
+    // status's orders under another status's heading.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
+    setOrders([]);
     clientApi
       .get<AdminOrder[]>(`/admin/orders?status=${status}`)
       .then((d) => active && setOrders(d))
-      .catch(() => active && setOrders([]))
+      .catch((e) => {
+        if (!active) return;
+        setOrders([]);
+        setError(e?.message || "Couldn't load orders.");
+      })
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
@@ -46,11 +62,13 @@ export default function AdminOrders() {
     // The order cell is a link; these buttons sit in the same row.
     e.preventDefault();
     e.stopPropagation();
+    setError("");
     setBusy(id);
     try {
       if (action === "advance") {
-        const next = FLOW[FLOW.indexOf(current || "") + 1];
-        if (next) await clientApi.put(`/admin/orders/${id}/status`, { status: next });
+        const next = nextStatus(current || "");
+        if (!next) return; // nothing to advance to — the button shouldn't render either
+        await clientApi.put(`/admin/orders/${id}/status`, { status: next });
       } else if (action === "cancel") {
         if (!confirm("Cancel this order and restore stock?")) return;
         await clientApi.put(`/admin/orders/${id}/cancel`, {});
@@ -59,6 +77,8 @@ export default function AdminOrders() {
         await clientApi.put(`/admin/orders/${id}/refund`, {});
       }
       setRefreshKey((k) => k + 1);
+    } catch (e) {
+      setError((e as Error)?.message || "That didn't go through. Try again.");
     } finally {
       setBusy(null);
     }
@@ -82,6 +102,15 @@ export default function AdminOrders() {
         ))}
       </div>
 
+      {error && (
+        <p
+          role="alert"
+          className="mt-4 border border-sale/40 bg-sale/5 px-4 py-3 font-body text-sm text-sale"
+        >
+          {error}
+        </p>
+      )}
+
       <div className="mt-5 overflow-x-auto border border-border bg-surface">
         <table className="w-full text-left">
           <thead className="border-b border-border bg-bg font-data text-xs uppercase tracking-wide text-muted">
@@ -95,7 +124,11 @@ export default function AdminOrders() {
           </thead>
           <tbody className="divide-y divide-border">
             {orders.map((o) => {
-              const terminal = ["delivered", "cancelled", "refunded"].includes(o.status);
+              // Derived from the shared helper rather than a literal list — the
+              // literal omitted `returned`, which is what produced a "→ placed"
+              // button on returned orders.
+              const next = nextStatus(o.status);
+              const terminal = TERMINAL.has(o.status);
               return (
                 <tr key={o._id} className="hover:bg-bg">
                   <td className="px-4 py-3">
@@ -125,13 +158,13 @@ export default function AdminOrders() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
-                      {!terminal && (
+                      {next && (
                         <button
                           disabled={busy === o._id}
                           onClick={(e) => act(e, o._id, "advance", o.status)}
                           className="border border-border px-2 py-1 font-data text-xs uppercase text-text hover:border-accent hover:text-accent disabled:opacity-50"
                         >
-                          → {FLOW[FLOW.indexOf(o.status) + 1] || ""}
+                          → {next}
                         </button>
                       )}
                       {!terminal && (

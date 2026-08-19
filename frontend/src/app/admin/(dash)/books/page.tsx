@@ -1,17 +1,25 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, EyeOff, X } from "lucide-react";
 import { clientApi } from "@/lib/client-api";
 import { npr } from "@/lib/format";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 import { Pagination } from "@/components/books/Pagination";
-import type { AdminBook } from "./_components/types";
+import type { AdminBook, Genre } from "./_components/types";
 
-const PAGE_SIZE = 10;
+// 10 rows against a 6,000-title catalogue meant 600+ pages, and the shelving
+// backlog is worked in batches — you want a screenful, judged together.
+const PAGE_SIZE = 25;
 const SEARCH_DEBOUNCE_MS = 400;
+const BULK_MAX = 100; // matches the API's cap on PATCH /admin/books/bulk
+
+// The holding pen for imports whose subject data was inconclusive. Not a live
+// genre and never browsable on the storefront (see /CLAUDE.md), but it is the
+// single most useful filter in here: it *is* the backlog worklist.
+const UNCLASSIFIED = "unclassified";
 
 /** Type a page number and jump straight there — for hops the numbered
  *  window can't reach (page 2 → 8). Clamps out-of-range input rather than
@@ -56,7 +64,7 @@ function JumpToPage({ pages, onJump }: { pages: number; onJump: (n: number) => v
 const TABS = [
   { key: "all", label: "All" },
   { key: "active", label: "Active" },
-  { key: "inactive", label: "Inactive" },
+  { key: "inactive", label: "Hidden" },
   { key: "bestseller", label: "Bestseller" },
   { key: "featured", label: "Featured" },
   { key: "new-arrival", label: "New arrival" },
@@ -83,10 +91,11 @@ function AdminBooksContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // The URL is the single source of truth for search/tab/page — shareable,
+  // The URL is the single source of truth for search/tab/genre/page — shareable,
   // survives a refresh, and back/forward moves between prior filter states.
   const search = searchParams.get("search") || "";
   const tab = (searchParams.get("tab") as TabKey) || "all";
+  const genre = searchParams.get("genre") || "";
   const page = Number(searchParams.get("page")) || 1;
 
   // Local echo of the search box so typing feels instant; only pushed to the
@@ -104,17 +113,20 @@ function AdminBooksContent() {
   // settling and the pending push would replay the old query string and drop
   // the tab again. Reading window.location at call time keeps every update a
   // patch on the current URL instead of on a snapshot of an older one.
-  function updateParams(patch: Record<string, string | null>) {
-    const params = new URLSearchParams(
-      typeof window === "undefined" ? searchParams.toString() : window.location.search
-    );
-    for (const [key, value] of Object.entries(patch)) {
-      if (value === null) params.delete(key);
-      else params.set(key, value);
-    }
-    const qs = params.toString();
-    router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-  }
+  const updateParams = useCallback(
+    (patch: Record<string, string | null>) => {
+      const params = new URLSearchParams(
+        typeof window === "undefined" ? searchParams.toString() : window.location.search
+      );
+      for (const [key, value] of Object.entries(patch)) {
+        if (value === null) params.delete(key);
+        else params.set(key, value);
+      }
+      const qs = params.toString();
+      router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [router, pathname, searchParams]
+  );
 
   useEffect(() => {
     if (searchInput === search) return;
@@ -130,6 +142,19 @@ function AdminBooksContent() {
   const [pages, setPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+  // Failures in here used to be swallowed — `del` had a bare `.catch(() => {})`,
+  // so a book that could not be deleted looked deleted until the next refresh
+  // quietly put it back.
+  const [error, setError] = useState("");
+
+  // Genre list powers both the filter and the bulk "shelve into" picker.
+  const [genres, setGenres] = useState<Genre[]>([]);
+  useEffect(() => {
+    clientApi
+      .get<Genre[]>("/admin/genres")
+      .then((g) => setGenres(g.filter((x) => x.isActive && x.slug !== UNCLASSIFIED)))
+      .catch(() => setGenres([])); // degrades to "All genres"; the table still works
+  }, []);
 
   useEffect(() => {
     // AbortController cancels the in-flight request when the effect re-runs —
@@ -143,6 +168,7 @@ function AdminBooksContent() {
     const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
     if (search) params.set("search", search);
     if (tab !== "all") params.set("filter", tab);
+    if (genre) params.set("genre", genre);
     clientApi
       .get<BooksPage>(`/admin/books?${params}`, { signal: ctrl.signal })
       .then((d) => {
@@ -155,12 +181,59 @@ function AdminBooksContent() {
         setBooks([]);
         setTotal(0);
         setPages(1);
+        setError(err?.message || "Couldn't load books.");
       })
       .finally(() => {
         if (!ctrl.signal.aborted) setLoading(false);
       });
     return () => ctrl.abort();
-  }, [search, page, tab, refreshKey]);
+  }, [search, page, tab, genre, refreshKey]);
+
+  // ── Selection ────────────────────────────────────────────
+  // Ids only, and cleared whenever the visible set changes: a selection carried
+  // across a filter change would act on rows you can no longer see.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- selection is scoped to the current result set
+    setSelected(new Set());
+  }, [search, page, tab, genre, refreshKey]);
+
+  const allOnPageSelected = books.length > 0 && books.every((b) => selected.has(b._id));
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAllOnPage() {
+    setSelected((prev) =>
+      books.every((b) => prev.has(b._id)) ? new Set() : new Set(books.map((b) => b._id))
+    );
+  }
+
+  // ── Actions ──────────────────────────────────────────────
+  const [busy, setBusy] = useState(false);
+
+  async function bulk(set: { genre?: string; isActive?: boolean }, verb: string) {
+    const ids = [...selected];
+    if (!ids.length || ids.length > BULK_MAX) return;
+    setError("");
+    setBusy(true);
+    try {
+      await clientApi.patch("/admin/books/bulk", { ids, set });
+      setRefreshKey((k) => k + 1);
+    } catch (e) {
+      // The API refuses to publish books missing a genre, cover or price and
+      // says how many — surface that verbatim rather than a generic failure.
+      setError((e as Error)?.message || `Couldn't ${verb} those books.`);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   function onTab(key: TabKey) {
     updateParams({ tab: key === "all" ? null : key, page: null }); // switching tabs restarts at page 1
@@ -182,11 +255,16 @@ function AdminBooksContent() {
 
   async function del(e: React.MouseEvent, b: AdminBook) {
     e.stopPropagation();
-    if (!confirm(`Delete “${b.title}”? This cannot be undone.`)) return;
-    await clientApi.del(`/admin/books/${b._id}`).catch(() => {});
-    // Step back a page if we just removed the only row on it.
-    if (books.length === 1 && page > 1) goToPage(page - 1);
-    else setRefreshKey((k) => k + 1);
+    if (!confirm(`Delete "${b.title}"? This cannot be undone.`)) return;
+    setError("");
+    try {
+      await clientApi.del(`/admin/books/${b._id}`);
+      // Step back a page if we just removed the only row on it.
+      if (books.length === 1 && page > 1) goToPage(page - 1);
+      else setRefreshKey((k) => k + 1);
+    } catch (err) {
+      setError((err as Error)?.message || `Couldn't delete "${b.title}".`);
+    }
   }
 
   return (
@@ -226,12 +304,97 @@ function AdminBooksContent() {
         ))}
       </div>
 
-      <input
-        value={searchInput}
-        onChange={(e) => setSearchInput(e.target.value)}
-        placeholder="Search title or author…"
-        className="mt-4 w-full max-w-sm border border-border bg-surface px-3 py-2 font-body text-sm text-text outline-none focus:border-accent"
-      />
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <input
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder="Search title or author…"
+          className="w-full max-w-sm border border-border bg-surface px-3 py-2 font-body text-sm text-text outline-none focus:border-accent"
+        />
+        <select
+          value={genre}
+          onChange={(e) => updateParams({ genre: e.target.value || null, page: null })}
+          aria-label="Filter by genre"
+          className="border border-border bg-surface px-3 py-2 font-body text-sm text-text outline-none focus:border-accent"
+        >
+          <option value="">All genres</option>
+          {/* First because it is the backlog, and the backlog is what someone
+              opening this filter is nearly always here to work through. */}
+          <option value={UNCLASSIFIED}>Unshelved (backlog)</option>
+          {genres.map((g) => (
+            <option key={g.slug} value={g.slug}>
+              {g.name}
+            </option>
+          ))}
+        </select>
+        {(genre || tab !== "all" || search) && (
+          <button
+            onClick={() => updateParams({ genre: null, tab: null, search: null, page: null })}
+            className="inline-flex items-center gap-1 font-data text-xs uppercase tracking-wide text-muted hover:text-accent"
+          >
+            <X className="size-3.5" /> Clear filters
+          </button>
+        )}
+      </div>
+
+      {error && (
+        <p role="alert" className="mt-4 border border-sale/40 bg-sale/5 px-4 py-3 font-body text-sm text-sale">
+          {error}
+        </p>
+      )}
+
+      {/* ── Bulk action bar ──────────────────────────────────
+          Appears only with a selection. Shelving and publishing are separate
+          controls on purpose: giving a book a genre is reversible metadata,
+          publishing puts it on a public, crawlable URL. */}
+      {selected.size > 0 && (
+        <div className="sticky top-0 z-30 mt-4 flex flex-wrap items-center gap-3 border border-accent/40 bg-accent/5 px-4 py-3">
+          <span className="font-data text-sm text-text">
+            {selected.size} selected
+            {selected.size >= BULK_MAX && <span className="text-muted"> (max {BULK_MAX})</span>}
+          </span>
+
+          <select
+            defaultValue=""
+            disabled={busy}
+            onChange={(e) => {
+              const value = e.target.value;
+              e.target.value = ""; // reset so the same genre can be applied twice in a row
+              if (value) bulk({ genre: value }, "shelve");
+            }}
+            aria-label="Shelve selected books into a genre"
+            className="border border-border bg-surface px-3 py-1.5 font-body text-sm text-text outline-none focus:border-accent disabled:opacity-50"
+          >
+            <option value="">Shelve into…</option>
+            {genres.map((g) => (
+              <option key={g.slug} value={g.slug}>
+                {g.name}
+              </option>
+            ))}
+          </select>
+
+          <button
+            disabled={busy}
+            onClick={() => bulk({ isActive: true }, "publish")}
+            className="inline-flex items-center gap-1.5 bg-accent px-3 py-1.5 font-data text-xs uppercase tracking-wide text-white hover:bg-accent-hover disabled:opacity-50"
+          >
+            <Eye className="size-3.5" /> Publish
+          </button>
+          <button
+            disabled={busy}
+            onClick={() => bulk({ isActive: false }, "hide")}
+            className="inline-flex items-center gap-1.5 border border-border px-3 py-1.5 font-data text-xs uppercase tracking-wide text-text hover:border-sale hover:text-sale disabled:opacity-50"
+          >
+            <EyeOff className="size-3.5" /> Hide
+          </button>
+          <button
+            onClick={() => setSelected(new Set())}
+            className="font-data text-xs uppercase tracking-wide text-muted hover:text-accent"
+          >
+            Clear
+          </button>
+        </div>
+      )}
 
       {loading ? (
         <div className="mt-5">
@@ -242,6 +405,15 @@ function AdminBooksContent() {
         <table className="w-full text-left">
           <thead className="border-b border-border bg-bg font-data text-xs uppercase tracking-wide text-muted">
             <tr>
+              <th className="px-4 py-3">
+                <input
+                  type="checkbox"
+                  checked={allOnPageSelected}
+                  onChange={toggleAllOnPage}
+                  aria-label="Select every book on this page"
+                  className="size-4 accent-[var(--color-accent)]"
+                />
+              </th>
               <th className="px-4 py-3">Title</th>
               <th className="px-4 py-3">Price</th>
               <th className="px-4 py-3">Stock</th>
@@ -254,33 +426,56 @@ function AdminBooksContent() {
               <tr
                 key={b._id}
                 onClick={() => router.push(`/admin/books/${b.slug}`)}
-                className="cursor-pointer hover:bg-bg"
+                className={`cursor-pointer hover:bg-bg ${selected.has(b._id) ? "bg-accent/5" : ""}`}
               >
+                <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={selected.has(b._id)}
+                    onChange={() => toggleOne(b._id)}
+                    aria-label={`Select ${b.title}`}
+                    className="size-4 accent-[var(--color-accent)]"
+                  />
+                </td>
                 <td className="px-4 py-3">
                   <p className="font-body text-sm text-text">{b.title}</p>
-                  <p className="font-body text-xs text-muted">
-                    {b.author}
-                    {!b.isActive && " · hidden"}
-                  </p>
+                  <p className="font-body text-xs text-muted">{b.author}</p>
                 </td>
                 <td className="px-4 py-3 font-data text-sm text-text">{npr(b.price)}</td>
                 <td className="px-4 py-3">
                   <span className={`font-data text-xs ${b.stock <= 3 ? "text-sale" : "text-accent"}`}>{b.stock}</span>
                 </td>
-                <td className="px-4 py-3 font-body text-sm text-muted">{b.genre}</td>
+                <td className="px-4 py-3">
+                  {/* Genre and visibility read as badges rather than a bare word
+                      plus an easily-missed "· hidden" suffix — on the backlog
+                      view every row is hidden, and what you are scanning for is
+                      the genre that isn't there. */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className={`font-data text-xs ${b.genre === UNCLASSIFIED ? "text-sale" : "text-muted"}`}>
+                      {b.genre === UNCLASSIFIED
+                        ? "unshelved"
+                        : b.genre || (b.category ? `§ ${b.category}` : "—")}
+                    </span>
+                    {!b.isActive && (
+                      <span className="border border-border px-1.5 py-0.5 font-data text-[10px] uppercase tracking-wide text-muted">
+                        Hidden
+                      </span>
+                    )}
+                  </div>
+                </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-2">
                     <Link
                       href={`/admin/books/${b.slug}/edit`}
                       onClick={(e) => e.stopPropagation()}
-                      aria-label="Edit"
+                      aria-label={`Edit ${b.title}`}
                       className="p-1.5 text-muted hover:text-accent"
                     >
                       <Pencil className="size-4" />
                     </Link>
                     <button
                       onClick={(e) => del(e, b)}
-                      aria-label="Delete"
+                      aria-label={`Delete ${b.title}`}
                       className="p-1.5 text-muted hover:text-sale"
                     >
                       <Trash2 className="size-4" />
@@ -291,8 +486,10 @@ function AdminBooksContent() {
             ))}
             {books.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center font-body text-muted">
-                  Nothing here yet, add your first book.
+                <td colSpan={6} className="px-4 py-10 text-center font-body text-muted">
+                  {search || genre || tab !== "all"
+                    ? "Nothing matches those filters."
+                    : "Nothing here yet, add your first book."}
                 </td>
               </tr>
             )}

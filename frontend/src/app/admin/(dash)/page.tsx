@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Package, Users, BookText, Star, TrendingUp, TrendingDown, AlertTriangle,
-  Banknote, Receipt, Heart, MessageCircleQuestion, ClipboardList, ArrowUpRight, ArrowRight,
+  Banknote, Receipt, Heart, MessageCircleQuestion, ClipboardList, ArrowUpRight, ArrowRight, Library,
 } from "lucide-react";
 import { clientApi } from "@/lib/client-api";
 import { npr } from "@/lib/format";
@@ -15,6 +15,7 @@ interface Overview {
     revenue: number; monthRevenue: number; lastMonthRevenue: number; monthRevenueDelta: number | null;
     todayRevenue: number; totalOrders: number; monthOrders: number; todayOrders: number;
     avgOrderValue: number; customers: number; newCustomers: number; books: number;
+    hiddenBooks: number; unshelvedBooks: number;
     lowStockCount: number; pendingReviews: number; unansweredQuestions: number; ordersToFulfill: number;
   };
   ordersByStatus: Record<string, number>;
@@ -81,11 +82,21 @@ export default function AdminOverview() {
       {/* ── Needs attention ──────────────────────────────── */}
       <section>
         <h2 className="mb-3 font-display text-lg text-text">Needs attention</h2>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
           <Attention href="/admin/orders" icon={Package} label="Orders to fulfill" count={k.ordersToFulfill} />
           <Attention href="/admin/reviews" icon={Star} label="Reviews to approve" count={k.pendingReviews} />
           <Attention href="/admin/questions" icon={MessageCircleQuestion} label="Questions to answer" count={k.unansweredQuestions} />
           <Attention href="/admin/books" icon={AlertTriangle} label="Low / out of stock" count={k.lowStockCount} />
+          {/* The import backlog: books already bought and paid for that no
+              shopper can see. It had no representation on this page at all,
+              which is how it reached four figures without anyone being
+              reminded. Links straight into the worklist, not the catalogue. */}
+          <Attention
+            href="/admin/books?tab=inactive&genre=unclassified"
+            icon={Library}
+            label={k.unshelvedBooks ? "Unshelved of " + k.hiddenBooks + " hidden" : "Hidden books"}
+            count={k.unshelvedBooks || k.hiddenBooks}
+          />
         </div>
       </section>
 
