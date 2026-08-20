@@ -313,6 +313,34 @@ const LIST = [
   ['The Making Of Hero', 'business-economics', null],
   ['Daughters of the Sun', 'politics-society', null],
   ['The Power Wish', 'spirituality-religion', null],
+
+  // ── batch 11 — added in the owner's revised list ─────────
+  ['Between Two Kingdoms', 'biography-memoir', null],
+  ['The SBI Story', 'business-economics', null],
+  ['Six Faces of Globalization', 'business-economics', null],
+  ['Forgive and Forget', 'spirituality-religion', null],
+  ['Midnight in Everwood', 'sci-fi-fantasy', null],
+  ['The Road to Character', 'self-help', null],
+  ['The One Hundred Years of Lenni and Margot', 'fiction', null],
+  ['Barons of Banking', 'business-economics', null],
+  ['The Betrayal of Anne Frank', 'politics-society', null],
+  ['Four Aunties and a Wedding', 'romance', null],
+  ['The School for Good Mothers', 'fiction', null],
+  ['The Henna Wars', 'young-adult', null],
+  ['Before The Big Bang', 'science-technology', null],
+  ['Not Exactly What I Had in Mind', 'romance', null],
+  ["Death's End", 'sci-fi-fantasy', null],
+  ['Everyone In My Family Has Killed Someone', 'mystery-thriller', null],
+  ['Spare Parts', 'science-technology', null],
+  ['Ten Ways to Build a Brilliant Brain', 'childrens', 'kids'],
+  ['US : Reconnect with Your Partner', 'self-help', null],
+  ['The Aristocracy of Talent', 'politics-society', null],
+  ['The Good Life', 'psychology', null],
+  ['Think Like Da Vinci', 'self-help', null],
+  ['Win Every Argument', 'self-help', null],
+  ['The Tools', 'self-help', null],
+  ['Whale', 'fiction', null],
+  ['Super-Infinite', 'biography-memoir', null],
 ];
 
 /** Lowercase, strip punctuation, collapse whitespace. Keeps Devanagari. */
@@ -371,6 +399,25 @@ const csvCell = (v) => `"${String(v ?? '').replace(/"/g, '""').replace(/\s+/g, '
       matched.push({ book: pick, genre, category, listTitle: title });
     }
 
+    // An entry that matched nothing hidden is usually already live from an
+    // earlier pass, not missing from the shop. Separating the two matters: one
+    // is finished work, the other is a title to source. Checked against the
+    // live shelf only for entries the hidden pool could not account for.
+    const live = await Book.find({ isActive: true }).select('slug title author genre category').lean();
+    const liveByNorm = live.map((b) => ({ ...b, n: norm(b.title) }));
+    const alreadyLive = [];
+    const missing = [];
+    for (const title of unmatched) {
+      const n = norm(title);
+      const hit =
+        liveByNorm.find((b) => b.n === n) ||
+        liveByNorm.find((b) => b.n.startsWith(n)) ||
+        liveByNorm.find((b) => n.startsWith(b.n) && b.n.length > 8) ||
+        liveByNorm.find((b) => b.n.includes(n) && n.length > 10);
+      if (hit) alreadyLive.push({ title, book: hit });
+      else missing.push(title);
+    }
+
     // Which matched books could actually go live? Same gates as
     // publish-ready-drafts.js — a genre that renders, real prose, cover, price, stock.
     const ready = [];
@@ -407,7 +454,8 @@ const csvCell = (v) => `"${String(v ?? '').replace(/"/g, '""').replace(/\s+/g, '
 
     console.log(`${args.apply ? 'APPLYING' : 'DRY RUN'} — ${LIST.length} titles on the list`);
     console.log(`matched to a hidden book : ${matched.length}`);
-    console.log(`not found                : ${unmatched.length}`);
+    console.log(`already live (done)      : ${alreadyLive.length}`);
+    console.log(`not in the catalogue     : ${missing.length}`);
     console.log(`would shelve             : ${matched.length}`);
     console.log(`would publish            : ${args.shelveOnly ? 0 : ready.length}`);
     console.log(`shelved but held back    : ${held.length}\n`);
@@ -490,10 +538,51 @@ const csvCell = (v) => `"${String(v ?? '').replace(/"/g, '""').replace(/\s+/g, '
       if (goLive) published += 1;
     }
 
-    logger.info({ shelved, published, held: held.length, unmatched: unmatched.length }, 'curated list shelved');
+    logger.info({ shelved, published, held: held.length, alreadyLive: alreadyLive.length, missing: missing.length }, 'curated list shelved');
     console.log(`\nshelved: ${shelved}`);
     console.log(`published: ${published}`);
     console.log('Book pages are ISR at revalidate=120, so these appear within ~2 minutes.');
+
+    // ── Unresolved report ────────────────────────────────
+    // Everything on the list that is still not on a public URL, with the one
+    // thing standing in its way. Re-derived from the database after the write
+    // rather than from the plan, so it reflects what is actually true now.
+    const stillHidden = await Book.find({
+      _id: { $in: matched.map((m) => m.book._id) },
+      isActive: false,
+    })
+      .select('slug title author genre category description')
+      .lean();
+
+    const reasonFor = (b) => {
+      const h = held.find((x) => String(x.book._id) === String(b._id));
+      return h ? h.reason : 'held';
+    };
+
+    console.log('\n\n══ UNRESOLVED — on the list, still not live ══\n');
+    console.log('| #  | Title | Author | Shelved as | Blocked by |');
+    console.log('| -- | ----- | ------ | ---------- | ---------- |');
+    stillHidden
+      .sort((a, b) => reasonFor(a).localeCompare(reasonFor(b)) || String(a.title).localeCompare(String(b.title)))
+      .forEach((b, i) => {
+        const m = matched.find((x) => String(x.book._id) === String(b._id));
+        const shelf = m?.category ? `${m.genre || '—'} + ${m.category}` : m?.genre || '—';
+        const chars = (b.description || '').trim().length;
+        const reason = reasonFor(b) === 'description too short' ? `description too short (${chars} chars)` : reasonFor(b);
+        console.log(
+          `| ${i + 1} | ${String(b.title).replace(/\|/g, '/').slice(0, 62)} | ${String(b.author).replace(/\|/g, '/').slice(0, 26)} | ${shelf} | ${reason} |`
+        );
+      });
+
+    // `missing`, not `unmatched`: an entry that matched nothing hidden is
+    // almost always already live from an earlier pass. Printing those as
+    // "not in the catalogue" would report finished work as a problem.
+    if (missing.length) {
+      console.log('\n══ NOT IN THE CATALOGUE — nothing here to activate ══\n');
+      console.log('| #  | Title from your list |');
+      console.log('| -- | -------------------- |');
+      missing.forEach((t, i) => console.log(`| ${i + 1} | ${t} |`));
+    }
   } finally {
     await disconnectMongo();
   }
