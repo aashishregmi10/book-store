@@ -24,6 +24,7 @@
  *   node scripts/backfill-descriptions.js --apply
  *   node scripts/backfill-descriptions.js --apply --limit 50
  *   node scripts/backfill-descriptions.js --apply --min-length 300
+ *   node scripts/backfill-descriptions.js --apply --hidden-only   # backlog only
  *
  * Requires MONGODB_URI. GOOGLE_BOOKS_API_KEY strongly recommended.
  */
@@ -42,6 +43,7 @@ function parseArgs(argv) {
   const a = { apply: false, limit: Infinity, minLength: 200, concurrency: 3 };
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === '--apply') a.apply = true;
+    else if (argv[i] === '--hidden-only') a.hiddenOnly = true;
     else if (argv[i] === '--limit') a.limit = Number(argv[i + 1]) || Infinity;
     else if (argv[i] === '--min-length') a.minLength = Number(argv[i + 1]) || 200;
     else if (argv[i] === '--concurrency') a.concurrency = Math.max(1, Number(argv[i + 1]) || 3);
@@ -96,7 +98,12 @@ async function pool(items, size, worker) {
   const args = parseArgs(process.argv.slice(2));
   await connectMongo();
   try {
-    const all = await Book.find({}).select('title author isbn description isActive soldCount').lean();
+    // --hidden-only keeps a run off published pages. Rewriting the blurb on a
+    // live product page is a public-content change; doing it to the unpublished
+    // backlog is just preparing stock for release, and that is usually the run
+    // you actually want.
+    const scope = args.hiddenOnly ? { isActive: false } : {};
+    const all = await Book.find(scope).select('title author isbn description isActive soldCount').lean();
     // "Thin" is not only about length. Our own templateDescription() placeholder
     // runs ~300 chars — comfortably over any sane minimum — so 510 books wearing
     // one were skipped by this script on every previous run, which is why they
