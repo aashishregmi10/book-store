@@ -3,7 +3,6 @@
 // long-dead listings, the per-section freshness aggregation, 50k paging) lives in
 // the backend; here we just fetch and shape into MetadataRoute.Sitemap entries.
 import { apiGet } from "./api";
-import type { ArticleCard, Paged } from "./types";
 
 // Google's hard limit is 50,000 URLs per file, but the useful limit is much
 // lower: Search Console reports indexed-vs-submitted *per sitemap file*, so one
@@ -12,6 +11,12 @@ import type { ArticleCard, Paged } from "./types";
 // updatedAt, so a shard is a cohort — and "shard 3 is indexing at 20% while
 // shard 0 is at 90%" is a finding you can act on.
 export const BOOKS_PER_SITEMAP = 1000;
+
+// Same reasoning for articles. The blog was a single <urlset> built by paging
+// the full article list 100 rows at a time and keeping every field — excerpts,
+// cover images — to read a slug and a date. That is ~100 sequential API calls
+// at 10,000 articles, on a route the sitemap index re-runs per request.
+export const ARTICLES_PER_SITEMAP = 1000;
 
 export interface BookSitemapItem {
   slug: string;
@@ -62,27 +67,31 @@ export function getSitemapSections(): Promise<SitemapSections> {
   return apiGet<SitemapSections>("/books/sitemap/sections", { revalidate: CACHE.categories });
 }
 
-/** The API's per-request ceiling for article lists (see articles.route.js). */
-const ARTICLES_PER_REQUEST = 100;
+export interface ArticleSitemapItem {
+  slug: string;
+  publishedAt?: string;
+  updatedAt?: string;
+}
+export interface ArticleSitemapPage {
+  total: number;
+  items: ArticleSitemapItem[];
+}
 
 /**
- * Published blog articles (few enough to never need sharding).
+ * One shard of published articles — slug and dates only.
  *
- * Pages through the list rather than asking for everything at once: the API
- * rejects an over-large `limit` outright, and a rejected request here used to
- * come back as an empty array, which rendered a valid-but-empty <urlset> and
- * quietly de-listed every article from the sitemap.
+ * This replaces a loop that pulled the entire article list, with excerpts and
+ * cover images attached, purely to emit a <loc> and a <lastmod>. At a dozen
+ * guides that was merely wasteful; at a few thousand it is ~100 sequential API
+ * calls on a route the sitemap index re-runs on every request. The dedicated
+ * endpoint returns the two fields an entry needs plus a total, so the index can
+ * compute its shard count from a single call instead of walking the archive.
  */
-export async function getBlogArticles(): Promise<ArticleCard[]> {
-  const out: ArticleCard[] = [];
-  for (let page = 1; ; page += 1) {
-    const res = await apiGet<Paged<ArticleCard>>("/articles", {
-      revalidate: CACHE.blog,
-      searchParams: { page, limit: ARTICLES_PER_REQUEST },
-    });
-    out.push(...res.items);
-    if (page >= (res.pages || 1) || !res.items.length) return out;
-  }
+export function getArticleSitemapPage(page: number): Promise<ArticleSitemapPage> {
+  return apiGet<ArticleSitemapPage>("/articles/sitemap", {
+    revalidate: CACHE.blog,
+    searchParams: { page, limit: ARTICLES_PER_SITEMAP },
+  });
 }
 
 // ── XML rendering ────────────────────────────────────────

@@ -2,12 +2,13 @@ import { SITE } from "@/lib/seo";
 import { cloudinaryAuto } from "@/lib/images";
 import {
   BOOKS_PER_SITEMAP,
+  ARTICLES_PER_SITEMAP,
   CACHE,
   renderUrlset,
   xmlResponse,
   getBookSitemapPage,
   getSitemapSections,
-  getBlogArticles,
+  getArticleSitemapPage,
   type SitemapUrl,
 } from "@/lib/sitemap";
 
@@ -60,9 +61,11 @@ function unavailable() {
 
 async function renderChild(id: string): Promise<Response> {
   if (id === "static") {
-    const [books, articles] = await Promise.all([getBookSitemapPage(1), getBlogArticles()]);
+    // Page 1 of each is enough: both are sorted newest-first, so row 0 is the
+    // high-water mark. This used to pull the whole article archive for one date.
+    const [books, articles] = await Promise.all([getBookSitemapPage(1), getArticleSitemapPage(1)]);
     return xmlResponse(
-      renderUrlset(staticUrls(books.items[0]?.updatedAt, articles[0]?.publishedAt)),
+      renderUrlset(staticUrls(books.items[0]?.updatedAt, articles.items[0]?.publishedAt)),
       CACHE.static
     );
   }
@@ -97,16 +100,33 @@ async function renderChild(id: string): Promise<Response> {
     );
   }
 
-  if (id === "blog") {
-    const articles = await getBlogArticles();
+  // Blog shards: blog-0, blog-1, … (0-based shard → 1-based API page). Sharded
+  // for the same reason books are — Search Console reports indexed-vs-submitted
+  // per file, so one file holding the whole archive yields a single number that
+  // says nothing about which cohort is struggling.
+  //
+  // Bare `blog` is kept as an alias for shard 0 rather than 404'd: that URL was
+  // already submitted to Search Console under the old single-file scheme, and a
+  // previously-discovered sitemap that starts returning 404 is reported as an
+  // error against the property for weeks.
+  const blogMatch = /^blog(?:-(\d+))?$/.exec(id);
+  if (blogMatch) {
+    const shard = Number(blogMatch[1] ?? 0);
+    const { items, total } = await getArticleSitemapPage(shard + 1);
+    const shardCount = Math.max(1, Math.ceil(total / ARTICLES_PER_SITEMAP));
+    if (shard >= shardCount) return new Response("Sitemap not found", { status: 404 });
     return xmlResponse(
       renderUrlset(
-        articles.map((a) => ({
-          loc: `${base}/blog/${a.slug}`,
-          lastmod: a.publishedAt,
-          changefreq: "monthly",
-          priority: 0.6,
-        }))
+        items
+          .filter((a) => a.slug)
+          .map((a) => ({
+            loc: `${base}/blog/${a.slug}`,
+            // updatedAt beats publishedAt here: a guide whose prices were
+            // refreshed has genuinely changed, and that is the recrawl we want.
+            lastmod: a.updatedAt || a.publishedAt,
+            changefreq: "monthly" as const,
+            priority: 0.6,
+          }))
       ),
       CACHE.blog
     );

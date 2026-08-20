@@ -829,13 +829,45 @@ router.delete('/genres/:id', validate({ params: idParams }), async (req, res, ne
 const readingTime = (body = '') => Math.max(1, Math.round(String(body).split(/\s+/).filter(Boolean).length / 200));
 
 async function invalidateArticleCaches(slug) {
-  await Promise.all([slug ? cacheDel(`article:${slug}`) : Promise.resolve(), cacheDel('articles_list:*')]);
+  await Promise.all([
+    slug ? cacheDel(`article:${slug}`) : Promise.resolve(),
+    cacheDel('articles_list:*'),
+    // The blog index's category bar and the sharded blog sitemap read from
+    // their own cached keys. Without these two a newly published article shows
+    // up in the list but not in the filter counts, and not in the sitemap, for
+    // up to an hour.
+    cacheDel('articles_meta'),
+    cacheDel('articles_sitemap:*'),
+  ]);
 }
 
-router.get('/articles', async (_req, res, next) => {
+// Paged, searchable and filterable. The previous version returned a bare array
+// capped at .limit(200) with no way to reach anything past it — fine at a dozen
+// guides, a silent data cliff at the scale this shelf is heading for. Returns
+// the same { items, total, page, pages } envelope the books list uses so the
+// admin table can share its pagination.
+const adminArticlesQuery = z.object({
+  page: intQuery({ min: 1 }).optional(),
+  limit: intQuery({ min: 1, max: 100 }).optional(),
+  search: trimmedString().optional(),
+  status: z.enum(['all', 'draft', 'published']).optional(),
+});
+
+router.get('/articles', validate({ query: adminArticlesQuery }), async (req, res, next) => {
   try {
-    const articles = await Article.find().select('-body').sort({ updatedAt: -1 }).limit(200).lean();
-    return ok(res, articles, 'Articles');
+    const page = req.query.page || 1;
+    const limit = req.query.limit || 25;
+    const filter = {};
+    if (req.query.status && req.query.status !== 'all') filter.status = req.query.status;
+    if (req.query.search) {
+      const rx = new RegExp(escapeRegex(String(req.query.search)), 'i'); // escaped: user input
+      filter.$or = [{ title: rx }, { slug: rx }, { category: rx }];
+    }
+    const [items, total] = await Promise.all([
+      Article.find(filter).select('-body').sort({ updatedAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+      Article.countDocuments(filter),
+    ]);
+    return ok(res, { items, total, page, pages: Math.ceil(total / limit) || 1 }, 'Articles');
   } catch (err) {
     return next(err);
   }

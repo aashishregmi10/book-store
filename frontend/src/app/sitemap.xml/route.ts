@@ -1,8 +1,9 @@
 import { SITE } from "@/lib/seo";
 import {
   BOOKS_PER_SITEMAP,
+  ARTICLES_PER_SITEMAP,
   getBookSitemapPage,
-  getBlogArticles,
+  getArticleSitemapPage,
   getSitemapSections,
 } from "@/lib/sitemap";
 
@@ -37,13 +38,18 @@ async function buildIndex() {
   const base = SITE.url;
 
   // Compute the book shard count (must match app/sitemap/[file]/route.ts).
+  // One page of each. This route is force-dynamic, so it runs per request —
+  // and it used to call getBlogArticles(), which walked the entire article
+  // archive 100 rows at a time just to read one date and a count. Both fetches
+  // now return their own `total`, which is all the shard arithmetic needs.
   const [books, articles, sections] = await Promise.all([
     getBookSitemapPage(1),
-    getBlogArticles(),
+    getArticleSitemapPage(1),
     getSitemapSections(),
   ]);
   const { total } = books;
   const bookShards = Math.max(1, Math.ceil(total / BOOKS_PER_SITEMAP));
+  const blogShards = Math.max(1, Math.ceil(articles.total / ARTICLES_PER_SITEMAP));
 
   // Real freshness per child instead of "now" on all of them. A lastmod that
   // always reads as this minute is one crawlers learn to disregard, and it is
@@ -53,12 +59,12 @@ async function buildIndex() {
   const newest = (dates: (string | undefined)[]) =>
     dates.filter(Boolean).sort().at(-1) as string | undefined;
   const booksLastmod = books.items[0]?.updatedAt;
-  const blogLastmod = articles[0]?.publishedAt;
+  const blogLastmod = articles.items[0]?.updatedAt || articles.items[0]?.publishedAt;
   const lastmodFor = (id: string): string | undefined => {
     if (id === "static") return newest([booksLastmod, blogLastmod]);
     if (id === "categories") return newest(sections.categories.map((c) => c.lastmod));
     if (id === "genres") return newest(sections.genres.map((g) => g.lastmod));
-    if (id === "blog") return blogLastmod;
+    if (id === "blog-0") return blogLastmod;
     // Books are sorted updatedAt desc, so only shard 0 has a lastmod we already
     // know. Establishing it for the rest would mean fetching every shard just to
     // read its first row. An omitted lastmod costs a crawl hint; a wrong one
@@ -70,7 +76,7 @@ async function buildIndex() {
     "static",
     "categories",
     "genres",
-    "blog",
+    ...Array.from({ length: blogShards }, (_, i) => `blog-${i}`),
     ...Array.from({ length: bookShards }, (_, i) => `books-${i}`),
   ];
 
@@ -88,7 +94,7 @@ async function buildIndex() {
 
   // Health/stats line (server-side, no PII) for log inspection in production.
   console.info(
-    `[sitemap] index generated ${new Date().toISOString()} — children=${ids.length}, books=${total}, articles=${articles.length}, bookShards=${bookShards}`
+    `[sitemap] index generated ${new Date().toISOString()} — children=${ids.length}, books=${total}, articles=${articles.total}, bookShards=${bookShards}, blogShards=${blogShards}`
   );
 
   return new Response(xml, {
