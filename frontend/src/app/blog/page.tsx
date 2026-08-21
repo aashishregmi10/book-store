@@ -118,8 +118,14 @@ export default async function BlogPage({ searchParams }: { searchParams: Promise
         ])}
       />
 
+      {/* The archive is a reading column, not a dashboard. `.shell` runs to
+          1920px, and letting the list span it left every headline 1,190px wide
+          with ~570px of dead space to the right of each excerpt — the list read
+          as an unfinished half-page. Constraining it here keeps the date rail
+          and the text as one column that ends where the eye expects. */}
       <div className="shell py-12">
-        <header className="max-w-3xl">
+        <div className="mx-auto max-w-[54rem]">
+        <header>
           <p className="label-smallcaps font-data text-xs">The reading room</p>
           <h1 className="mt-2 font-display text-4xl text-text sm:text-5xl">Reading guides &amp; articles</h1>
           <p className="mt-3 font-body text-lg leading-relaxed text-muted">
@@ -202,14 +208,17 @@ export default async function BlogPage({ searchParams }: { searchParams: Promise
           <ol className="mt-4 divide-y divide-border border-b border-border">
             {articles.map((a) => (
               <li key={a._id}>
-                <Link href={`/blog/${a.slug}`} className="group block py-7 sm:py-8">
+                <Link href={`/blog/${a.slug}`} className="group block py-6 sm:py-8">
                   <div className="grid gap-x-8 gap-y-2 sm:grid-cols-[8.5rem_1fr]">
                     {/* Date rail. On a long archive the date is the thing you
                         scan by, so it gets its own column rather than being
                         buried under the excerpt. */}
-                    <div className="font-data text-xs text-muted sm:pt-1.5">
+                    {/* One line on a phone, a stacked rail from sm up. Two
+                        stacked lines above every title on mobile pushed the
+                        headlines apart and made a 20-row list feel endless. */}
+                    <div className="flex items-baseline gap-2 font-data text-xs text-muted sm:block sm:pt-1.5">
                       {a.publishedAt && (
-                        <time dateTime={a.publishedAt} className="block tabular-nums">
+                        <time dateTime={a.publishedAt} className="tabular-nums sm:block">
                           {new Date(a.publishedAt).toLocaleDateString("en-GB", {
                             day: "2-digit",
                             month: "short",
@@ -218,7 +227,12 @@ export default async function BlogPage({ searchParams }: { searchParams: Promise
                         </time>
                       )}
                       {a.category && (
-                        <span className="mt-1 block uppercase tracking-[0.14em] text-accent">{a.category}</span>
+                        <span className="uppercase tracking-[0.14em] text-accent sm:mt-1 sm:block">
+                          <span aria-hidden className="pr-2 text-border sm:hidden">
+                            &middot;
+                          </span>
+                          {a.category}
+                        </span>
                       )}
                     </div>
 
@@ -227,7 +241,7 @@ export default async function BlogPage({ searchParams }: { searchParams: Promise
                         {a.title}
                       </h2>
                       {a.excerpt && (
-                        <p className="mt-2 max-w-2xl font-body text-sm leading-relaxed text-muted">{a.excerpt}</p>
+                        <p className="mt-2 font-body text-sm leading-relaxed text-muted">{a.excerpt}</p>
                       )}
                       <p className="mt-3 font-data text-xs text-muted">
                         {a.author || "Books Temple Editors"}
@@ -249,6 +263,7 @@ export default async function BlogPage({ searchParams }: { searchParams: Promise
             </p>
           </>
         )}
+        </div>
       </div>
     </>
   );

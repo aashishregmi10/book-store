@@ -68,8 +68,12 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           characters), but the page around it is full width and the masthead,
           cover and aside use that room — previously a bare 768px column sat
           centred in a 1600px page with empty gutters either side, which read as
-          a broken layout rather than as generous margins. */}
-      <div className="mx-auto max-w-[1400px] px-6 py-10 sm:px-8 lg:px-12">
+          a broken layout rather than as generous margins.
+          Width is 68rem, not 1400px: at 1400 the prose stopped at its 68ch cap
+          while the grid's 1fr track kept going, leaving a 327px hole between
+          the last word of every line and the sidebar. At this width the track
+          and the measure are the same size, so the gap closes. */}
+      <div className="mx-auto max-w-[68rem] px-6 py-10 sm:px-8 lg:px-12">
         <Link href="/blog" className="inline-flex items-center gap-1 font-body text-sm text-accent hover:underline">
           <ChevronLeft className="size-4" /> All articles
         </Link>
