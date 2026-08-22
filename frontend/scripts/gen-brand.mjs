@@ -27,7 +27,7 @@ const SRC = "brand/logo-source.jpeg";
 
 // Brand palette, sampled from the source rather than guessed.
 const TEAL = "#17828E";
-const TILE = "#E8F1FB"; // pale blue favicon tile, carried over from the previous mark
+const TILE = "#E9F3FC"; // pale blue favicon tile, carried over from the previous mark
 
 // Measured ink boxes in the 1536x1024 source.
 const LOCKUP = { left: 89, top: 204, width: 1396, height: 497 }; // wordmark + feather + subtitle

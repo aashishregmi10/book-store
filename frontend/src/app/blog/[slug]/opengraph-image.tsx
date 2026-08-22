@@ -25,12 +25,12 @@ export default async function Image({ params }: { params: Promise<{ slug: string
         }}
       >
         <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
-          <span style={{ fontSize: 36, fontWeight: 700, color: "#1c5fa6" }}>Books Temple</span>
+          <span style={{ fontSize: 36, fontWeight: 700, color: "#1d76bc" }}>Books Temple</span>
           <span style={{ fontSize: 20, letterSpacing: 8, color: "#6b7c92" }}>NEPAL</span>
         </div>
         <div style={{ display: "flex", flexDirection: "column" }}>
           {a?.category && (
-            <div style={{ fontSize: 26, letterSpacing: 4, color: "#1c5fa6", textTransform: "uppercase" }}>{a.category}</div>
+            <div style={{ fontSize: 26, letterSpacing: 4, color: "#1d76bc", textTransform: "uppercase" }}>{a.category}</div>
           )}
           <div style={{ fontSize: 64, lineHeight: 1.1, color: "#15233b", marginTop: 12 }}>{a?.title || "Reading guide"}</div>
         </div>

@@ -21,7 +21,7 @@ interface Draft {
   isActive: boolean;
 }
 
-const EMPTY: Draft = { name: "", description: "", color: "#1C5FA6", isActive: true };
+const EMPTY: Draft = { name: "", description: "", color: "#1D76BC", isActive: true };
 
 export default function AdminGenres() {
   const [genres, setGenres] = useState<Genre[]>([]);
@@ -61,7 +61,7 @@ export default function AdminGenres() {
 
   function startEdit(g: Genre) {
     setEditingSlug(g.slug);
-    setDraft({ name: g.name, description: g.description || "", color: g.color || "#1C5FA6", isActive: g.isActive });
+    setDraft({ name: g.name, description: g.description || "", color: g.color || "#1D76BC", isActive: g.isActive });
     setError("");
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -205,7 +205,7 @@ export default function AdminGenres() {
                     <div className="flex items-center gap-3">
                       <span
                         className="size-4 shrink-0 rounded-full border border-border"
-                        style={{ backgroundColor: g.color || "#1C5FA6" }}
+                        style={{ backgroundColor: g.color || "#1D76BC" }}
                       />
                       <div>
                         <p className="font-body text-sm text-text">{g.name}</p>

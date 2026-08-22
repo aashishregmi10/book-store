@@ -166,7 +166,7 @@ export default function AdminArticles() {
             </thead>
             <tbody className="divide-y divide-border">
               {rows.map((a) => (
-                <tr key={a._id} className="hover:bg-bg">
+                <tr key={a._id} className="hover:bg-hover">
                   <td className="px-4 py-3">
                     <Link
                       href={`/admin/articles/${a.slug}/edit`}

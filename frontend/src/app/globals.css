@@ -9,19 +9,27 @@
 */
 
 @theme {
-  --color-bg: #e8f1fb;        /* pale blue page background */
-  --color-surface: #ffffff;   /* cards / raised slips */
-  --color-text: #212529;      /* charcoal — body + headings (can-logistic primary-text) */
-  --color-accent: #1c5fa6;    /* royal blue — CTAs, links, active states */
-  --color-accent-hover: #164d86;
-  --color-muted: #64748b;     /* slate grey — captions, placeholders (can-logistic text-secondary) */
-  --color-border: #cfe0f1;    /* pale blue hairline dividers, card edges */
-  --color-link: #0072d6;      /* brighter blue reserved for "see all" links */
-  --color-sale: #c0392b;      /* restrained brick red for sale/urgency */
-  --color-promo: #fdf3d8;     /* warm cream — the browse banner field */
-  --color-promo-border: #f2e2b4;
-  --color-star: #ffc400;       /* bright gold-yellow — filled rating stars */
-  --color-star-empty: #dcdcdc; /* soft grey — empty rating stars */
+  /* Palette ported verbatim from palmmind.com — white is the field, and one
+     saturated blue is the only accent. Their token names noted as (pm --x). */
+  --color-bg: #ffffff;           /* page field — WHITE (pm --background) */
+  --color-surface: #ffffff;      /* cards / raised slips (pm --card) */
+  --color-tint: #e9f3fc;         /* pale-blue banded section (pm --primary-extra-light) */
+  --color-hover: #f5f5f5;        /* neutral row hover, needed now bg is white (pm --muted) */
+  --color-text: #333a3f;         /* charcoal — body + headings (pm --black-light) */
+  --color-accent: #1d76bc;       /* the blue — CTAs, links, active states (pm --landing-primary) */
+  --color-accent-hover: #17608f; /* DELIBERATE deviation from Palm Mind. Theirs is
+                                    #2185d4 (lighter), which gives white text only
+                                    3.91:1 — under WCAG AA. Fine for two marketing
+                                    buttons, not for 48 commerce CTAs. This darker
+                                    step is 6.76:1 and reads as a stronger change. */
+  --color-muted: #6a757b;        /* slate grey — captions, placeholders (pm --gray) */
+  --color-border: #e5e5e5;       /* neutral hairline — no longer blue-tinted (pm --border) */
+  --color-link: #1d76bc;         /* unified with accent, the way Palm Mind does it */
+  --color-sale: #e40014;         /* pm --destructive */
+  --color-promo: #e9f3fc;        /* the browse banner field — was warm cream */
+  --color-promo-border: #dff1ff; /* pm --primary-light */
+  --color-star: #ffc402;         /* pm --gold */
+  --color-star-empty: #dcdcdc;   /* soft grey — empty rating stars */
 
   --font-display: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
   --font-body: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
@@ -34,10 +42,6 @@
   }
   body {
     background-color: var(--color-bg);
-    /* Soft top-light wash (no dotted texture). */
-    background-image: linear-gradient(180deg, color-mix(in srgb, #ffffff 55%, transparent), transparent 42%);
-    background-repeat: no-repeat;
-    background-attachment: fixed;
     color: var(--color-text);
     font-family: var(--font-body);
     font-feature-settings: "liga" 1, "calt" 1;

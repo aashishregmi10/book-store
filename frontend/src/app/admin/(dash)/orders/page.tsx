@@ -130,7 +130,7 @@ export default function AdminOrders() {
               const next = nextStatus(o.status);
               const terminal = TERMINAL.has(o.status);
               return (
-                <tr key={o._id} className="hover:bg-bg">
+                <tr key={o._id} className="hover:bg-hover">
                   <td className="px-4 py-3">
                     {/* A real <a>: middle-click and open-in-new-tab work, which
                         the previous row-level onClick handler did not support. */}

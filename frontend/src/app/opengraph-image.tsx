@@ -22,12 +22,12 @@ export default function OpengraphImage() {
         }}
       >
         <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
-          <span style={{ fontSize: 40, fontWeight: 700, color: "#1c5fa6" }}>Books Temple</span>
+          <span style={{ fontSize: 40, fontWeight: 700, color: "#1d76bc" }}>Books Temple</span>
           <span style={{ fontSize: 22, letterSpacing: 8, color: "#6b7c92" }}>NEPAL</span>
         </div>
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ fontSize: 76, lineHeight: 1.05, color: "#15233b" }}>Books worth reading,</div>
-          <div style={{ fontSize: 76, lineHeight: 1.05, color: "#1c5fa6" }}>delivered across Nepal.</div>
+          <div style={{ fontSize: 76, lineHeight: 1.05, color: "#1d76bc" }}>delivered across Nepal.</div>
         </div>
         <div style={{ fontSize: 28, color: "#6b7c92" }}>
           NPR prices · Cash on delivery · All seven provinces

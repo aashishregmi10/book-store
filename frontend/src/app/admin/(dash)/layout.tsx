@@ -86,7 +86,7 @@ export default function AdminDashLayout({ children }: { children: React.ReactNod
               // the compiler's set-state-in-effect rule for good reason.
               onClick={() => setNavOpen(false)}
               aria-current={active ? "page" : undefined}
-              className={`mb-1 flex items-center gap-3 px-3 py-2.5 font-data text-sm uppercase tracking-wide transition-colors ${active ? "bg-accent text-white" : "text-muted hover:bg-bg hover:text-text"}`}
+              className={`mb-1 flex items-center gap-3 px-3 py-2.5 font-data text-sm uppercase tracking-wide transition-colors ${active ? "bg-accent text-white" : "text-muted hover:bg-hover hover:text-text"}`}
             >
               <n.icon className="size-4 shrink-0" />
               {n.label}

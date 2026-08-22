@@ -65,7 +65,7 @@ export default function AdminUsers() {
           </thead>
           <tbody className="divide-y divide-border">
             {users.map((u) => (
-              <tr key={u._id} className={`hover:bg-bg ${u.isBanned ? "opacity-60" : ""}`}>
+              <tr key={u._id} className={`hover:bg-hover ${u.isBanned ? "opacity-60" : ""}`}>
                 <td className="px-4 py-3">
                   <p className="font-body text-sm text-text">{u.fullName}</p>
                   <p className="font-body text-xs text-muted">{u.email}</p>

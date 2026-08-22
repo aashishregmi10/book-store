@@ -170,7 +170,11 @@ export default async function HomePage() {
       {data && (data.bestsellers.length || data.newArrivals.length || data.featured.length) ? (
         <>
           <BookShelf title="Bestsellers" books={data.bestsellers} href="/books?sort=popular" />
-          <BookShelf title="New arrivals" books={data.newArrivals} href="/books?sort=newest" />
+          {/* Alternating tinted band — Palm Mind alternates white and pale-blue
+              sections rather than tinting the whole page. */}
+          <div className="border-y border-border bg-tint">
+            <BookShelf title="New arrivals" books={data.newArrivals} href="/books?sort=newest" />
+          </div>
           <BookShelf title="Staff favourites" books={data.featured} href="/books" />
         </>
       ) : (

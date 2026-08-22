@@ -88,7 +88,7 @@ export function RelatedBooksPicker({
                 <button
                   type="button"
                   onClick={() => add(b)}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left font-body text-sm text-text hover:bg-bg"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left font-body text-sm text-text hover:bg-hover"
                 >
                   <Plus className="size-3.5 text-accent" />
                   <span className="truncate">{b.title}</span>

@@ -39,7 +39,7 @@ export function SearchSuggestions({
         <ul className="py-1.5">
           {results!.books.map((b) => (
             <li key={b.slug}>
-              <Link href={`/books/${b.slug}`} onClick={onNavigate} className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-surface">
+              <Link href={`/books/${b.slug}`} onClick={onNavigate} className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-hover">
                 <Image src={b.coverImage.secureUrl} alt="" width={32} height={48} className="h-12 w-8 shrink-0 rounded border border-border object-cover" />
                 <span className="min-w-0">
                   <span className="block truncate font-body text-sm text-text">{b.title}</span>
@@ -54,7 +54,7 @@ export function SearchSuggestions({
         <ul className="py-1.5">
           {results!.authors.map((a) => (
             <li key={a.name}>
-              <Link href={`/books?author=${encodeURIComponent(a.name)}`} onClick={onNavigate} className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-surface">
+              <Link href={`/books?author=${encodeURIComponent(a.name)}`} onClick={onNavigate} className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-hover">
                 <UserIcon className="size-4 shrink-0 text-muted" />
                 <span className="truncate font-body text-sm text-text">{a.name}</span>
                 <span className="ml-auto font-data text-[10px] uppercase tracking-wide text-muted">Author</span>
@@ -67,7 +67,7 @@ export function SearchSuggestions({
         <ul className="py-1.5">
           {results!.genres.map((g) => (
             <li key={g.slug}>
-              <Link href={`/genre/${g.slug}`} onClick={onNavigate} className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-surface">
+              <Link href={`/genre/${g.slug}`} onClick={onNavigate} className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-hover">
                 <Tag className="size-4 shrink-0 text-muted" />
                 <span className="truncate font-body text-sm text-text">{g.name}</span>
                 <span className="ml-auto font-data text-[10px] uppercase tracking-wide text-muted">Genre</span>

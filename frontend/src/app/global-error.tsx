@@ -29,8 +29,8 @@ export default function GlobalError({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#e8f1fb",
-          color: "#212529",
+          background: "#ffffff",
+          color: "#333a3f",
           fontFamily: "ui-sans-serif, system-ui, sans-serif",
           padding: "2rem",
         }}
@@ -39,13 +39,13 @@ export default function GlobalError({
           <h1 style={{ fontSize: "1.875rem", margin: "0 0 0.75rem", lineHeight: 1.2 }}>
             Books Temple Nepal is having a moment.
           </h1>
-          <p style={{ margin: "0 0 1.5rem", lineHeight: 1.6, color: "#64748b" }}>
+          <p style={{ margin: "0 0 1.5rem", lineHeight: 1.6, color: "#6a757b" }}>
             Something went wrong loading the shop. Reloading usually sorts it.
           </p>
           <button
             onClick={reset}
             style={{
-              background: "#1c5fa6",
+              background: "#1d76bc",
               color: "#fff",
               border: "none",
               borderRadius: "999px",
@@ -57,7 +57,7 @@ export default function GlobalError({
             Reload
           </button>
           {error.digest && (
-            <p style={{ marginTop: "2rem", fontSize: "0.75rem", color: "#64748b" }}>
+            <p style={{ marginTop: "2rem", fontSize: "0.75rem", color: "#6a757b" }}>
               Reference: {error.digest}
             </p>
           )}

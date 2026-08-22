@@ -172,7 +172,7 @@ export default function WishlistPage() {
                   return (
                     <li
                       key={b._id}
-                      className="group flex gap-5 rounded-2xl border border-border bg-surface p-4 transition-shadow hover:shadow-[0_6px_24px_-12px_rgba(28,93,156,0.3)] sm:p-5"
+                      className="group flex gap-5 rounded-2xl border border-border bg-surface p-4 transition-shadow hover:shadow-[0_6px_24px_-12px_rgba(29,118,188,0.3)] sm:p-5"
                     >
                       <Link href={`/books/${b.slug}`} className="relative h-32 w-22 shrink-0 overflow-hidden rounded-lg border border-border bg-bg">
                         <Image src={b.coverImage.secureUrl} alt={`${b.title} cover`} fill sizes="88px" className="object-cover" />

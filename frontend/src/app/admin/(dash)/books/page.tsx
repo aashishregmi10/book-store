@@ -426,7 +426,7 @@ function AdminBooksContent() {
               <tr
                 key={b._id}
                 onClick={() => router.push(`/admin/books/${b.slug}`)}
-                className={`cursor-pointer hover:bg-bg ${selected.has(b._id) ? "bg-accent/5" : ""}`}
+                className={`cursor-pointer hover:bg-hover ${selected.has(b._id) ? "bg-accent/5" : ""}`}
               >
                 <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                   <input

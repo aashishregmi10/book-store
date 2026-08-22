@@ -104,7 +104,7 @@ export default function AdminCoupons() {
               {rows.map((c) => {
                 const s = status(c);
                 return (
-                  <tr key={c._id} className="hover:bg-bg">
+                  <tr key={c._id} className="hover:bg-hover">
                     <td className="px-4 py-3">
                       <Link href={`/admin/coupons/${c._id}/edit`} className="font-data tracking-[0.12em] text-text hover:text-accent">
                         {c.code}

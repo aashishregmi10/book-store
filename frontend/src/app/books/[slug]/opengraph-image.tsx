@@ -41,14 +41,14 @@ export default async function Image({ params }: { params: Promise<{ slug: string
         )}
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1 }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-            <span style={{ fontSize: 32, fontWeight: 700, color: "#1c5fa6" }}>Books Temple</span>
+            <span style={{ fontSize: 32, fontWeight: 700, color: "#1d76bc" }}>Books Temple</span>
             <span style={{ fontSize: 18, letterSpacing: 6, color: "#6b7c92" }}>NEPAL</span>
           </div>
           <div style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ fontSize: 58, lineHeight: 1.05, color: "#15233b" }}>{book?.title || "A good book"}</div>
             <div style={{ fontSize: 30, color: "#6b7c92", marginTop: 16 }}>{book?.author || ""}</div>
           </div>
-          <div style={{ fontSize: 40, fontWeight: 700, color: "#1c5fa6" }}>{book ? npr(book.price) : ""}</div>
+          <div style={{ fontSize: 40, fontWeight: 700, color: "#1d76bc" }}>{book ? npr(book.price) : ""}</div>
         </div>
       </div>
     ),

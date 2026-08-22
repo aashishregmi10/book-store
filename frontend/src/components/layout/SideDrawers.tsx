@@ -45,7 +45,7 @@ function DrawerShell({ title, onClose, children }: { title: string; onClose: () 
       <div className="animate-drawer-in absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-bg shadow-2xl">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <h2 className="font-display text-xl text-text">{title}</h2>
-          <button onClick={onClose} aria-label="Close" className="grid size-8 place-items-center rounded-full text-muted hover:bg-surface hover:text-text">
+          <button onClick={onClose} aria-label="Close" className="grid size-8 place-items-center rounded-full text-muted hover:bg-hover hover:text-text">
             <X className="size-5" />
           </button>
         </div>

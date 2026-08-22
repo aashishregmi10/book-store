@@ -15,7 +15,7 @@ const GENRES = [
   {
     slug: "self-help",
     name: "Self-Help",
-    color: "#2D5A3D",
+    color: "#1D76BC",
     description:
       "Books Temple Nepal stocks the top-rated self-help and personal-development titles available across Nepal, from habit-building to deep focus, with NPR pricing and Kathmandu delivery in 1–2 days.",
     metaTitle: "Best Self-Help Books in Nepal",

@@ -13,7 +13,7 @@ const genreSchema = new mongoose.Schema(
     description: { type: String }, // BLUF intro for the genre page
     curatorNote: { type: String },
     icon: { type: String },
-    color: { type: String, default: '#1C5FA6' },
+    color: { type: String, default: '#1D76BC' },
     bookCount: { type: Number, default: 0 },
     metaTitle: { type: String, maxlength: 70 },
     metaDesc: { type: String, maxlength: 160 },

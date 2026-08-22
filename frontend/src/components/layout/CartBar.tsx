@@ -31,7 +31,7 @@ export function CartBar() {
   return (
     <button
       onClick={openCart}
-      className="fixed inset-x-3 bottom-[4.25rem] z-40 flex items-center justify-between rounded-full bg-accent px-5 py-3 text-white shadow-[0_8px_24px_-8px_rgba(28,93,156,0.5)] md:hidden"
+      className="fixed inset-x-3 bottom-[4.25rem] z-40 flex items-center justify-between rounded-full bg-accent px-5 py-3 text-white shadow-[0_8px_24px_-8px_rgba(29,118,188,0.5)] md:hidden"
     >
       <span className="inline-flex items-center gap-2 font-data text-sm">
         <ShoppingCart className="size-4" /> {count} {count === 1 ? "item" : "items"}

@@ -12,8 +12,8 @@ export default function manifest(): MetadataRoute.Manifest {
     // These were still the warm-neutral + forest-green pair from an earlier
     // brand, so the PWA splash screen and the Android title bar rendered in
     // colours that appear nowhere on the site.
-    background_color: "#e8f1fb",
-    theme_color: "#1c5fa6",
+    background_color: "#ffffff",
+    theme_color: "#1d76bc",
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
       { src: "/icon-512.png", sizes: "512x512", type: "image/png" },

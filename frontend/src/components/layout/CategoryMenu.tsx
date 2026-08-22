@@ -105,7 +105,7 @@ export function CategoryMenu({ genres, active }: { genres: Genre[]; active?: boo
                 <Link
                   href={`/genre/${g.slug}`}
                   onClick={() => setOpen(false)}
-                  className="block truncate rounded-sm px-2 py-2 font-body text-sm text-text transition-colors hover:bg-surface hover:text-accent"
+                  className="block truncate rounded-sm px-2 py-2 font-body text-sm text-text transition-colors hover:bg-hover hover:text-accent"
                 >
                   {g.name}
                 </Link>

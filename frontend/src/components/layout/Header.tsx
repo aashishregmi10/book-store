@@ -197,7 +197,7 @@ function HeaderSearch() {
       </form>
 
       {open && q.trim().length >= 2 && (
-        <div className="absolute inset-x-0 top-full z-50 mt-1 max-h-[70vh] overflow-y-auto rounded-md border border-border bg-bg shadow-[0_12px_32px_-12px_rgba(28,93,156,0.35)]">
+        <div className="absolute inset-x-0 top-full z-50 mt-1 max-h-[70vh] overflow-y-auto rounded-md border border-border bg-bg shadow-[0_12px_32px_-12px_rgba(29,118,188,0.35)]">
           <SearchSuggestions term={q} results={results} loading={loading} onNavigate={() => setOpen(false)} />
         </div>
       )}

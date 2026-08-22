@@ -53,7 +53,7 @@ export function AccountMenu() {
         aria-label="Account menu"
         aria-expanded={open}
         aria-haspopup="menu"
-        className="flex items-center gap-2 rounded-full px-2.5 py-1.5 text-text transition-colors hover:bg-bg hover:text-accent"
+        className="flex items-center gap-2 rounded-full px-2.5 py-1.5 text-text transition-colors hover:bg-hover hover:text-accent"
       >
         <User className="size-5 shrink-0" />
         <span className="hidden max-w-[8rem] truncate font-data text-sm font-medium sm:inline">
@@ -62,7 +62,7 @@ export function AccountMenu() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-60 overflow-hidden rounded-xl border border-border bg-surface shadow-[0_12px_32px_-12px_rgba(28,93,156,0.35)]">
+        <div className="absolute right-0 top-full z-50 mt-2 w-60 overflow-hidden rounded-xl border border-border bg-surface shadow-[0_12px_32px_-12px_rgba(29,118,188,0.35)]">
           <div className="border-b border-border px-4 py-3">
             <p className="truncate font-body text-sm font-medium text-text">{user.fullName}</p>
             <p className="truncate font-body text-xs text-muted">{user.email}</p>
@@ -73,7 +73,7 @@ export function AccountMenu() {
                 key={it.href}
                 href={it.href}
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-3 px-4 py-2.5 font-body text-sm text-text transition-colors hover:bg-bg hover:text-accent"
+                className="flex items-center gap-3 px-4 py-2.5 font-body text-sm text-text transition-colors hover:bg-hover hover:text-accent"
               >
                 <it.icon className="size-4 text-muted" /> {it.label}
               </Link>
@@ -82,7 +82,7 @@ export function AccountMenu() {
           <div className="border-t border-border py-1">
             <button
               onClick={logout}
-              className="flex w-full items-center gap-3 px-4 py-2.5 font-body text-sm text-text transition-colors hover:bg-bg hover:text-sale"
+              className="flex w-full items-center gap-3 px-4 py-2.5 font-body text-sm text-text transition-colors hover:bg-hover hover:text-sale"
             >
               <LogOut className="size-4 text-muted" /> Log out
             </button>

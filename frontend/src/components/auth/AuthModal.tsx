@@ -115,7 +115,7 @@ function AuthModalBody({
       <button
         onClick={close}
         aria-label="Close"
-        className="absolute right-4 top-4 grid size-8 place-items-center rounded-full text-muted transition-colors hover:bg-bg hover:text-text"
+        className="absolute right-4 top-4 grid size-8 place-items-center rounded-full text-muted transition-colors hover:bg-hover hover:text-text"
       >
         <X className="size-5" />
       </button>

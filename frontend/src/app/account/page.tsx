@@ -143,7 +143,7 @@ export default function AccountPage() {
                 <div className="shrink-0 rounded-md border border-border bg-white p-2.5">
                   {/* qrcode.react needs literal colour strings; these mirror the
                       --color-text / surface tokens for a high-contrast scan. */}
-                  <QRCodeSVG value={link} size={104} fgColor="#212529" bgColor="#ffffff" level="M" aria-label="QR code for your invite link" />
+                  <QRCodeSVG value={link} size={104} fgColor="#333a3f" bgColor="#ffffff" level="M" aria-label="QR code for your invite link" />
                 </div>
                 <div>
                   <p className="font-data text-xs uppercase tracking-wide text-muted">Scan to invite</p>
