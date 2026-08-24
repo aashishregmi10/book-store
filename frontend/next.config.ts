@@ -50,6 +50,27 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        /*
+          Generated OG cards are IMAGES, but Next serves them from a page-shaped
+          path (/books/<slug>/opengraph-image?<hash>). Google crawled them as page
+          candidates and parked every one under "Crawled - currently not indexed" —
+          one wasted URL per book, which at this catalogue size costs more crawl
+          budget than the catalogue itself.
+
+          X-Robots-Tag rather than a robots.txt Disallow: the card must stay
+          FETCHABLE (that is the point of og:image), it just must not be indexed.
+          Social crawlers ignore this header, so link previews are unaffected, and
+          the real covers are separate Cloudinary URLs that stay in Google Images.
+        */
+        source: "/:path*/opengraph-image",
+        headers: [{ key: "X-Robots-Tag", value: "noindex" }],
+      },
+      {
+        // Same, for the site-level card at the root.
+        source: "/opengraph-image",
+        headers: [{ key: "X-Robots-Tag", value: "noindex" }],
+      },
+      {
         // Always fetch the latest service worker; allow it to control the root scope.
         source: "/sw.js",
         headers: [
