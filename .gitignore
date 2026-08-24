@@ -45,6 +45,7 @@ Thumbs.db
 # The existing ones stay on disk; they are simply no longer tracked.
 daraz-*-backup-*.csv
 merchandising-flags-backup-*.json
+reprice-backup-*.json
 
 # Misc
 *.pem
