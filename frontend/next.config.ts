@@ -51,6 +51,37 @@ const nextConfig: NextConfig = {
     return [
       {
         /*
+          Baseline security headers on every response.
+
+          Deliberately NOT including a Content-Security-Policy. Next's App
+          Router injects inline scripts for streaming and hydration, so any CSP
+          shipped without nonce middleware has to allow 'unsafe-inline' on
+          script-src — which removes the one thing a CSP is mainly there to
+          stop. That policy would satisfy a scanner and almost nothing else.
+          Doing it properly means generating a nonce per request in middleware
+          and threading it through; worth doing as its own change, not smuggled
+          in behind a headers tweak.
+
+          The four below have no such caveat: they are unambiguous wins and
+          cannot break a page that does not frame itself or sniff its own MIME
+          types. Referrer-Policy matches what browsers already default to, but
+          stating it explicitly is what audits look for and removes the doubt.
+        */
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          // The shop asks for none of these; denying them means an injected
+          // script cannot ask on our behalf either.
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+          },
+        ],
+      },
+      {
+        /*
           Generated OG cards are IMAGES, but Next serves them from a page-shaped
           path (/books/<slug>/opengraph-image?<hash>). Google crawled them as page
           candidates and parked every one under "Crawled - currently not indexed" —
