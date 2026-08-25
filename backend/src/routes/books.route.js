@@ -303,7 +303,16 @@ router.get('/sitemap', validate({ query: sitemapQuery }), async (req, res, next)
       const [items, total] = await Promise.all([
         Book.find(filter)
           .select('slug title updatedAt coverImage')
-          .sort({ updatedAt: -1 })
+          // `_id` is the tiebreaker, and it is not optional. `updatedAt` alone
+          // is not unique — a bulk shelving pass stamps hundreds of books
+          // within the same millisecond — and Mongo gives no stable order to
+          // tied documents across separate queries. Each sitemap shard is its
+          // own request, cached independently, so ties reshuffled between them:
+          // the live sitemap was serving 5,882 rows containing only 5,301
+          // unique URLs, which means ~581 books appeared twice and ~581 others
+          // appeared nowhere at all. A unique tiebreaker makes the total order
+          // deterministic, so skip/limit paginates the same way every time.
+          .sort({ updatedAt: -1, _id: 1 })
           .skip((page - 1) * limit)
           .limit(limit)
           .lean(),

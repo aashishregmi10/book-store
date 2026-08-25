@@ -59,7 +59,10 @@ router.get(
       const key = `articles_list:${page}:${limit}:${req.query.category || ''}:${req.query.tag || ''}:${req.query.search || ''}`;
       const data = await withCache(key, 600, async () => {
         const [items, total] = await Promise.all([
-          Article.find(filter).select(LIST).sort({ publishedAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+          // _id tiebreaker: a seeded batch shares publishedAt to the millisecond, and
+          // tied documents have no stable order across requests, so paging without
+          // it repeats some articles and skips others (see books.route.js).
+          Article.find(filter).select(LIST).sort({ publishedAt: -1, _id: 1 }).skip((page - 1) * limit).limit(limit).lean(),
           Article.countDocuments(filter),
         ]);
         return { items, total, page, pages: Math.ceil(total / limit) || 1 };
@@ -120,7 +123,7 @@ router.get('/sitemap', validate({ query: sitemapQuery }), async (req, res, next)
       const [items, total] = await Promise.all([
         Article.find(filter)
           .select('slug publishedAt updatedAt')
-          .sort({ publishedAt: -1 })
+          .sort({ publishedAt: -1, _id: 1 }) // stable paging — see books.route.js
           .skip((page - 1) * limit)
           .limit(limit)
           .lean(),
