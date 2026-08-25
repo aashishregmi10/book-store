@@ -52,8 +52,8 @@ export function Footer() {
           <Image
             src="/logo-full.png"
             alt="Books Temple Nepal, online bookstore"
-            width={1200}
-            height={427}
+            width={674}
+            height={240}
             className="h-16 w-auto sm:h-20"
           />
           {/* Keep this number honest and rounded down. It was "over 2,000" long

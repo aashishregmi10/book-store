@@ -63,8 +63,8 @@ export function Header({ genres = [] }: { genres?: Genre[] }) {
           <Image
             src="/logo-wordmark.png"
             alt="Books Temple Nepal"
-            width={900}
-            height={278}
+            width={542}
+            height={168}
             priority
             className="h-10 w-auto sm:h-14"
           />
