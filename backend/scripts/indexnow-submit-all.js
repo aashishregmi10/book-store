@@ -52,16 +52,49 @@ const locs = (xml) => [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].
   if (key !== hosted) throw new Error(`key mismatch: env=${key.slice(0, 8)}… hosted=${hosted.slice(0, 8)}…`);
   console.log(`key verified (${hosted.slice(0, 8)}…) against ${SITE}/indexnow-key.txt`);
 
-  const index = await fetchText(`${SITE}/sitemap.xml`);
-  const children = locs(index);
-  console.log(`sitemap index lists ${children.length} child sitemaps`);
-
   const urls = [];
-  for (const child of children) {
-    const found = locs(await fetchText(child));
-    console.log(`  ${child.replace(SITE, '')}: ${found.length}`);
-    urls.push(...found);
+
+  // The published sitemap is the right source in the normal case: it is exactly
+  // what the site tells crawlers is indexable. But it is served through a 6-hour
+  // edge cache, so straight after a sitemap fix it still hands back the old
+  // shards. --from-api reads the same rows from the API that generates them,
+  // which is authoritative immediately. Use it when a fix has landed on the
+  // backend and you do not want to wait out the CDN.
+  const fromApi = process.argv.includes('--from-api');
+
+  if (fromApi) {
+    const API = process.env.API_URL || 'https://book-store-backend-kr9a.onrender.com/api';
+    const page = async (path, p) => {
+      const res = await fetch(`${API}${path}?page=${p}&limit=1000`);
+      if (!res.ok) throw new Error(`${path} page ${p} -> HTTP ${res.status}`);
+      return (await res.json()).data;
+    };
+    for (const [path, prefix] of [['/books/sitemap', '/books/'], ['/articles/sitemap', '/blog/']]) {
+      const first = await page(path, 1);
+      const pages = Math.ceil(first.total / 1000);
+      const items = [...first.items];
+      for (let p = 2; p <= pages; p += 1) items.push(...(await page(path, p)).items);
+      console.log(`  ${path}: ${items.length} of ${first.total}`);
+      urls.push(...items.map((i) => `${SITE}${prefix}${i.slug}`));
+    }
+    // The small, unpaginated sitemaps have no ordering bug, so take them as
+    // published rather than reconstructing them.
+    for (const id of ['static', 'categories', 'genres']) {
+      const found = locs(await fetchText(`${SITE}/sitemap/${id}.xml`));
+      console.log(`  /sitemap/${id}.xml: ${found.length}`);
+      urls.push(...found);
+    }
+  } else {
+    const index = await fetchText(`${SITE}/sitemap.xml`);
+    const children = locs(index);
+    console.log(`sitemap index lists ${children.length} child sitemaps`);
+    for (const child of children) {
+      const found = locs(await fetchText(child));
+      console.log(`  ${child.replace(SITE, '')}: ${found.length}`);
+      urls.push(...found);
+    }
   }
+
   const unique = [...new Set(urls)];
   console.log(`\n${unique.length} unique URLs (${urls.length - unique.length} duplicates dropped)`);
 
@@ -86,7 +119,18 @@ const locs = (xml) => [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].
     // 200 accepted, 202 accepted pending key validation. Anything else matters.
     console.log(`  batch ${i + 1}/${batches.length}: ${batch.length} URLs -> HTTP ${res.status}`);
     if (res.status !== 200 && res.status !== 202) {
-      console.log('    body:', (await res.text()).slice(0, 300));
+      const body = await res.text();
+      console.log('    body:', body.slice(0, 300));
+      // Bing verifies the hosted key asynchronously, so the first submission
+      // after publishing the key file is routinely refused while that is still
+      // pending. It is a wait-and-retry, not a misconfiguration — worth saying
+      // so rather than sending someone hunting for a broken setup.
+      if (body.includes('SiteVerificationNotCompleted')) {
+        console.log(
+          '\n    The key file is served correctly; Bing has not finished verifying it yet.\n' +
+            '    This clears on its own — re-run the same command later.'
+        );
+      }
       throw new Error(`batch ${i + 1} rejected with ${res.status}`);
     }
     sent += batch.length;

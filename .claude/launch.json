@@ -4,70 +4,150 @@
     {
       "name": "ns-frontend",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "D:/learning-platform/frontend", "run", "dev"],
+      "runtimeArgs": [
+        "--prefix",
+        "D:/learning-platform/frontend",
+        "run",
+        "dev"
+      ],
       "port": 3000,
       "autoPort": false
     },
     {
       "name": "lp2-frontend",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "D:/learning-platform-2/frontend", "run", "dev", "--", "--port", "5180", "--strictPort"],
+      "runtimeArgs": [
+        "--prefix",
+        "D:/learning-platform-2/frontend",
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "5180",
+        "--strictPort"
+      ],
       "port": 5180,
       "autoPort": false
     },
     {
       "name": "lp2-backend",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "D:/learning-platform-2/backend", "run", "dev"],
+      "runtimeArgs": [
+        "--prefix",
+        "D:/learning-platform-2/backend",
+        "run",
+        "dev"
+      ],
       "port": 5000,
       "autoPort": false
     },
     {
       "name": "pawmart-frontend",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "D:/pawmart/frontend", "run", "dev", "--", "--port", "3010"],
+      "runtimeArgs": [
+        "--prefix",
+        "D:/pawmart/frontend",
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "3010"
+      ],
       "port": 3010,
       "autoPort": false
     },
     {
       "name": "pageturn-backend",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "D:/pageturn-nepal/backend", "run", "dev"],
+      "runtimeArgs": [
+        "--prefix",
+        "D:/pageturn-nepal/backend",
+        "run",
+        "dev"
+      ],
       "port": 5000,
       "autoPort": false
     },
     {
       "name": "ipb-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "D:/international-paper-bag", "run", "dev"],
+      "runtimeArgs": [
+        "--prefix",
+        "D:/international-paper-bag",
+        "run",
+        "dev"
+      ],
       "port": 4321,
       "autoPort": false
     },
     {
       "name": "pageturn-frontend",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "D:/pageturn-nepal/frontend", "run", "dev"],
+      "runtimeArgs": [
+        "--prefix",
+        "D:/pageturn-nepal/frontend",
+        "run",
+        "dev"
+      ],
       "port": 3000,
       "autoPort": false
     },
     {
       "name": "pageturn-frontend-prod",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "D:/pageturn-nepal/frontend", "run", "start", "--", "--port", "3001"],
+      "runtimeArgs": [
+        "--prefix",
+        "D:/pageturn-nepal/frontend",
+        "run",
+        "start",
+        "--",
+        "--port",
+        "3001"
+      ],
       "port": 3001,
       "autoPort": false
     },
     {
       "name": "edunepal-backend",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "D:/eduNepal/backend", "run", "dev"],
+      "runtimeArgs": [
+        "--prefix",
+        "D:/eduNepal/backend",
+        "run",
+        "dev"
+      ],
       "port": 5001,
+      "autoPort": false
+    },
+    {
+      "name": "mission84-frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "D:/mission-84/frontend",
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "5174",
+        "--strictPort"
+      ],
+      "port": 5174,
       "autoPort": false
     },
     {
       "name": "edunepal-frontend",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "D:/eduNepal/frontend", "run", "dev", "--", "--port", "5173", "--strictPort"],
+      "runtimeArgs": [
+        "--prefix",
+        "D:/eduNepal/frontend",
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "5173",
+        "--strictPort"
+      ],
       "port": 5173,
       "autoPort": false
     }
