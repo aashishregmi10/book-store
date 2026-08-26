@@ -98,11 +98,55 @@ describe('Admin orders', () => {
     const order = await makeOrder();
     const before = (await User.findById(normalUser._id)).points;
 
-    const res = await request(app).put(`/api/admin/orders/${order._id}/cancel`).set(auth(adminToken)).send({ reason: 'test' });
+    const res = await request(app).put(`/api/admin/orders/${order._id}/cancel`).set(auth(adminToken)).send({ reason: 'sold out at the supplier' });
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe('cancelled');
+    expect(res.body.data.cancellationReason).toBe('sold out at the supplier');
     expect((await Book.findById(book._id)).stock).toBe(10); // restored
     expect((await User.findById(normalUser._id)).points).toBe(before - 50); // earned reversed
+  });
+
+  // The reason used to default to "Cancelled by admin", which told whoever
+  // opened the order later nothing at all. Both routes now insist on one.
+  it.each([['cancel'], ['refund']])('refuses to %s an order without a reason', async (action) => {
+    const order = await makeOrder();
+    const res = await request(app).put(`/api/admin/orders/${order._id}/${action}`).set(auth(adminToken)).send({});
+    expect(res.status).toBe(400);
+    expect(res.body.errors[0].field).toBe('reason');
+  });
+
+  it('records why a refund happened, not just that it did', async () => {
+    const order = await makeOrder();
+    const res = await request(app)
+      .put(`/api/admin/orders/${order._id}/refund`)
+      .set(auth(adminToken))
+      .send({ reason: 'damaged in transit' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe('refunded');
+    expect(res.body.data.paymentStatus).toBe('refunded');
+    expect(res.body.data.refundReason).toBe('damaged in transit');
+    expect(res.body.data.statusHistory.at(-1).note).toBe('damaged in transit');
+  });
+
+  // Was a flat .limit(200) returning a bare array: order 201 was unreachable,
+  // and nothing said the list had been cut off.
+  it('pages the order list and reports the total', async () => {
+    for (let i = 0; i < 3; i += 1) await makeOrder();
+
+    const first = await request(app).get('/api/admin/orders?page=1&limit=2').set(auth(adminToken));
+    expect(first.status).toBe(200);
+    expect(first.body.data.items).toHaveLength(2);
+    expect(first.body.data.total).toBe(3);
+    expect(first.body.data.pages).toBe(2);
+
+    const second = await request(app).get('/api/admin/orders?page=2&limit=2').set(auth(adminToken));
+    expect(second.body.data.items).toHaveLength(1);
+
+    // No row may appear on both pages - that is what the _id tiebreaker in the
+    // sort is for, since these orders share a createdAt to the millisecond.
+    const ids = [...first.body.data.items, ...second.body.data.items].map((o) => o._id);
+    expect(new Set(ids).size).toBe(3);
   });
 });
 

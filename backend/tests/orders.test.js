@@ -4,6 +4,7 @@ const request = require('supertest');
 const db = require('./db');
 const app = require('../src/app');
 const Book = require('../src/models/book.model');
+const Order = require('../src/models/order.model');
 const User = require('../src/models/user.model');
 const Coupon = require('../src/models/coupon.model');
 const Activity = require('../src/models/activity.model');
@@ -75,11 +76,14 @@ describe('POST /api/orders (COD)', () => {
     expect(res.body.errors[0].code).toBe('COD_ONLY');
   });
 
-  it('supports guest checkout (no auth, no points)', async () => {
+  // Guest checkout was removed: an order has to belong to an account so the
+  // buyer can find it, earn points on it, and be emailed about it. The
+  // storefront hides the checkout form from signed-out visitors, but this is
+  // the check that actually holds - a request straight at the API is refused.
+  it('refuses to place an order without a session', async () => {
     const res = await request(app).post('/api/orders').send({ items: [{ bookId: bookA.id, quantity: 1 }], deliveryAddress: ADDR });
-    expect(res.status).toBe(201);
-    expect(res.body.data.order.isGuest).toBe(true);
-    expect(res.body.data.order.pointsEarned).toBe(0);
+    expect(res.status).toBe(401);
+    expect(res.body.errors[0].code).toBe('NO_TOKEN');
   });
 
   // The delivery phone was validated as "any non-empty string". On a COD shop
@@ -223,17 +227,25 @@ describe('POST /api/orders (COD)', () => {
   });
 });
 
-// Guests can check out, so they hold an order number that every other read on
-// this router rejects — there is no session to match it against.
+// /orders/lookup serves orders placed before sign-in was required. Those carry
+// no user, so every other read on this router rejects them - there is no
+// session to match against. The API cannot mint one any more, so the fixture
+// writes the row directly, which is exactly the shape those orders still have.
 describe('POST /api/orders/lookup (guest tracking)', () => {
   const GUEST_ADDR = { ...ADDR, phone: '9801234567' };
 
   async function placeGuestOrder() {
-    const res = await request(app)
-      .post('/api/orders')
-      .send({ items: [{ bookId: bookA.id, quantity: 1 }], deliveryAddress: GUEST_ADDR });
-    expect(res.status).toBe(201);
-    return res.body.data.order.orderNumber;
+    const order = await Order.create({
+      isGuest: true,
+      items: [{ book: bookA.id, title: bookA.title, author: bookA.author, price: bookA.price, quantity: 1 }],
+      subtotal: bookA.price,
+      deliveryFee: 0,
+      total: bookA.price,
+      deliveryAddress: GUEST_ADDR,
+      paymentMethod: 'cod',
+      status: 'placed',
+    });
+    return order.orderNumber;
   }
 
   it('returns the order for the right number + phone', async () => {
