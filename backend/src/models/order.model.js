@@ -74,6 +74,10 @@ const orderSchema = new mongoose.Schema(
     },
 
     cancellationReason: { type: String },
+    // Mirrors cancellationReason. The reason was previously only written into
+    // statusHistory[].note, which is fine for a timeline but cannot be queried
+    // or shown next to the order without walking the history array.
+    refundReason: { type: String },
     customerNote: { type: String },
     adminNote: { type: String },
   },

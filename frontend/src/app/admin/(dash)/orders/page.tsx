@@ -1,12 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 
 import { clientApi } from "@/lib/client-api";
 import { npr } from "@/lib/format";
-import { STATUSES, TERMINAL, nextStatus, type AdminOrder } from "./types";
+import { Pagination } from "@/components/books/Pagination";
+import { TableSkeleton } from "@/components/ui/Skeleton";
+import { STATUSES, TERMINAL, askReason, nextStatus, type AdminOrder } from "./types";
+
+/** One page of orders from GET /admin/orders. */
+interface OrdersPage {
+  items: AdminOrder[];
+  total: number;
+  page: number;
+  pages: number;
+}
+
+const PAGE_SIZE = 25;
+
 
 /**
  * Orders list. Rows link through to /admin/orders/[id].
@@ -19,15 +33,59 @@ import { STATUSES, TERMINAL, nextStatus, type AdminOrder } from "./types";
  * the order's own page.
  */
 export default function AdminOrders() {
+  // useSearchParams needs a Suspense boundary, same as the books list.
+  return (
+    <Suspense fallback={<TableSkeleton rows={6} cols={5} />}>
+      <AdminOrdersContent />
+    </Suspense>
+  );
+}
+
+function AdminOrdersContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // The URL owns status + page, matching the books list: a filtered page is
+  // shareable, survives a refresh, and back/forward walks prior states.
+  const status = searchParams.get("status") || "all";
+  const page = Number(searchParams.get("page")) || 1;
+
   const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState("all");
   const [busy, setBusy] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   // A failed status change used to be completely silent: `act` had no catch, so
   // the promise rejected unhandled, the row never moved, and the only clue was
   // the console. Anything that touches an order now reports what happened.
   const [error, setError] = useState("");
+
+  const updateParams = useCallback(
+    (patch: Record<string, string | null>) => {
+      const params = new URLSearchParams(
+        typeof window === "undefined" ? searchParams.toString() : window.location.search
+      );
+      for (const [key, value] of Object.entries(patch)) {
+        if (value === null) params.delete(key);
+        else params.set(key, value);
+      }
+      const qs = params.toString();
+      router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [router, pathname, searchParams]
+  );
+
+  // Same URL shape, as an href, so <Pagination> renders real links
+  // (middle-click, open-in-new-tab) rather than click handlers.
+  function hrefForPage(n: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (n === 1) params.delete("page");
+    else params.set("page", String(n));
+    const qs = params.toString();
+    return qs ? `${pathname}?${qs}` : pathname;
+  }
 
   useEffect(() => {
     let active = true;
@@ -40,18 +98,25 @@ export default function AdminOrders() {
     setLoading(true);
     setOrders([]);
     clientApi
-      .get<AdminOrder[]>(`/admin/orders?status=${status}`)
-      .then((d) => active && setOrders(d))
+      .get<OrdersPage>(`/admin/orders?status=${status}&page=${page}&limit=${PAGE_SIZE}`)
+      .then((d) => {
+        if (!active) return;
+        setOrders(d.items);
+        setPages(d.pages);
+        setTotal(d.total);
+      })
       .catch((e) => {
         if (!active) return;
         setOrders([]);
+        setPages(1);
+        setTotal(0);
         setError(e?.message || "Couldn't load orders.");
       })
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
     };
-  }, [status, refreshKey]);
+  }, [status, page, refreshKey]);
 
   async function act(
     e: React.MouseEvent,
@@ -70,11 +135,13 @@ export default function AdminOrders() {
         if (!next) return; // nothing to advance to — the button shouldn't render either
         await clientApi.put(`/admin/orders/${id}/status`, { status: next });
       } else if (action === "cancel") {
-        if (!confirm("Cancel this order and restore stock?")) return;
-        await clientApi.put(`/admin/orders/${id}/cancel`, {});
+        const reason = askReason("Why is this order being cancelled? Stock will be restored.");
+        if (reason === null) return;
+        await clientApi.put(`/admin/orders/${id}/cancel`, { reason });
       } else {
-        if (!confirm("Refund this order?")) return;
-        await clientApi.put(`/admin/orders/${id}/refund`, {});
+        const reason = askReason("Why is this order being refunded?");
+        if (reason === null) return;
+        await clientApi.put(`/admin/orders/${id}/refund`, { reason });
       }
       setRefreshKey((k) => k + 1);
     } catch (e) {
@@ -92,7 +159,7 @@ export default function AdminOrders() {
         {STATUSES.map((s) => (
           <button
             key={s}
-            onClick={() => setStatus(s)}
+            onClick={() => updateParams({ status: s === "all" ? null : s, page: null })}
             className={`px-3 py-1.5 font-data text-xs uppercase tracking-wide ${
               status === s ? "bg-accent text-white" : "border border-border text-muted hover:text-accent"
             }`}
@@ -210,6 +277,20 @@ export default function AdminOrders() {
           </tbody>
         </table>
       </div>
+
+      {!loading && total > 0 && (
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+          <span className="font-data text-xs uppercase tracking-wide text-muted">
+            {total} order{total === 1 ? "" : "s"}
+          </span>
+          <Pagination
+            page={page}
+            pages={pages}
+            hrefFor={hrefForPage}
+            className="flex flex-wrap items-center gap-1.5"
+          />
+        </div>
+      )}
     </div>
   );
 }

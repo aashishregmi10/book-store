@@ -9,7 +9,7 @@ import { ArrowLeft } from "lucide-react";
 import { clientApi } from "@/lib/client-api";
 import { npr } from "@/lib/format";
 import { OrderTimeline } from "../_components/OrderTimeline";
-import { FLOW, type AdminOrderDetail } from "../types";
+import { FLOW, askReason, type AdminOrderDetail } from "../types";
 
 /**
  * A whole page per order, rather than an accordion inside the list.
@@ -51,11 +51,13 @@ export default function AdminOrderDetailPage() {
         const next = FLOW[FLOW.indexOf(order.status) + 1];
         if (next) await clientApi.put(`/admin/orders/${order._id}/status`, { status: next });
       } else if (action === "cancel") {
-        if (!confirm("Cancel this order and restore stock?")) return;
-        await clientApi.put(`/admin/orders/${order._id}/cancel`, {});
+        const reason = askReason("Why is this order being cancelled? Stock will be restored.");
+        if (reason === null) return;
+        await clientApi.put(`/admin/orders/${order._id}/cancel`, { reason });
       } else {
-        if (!confirm("Refund this order?")) return;
-        await clientApi.put(`/admin/orders/${order._id}/refund`, {});
+        const reason = askReason("Why is this order being refunded?");
+        if (reason === null) return;
+        await clientApi.put(`/admin/orders/${order._id}/refund`, { reason });
       }
       setLoading(true);
       load();
@@ -214,6 +216,18 @@ export default function AdminOrderDetailPage() {
           {order.customerNote && (
             <p className="border-t border-border pt-4 font-body text-sm text-muted">
               <span className="text-text">Note:</span> {order.customerNote}
+            </p>
+          )}
+
+          {/* Why this order ended where it did. It is recorded in the timeline
+              too, but that means scrolling a history to answer the first
+              question anyone opening a cancelled order asks. */}
+          {(order.cancellationReason || order.refundReason) && (
+            <p className="mt-4 border border-sale/40 bg-sale/5 px-4 py-3 font-body text-sm text-text">
+              <span className="font-data text-xs uppercase tracking-wide text-sale">
+                {order.refundReason ? "Refunded" : "Cancelled"}
+              </span>
+              <span className="mt-1 block">{order.refundReason || order.cancellationReason}</span>
             </p>
           )}
         </div>

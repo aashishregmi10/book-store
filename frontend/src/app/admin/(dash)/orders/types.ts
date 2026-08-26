@@ -33,6 +33,26 @@ export function nextStatus(current: string): string | null {
   return FLOW[i + 1] ?? null; // delivered is the end of the line
 }
 
+/**
+ * Cancelling and refunding both have to say why -- the API rejects a missing
+ * reason, and an order that just reads "cancelled" tells whoever opens it
+ * later nothing. The prompt doubles as the confirmation step, so callers no
+ * longer show a separate confirm(). Returns null when the admin backs out.
+ *
+ * Lives here rather than in either page so the list and the detail page ask
+ * the same way and enforce the same minimum.
+ */
+export function askReason(question: string): string | null {
+  const answer = window.prompt(question);
+  if (answer === null) return null; // dismissed
+  const trimmed = answer.trim();
+  if (trimmed.length < 3) {
+    window.alert("Please give a reason of at least 3 characters.");
+    return null;
+  }
+  return trimmed;
+}
+
 export interface AdminOrder {
   _id: string;
   orderNumber: string;
@@ -64,6 +84,8 @@ export interface AdminOrderDetail extends AdminOrder {
   paymentStatus: string;
   deliveryMethod: string;
   customerNote?: string;
+  cancellationReason?: string;
+  refundReason?: string;
   user?: { fullName?: string; email?: string; phone?: string };
   deliveryAddress?: {
     fullName?: string;

@@ -6,7 +6,10 @@ export default function manifest(): MetadataRoute.Manifest {
     name: SITE.name,
     short_name: "Books Temple",
     description: SITE.description,
-    start_url: "/",
+    // Installed from a phone, this is the screen the app opens on. The
+    // homepage is a shop window built for first-time visitors; someone who
+    // installed the app has already been sold, so it opens on the catalogue.
+    start_url: "/books",
     display: "standalone",
     // Must track the live palette in globals.css (--color-bg / --color-accent).
     // These were still the warm-neutral + forest-green pair from an earlier

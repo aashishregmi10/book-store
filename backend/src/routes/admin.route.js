@@ -35,6 +35,9 @@ router.use(authenticate, requireAdmin);
 // pass through unchanged — matching the previous express-validator behaviour). ──
 const idParams = z.object({ id: objectId() });
 const slugParams = z.object({ slug: trimmedString() });
+// Cancelling or refunding must say why. It used to default to 'Cancelled by
+// admin', which told whoever read the order later precisely nothing.
+const reasonBody = z.object({ reason: trimmedString(3).max(500) });
 const userIdParams = z.object({ userId: objectId() });
 const looseImage = z.object({ secureUrl: trimmedString(), publicId: trimmedString() }).catchall(z.unknown());
 const bookBody = z
@@ -1008,8 +1011,33 @@ router.get('/orders', async (req, res, next) => {
     const filter = {};
     if (req.query.status && req.query.status !== 'all') filter.status = req.query.status;
     if (req.query.search) filter.orderNumber = new RegExp(String(req.query.search), 'i');
-    const orders = await Order.find(filter).sort({ createdAt: -1 }).limit(200).populate('user', 'fullName email').lean();
-    return ok(res, orders.map((o) => ({ ...o, itemCount: o.items.length })), 'Orders');
+    // Was a flat .limit(200): order 201 onwards was unreachable from the UI,
+    // and the list gave no clue it had been truncated. Paged instead, with a
+    // total so the control knows how many pages there are.
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 25));
+    const [orders, total] = await Promise.all([
+      Order.find(filter)
+        // _id breaks ties: two orders placed in the same millisecond have no
+        // defined order under createdAt alone, and skip/limit paging over an
+        // unstable sort can repeat a row on one page and drop it from the next.
+        .sort({ createdAt: -1, _id: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .populate('user', 'fullName email')
+        .lean(),
+      Order.countDocuments(filter),
+    ]);
+    return ok(
+      res,
+      {
+        items: orders.map((o) => ({ ...o, itemCount: o.items.length })),
+        total,
+        page,
+        pages: Math.max(1, Math.ceil(total / limit)),
+      },
+      'Orders'
+    );
   } catch (err) {
     return next(err);
   }
@@ -1056,7 +1084,7 @@ router.put('/orders/:id/status', validate({ params: idParams, body: z.object({ s
   }
 });
 
-router.put('/orders/:id/cancel', validate({ params: idParams }), async (req, res, next) => {
+router.put('/orders/:id/cancel', validate({ params: idParams, body: reasonBody }), async (req, res, next) => {
   try {
     const order = await Order.findById(req.params.id);
     if (!order) return fail(res, 'Order not found', 404, [{ code: 'NOT_FOUND' }]);
@@ -1074,7 +1102,7 @@ router.put('/orders/:id/cancel', validate({ params: idParams }), async (req, res
       }
     }
     order.status = 'cancelled';
-    order.cancellationReason = req.body.reason || 'Cancelled by admin';
+    order.cancellationReason = req.body.reason; // required by reasonBody
     order.statusHistory.push({ status: 'cancelled', note: order.cancellationReason, timestamp: new Date(), updatedBy: req.userId });
     await order.save();
     return ok(res, order, 'Order cancelled, stock restored');
@@ -1083,7 +1111,7 @@ router.put('/orders/:id/cancel', validate({ params: idParams }), async (req, res
   }
 });
 
-router.put('/orders/:id/refund', validate({ params: idParams }), async (req, res, next) => {
+router.put('/orders/:id/refund', validate({ params: idParams, body: reasonBody }), async (req, res, next) => {
   try {
     const order = await Order.findById(req.params.id);
     if (!order) return fail(res, 'Order not found', 404, [{ code: 'NOT_FOUND' }]);
@@ -1097,7 +1125,8 @@ router.put('/orders/:id/refund', validate({ params: idParams }), async (req, res
     }
     order.paymentStatus = 'refunded';
     order.status = 'refunded';
-    order.statusHistory.push({ status: 'refunded', note: req.body.reason || 'Refund processed', timestamp: new Date(), updatedBy: req.userId });
+    order.refundReason = req.body.reason; // required by reasonBody
+    order.statusHistory.push({ status: 'refunded', note: order.refundReason, timestamp: new Date(), updatedBy: req.userId });
     await order.save();
     return ok(res, order, 'Refund processed');
   } catch (err) {
