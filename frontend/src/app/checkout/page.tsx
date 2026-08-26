@@ -5,6 +5,7 @@ import Link from "next/link";
 import { PartyPopper } from "lucide-react";
 import { useCart } from "@/lib/stores/cart";
 import { useAuth } from "@/lib/stores/auth";
+import { useAuthModal } from "@/lib/stores/authModal";
 import { clientApi, ClientApiError } from "@/lib/client-api";
 import { npr } from "@/lib/format";
 import { isNepaliPhone } from "@/lib/phone";
@@ -37,6 +38,9 @@ export default function CheckoutPage() {
   const items = useCart((s) => s.items);
   const clear = useCart((s) => s.clear);
   const user = useAuth((s) => s.user);
+  const token = useAuth((s) => s.token);
+  const hydrated = useAuth((s) => s.hydrated);
+  const openLogin = useAuthModal((s) => s.openLogin);
 
   const [priced, setPriced] = useState<Priced | null>(null);
   const [placing, setPlacing] = useState(false);
@@ -99,6 +103,33 @@ export default function CheckoutPage() {
             Keep that number: you can check on your order any time with it and your phone number.
           </p>
         )}
+      </div>
+    );
+  }
+
+  // Auth is still rehydrating from storage. Render nothing rather than flash
+  // the sign-in wall at someone who is already signed in.
+  if (!hydrated) {
+    return <div className="mx-auto h-64 max-w-2xl px-4 sm:px-6" aria-hidden />;
+  }
+
+  // Checkout needs an account: the order has to belong to someone who can
+  // then track it and earn points on it. Add to cart is gated the same way,
+  // so in practice only a cart persisted from before this rule reaches here.
+  // Checked before the empty-cart branch so the message is the actionable one.
+  if (!token) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-24 text-center sm:px-6">
+        <h1 className="font-display text-3xl text-text">Sign in to finish your order</h1>
+        <p className="mt-2 font-body text-muted">
+          Your books are saved. Signing in keeps the order in your account, so you can track it and collect points on it.
+        </p>
+        <button
+          onClick={() => openLogin("/checkout")}
+          className="mt-6 inline-block bg-accent px-6 py-3 font-data text-sm uppercase tracking-wide text-white hover:bg-accent-hover"
+        >
+          Sign in
+        </button>
       </div>
     );
   }

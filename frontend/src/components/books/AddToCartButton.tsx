@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { useCart, type CartItem } from "@/lib/stores/cart";
+import { useAuth } from "@/lib/stores/auth";
+import { useAuthModal } from "@/lib/stores/authModal";
 import { CartIcon } from "@/components/ui/CartIcon";
 import { RestockRequestButton } from "./RestockRequestButton";
 
@@ -26,9 +28,20 @@ export function AddToCartButton({
   className?: string;
 }) {
   const add = useCart((s) => s.add);
+  const token = useAuth((s) => s.token);
+  const openLogin = useAuthModal((s) => s.openLogin);
   const [added, setAdded] = useState(false);
 
   function handleAdd() {
+    // Sign-in is required to hold a cart, so the prompt goes here rather than
+    // at checkout: letting someone fill a cart and only then telling them to
+    // sign in loses the work they just did. No `hydrated` check is needed —
+    // this handler cannot run before React hydrates the button, and the auth
+    // store rehydrates from storage when the module loads, i.e. earlier.
+    if (!token) {
+      openLogin(`/books/${book.slug}`);
+      return;
+    }
     add(book, 1);
     setAdded(true);
     setTimeout(() => setAdded(false), 1600);

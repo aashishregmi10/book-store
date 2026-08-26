@@ -7,7 +7,7 @@ const Order = require('../models/order.model');
 const User = require('../models/user.model');
 const Coupon = require('../models/coupon.model');
 const Activity = require('../models/activity.model');
-const { authenticate, optionalAuth } = require('../middleware/auth');
+const { authenticate } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const { z, objectId, trimmedString, phone } = require('../utils/zod');
 const { priceCart } = require('../services/pricing');
@@ -44,10 +44,16 @@ const createOrderBody = z.object({
 });
 const orderNumberParams = z.object({ orderNumber: trimmedString() });
 
-// ── POST /api/orders — place order (auth optional → guest checkout) ──
+// ── POST /api/orders — place order (sign-in required) ──
+// Guest checkout was removed: an order has to belong to an account so the
+// buyer can find it under /account, earn points on it, and be emailed about
+// it. This is the real boundary. The storefront also hides the checkout form
+// from signed-out visitors, but that alone is cosmetic and curl walks past
+// it. Orders placed before this change keep isGuest:true and stay readable
+// through /orders/lookup, which is why that route is left alone.
 router.post(
   '/',
-  optionalAuth,
+  authenticate,
   validate({ body: createOrderBody }),
   async (req, res, next) => {
     const { paymentMethod = 'cod', deliveryAddress, deliveryMethod, couponCode, pointsUsed = 0, customerNote } = req.body;
@@ -59,8 +65,11 @@ router.post(
 
     const decremented = [];
     try {
-      const user = req.userId ? await User.findById(req.userId) : null;
-      if (user?.isBanned) return fail(res, 'Account suspended', 403, [{ code: 'BANNED' }]);
+      // authenticate guarantees req.userId, but the account can have been
+      // deleted mid-session — refuse rather than write an ownerless order.
+      const user = await User.findById(req.userId);
+      if (!user) return fail(res, 'Please sign in again.', 401, [{ code: 'NO_ACCOUNT' }]);
+      if (user.isBanned) return fail(res, 'Account suspended', 403, [{ code: 'BANNED' }]);
 
       const priced = await priceCart({ items: req.body.items, deliveryMethod, couponCode, pointsUsed, user });
       if (priced.issues.length) return fail(res, 'Some items are unavailable', 409, priced.issues);
@@ -79,7 +88,7 @@ router.post(
 
       const order = await Order.create({
         user: user?._id,
-        isGuest: !user,
+        isGuest: false, // kept on the model for orders placed before sign-in was required
         items: priced.lineItems.map((li) => ({
           book: li.book, title: li.title, author: li.author, coverImage: li.coverImage, condition: li.condition, price: li.price, quantity: li.quantity,
           ...(li.variantId ? { variantId: li.variantId } : {}), ...(li.format ? { format: li.format } : {}),
