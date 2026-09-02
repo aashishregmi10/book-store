@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, BookText, Tags, Newspaper, Package, Users, Star, Heart, MessageCircleQuestion, Ticket, Store, LogOut, Menu, X } from "lucide-react";
+import { LayoutDashboard, BookText, Tags, Newspaper, Package, Users, Star, Heart, MessageCircleQuestion, Mail, Ticket, Store, LogOut, Menu, X } from "lucide-react";
 import { useAuth } from "@/lib/stores/auth";
 import { clientApi } from "@/lib/client-api";
 import { ADMIN_LOGIN_PATH } from "@/lib/admin";
@@ -18,6 +18,7 @@ const NAV = [
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/reviews", label: "Reviews", icon: Star },
   { href: "/admin/questions", label: "Q&A", icon: MessageCircleQuestion },
+  { href: "/admin/messages", label: "Messages", icon: Mail },
   { href: "/admin/wishlists", label: "Wishlists", icon: Heart },
 ];
 

@@ -9,6 +9,7 @@ const Order = require('../models/order.model');
 const User = require('../models/user.model');
 const Review = require('../models/review.model');
 const Question = require('../models/question.model');
+const ContactMessage = require('../models/contactMessage.model');
 const Article = require('../models/article.model');
 const Activity = require('../models/activity.model');
 const Coupon = require('../models/coupon.model');
@@ -34,6 +35,7 @@ router.use(authenticate, requireAdmin);
 // ── Shared validation schemas (loose: only listed fields are checked, the rest
 // pass through unchanged — matching the previous express-validator behaviour). ──
 const idParams = z.object({ id: objectId() });
+const contactStatusBody = z.object({ status: z.enum(['new', 'read', 'replied']) });
 const slugParams = z.object({ slug: trimmedString() });
 // Cancelling or refunding must say why. It used to default to 'Cancelled by
 // admin', which told whoever read the order later precisely nothing.
@@ -1269,6 +1271,49 @@ router.delete('/questions/:id', validate({ params: idParams }), async (req, res,
     return next(err);
   }
 });
+
+// ══ CONTACT MESSAGES (the /contact form inbox) ═══════════
+// The form has been storing notes since launch and nothing ever read them
+// back: contactMessage.model.js was written for an inbox (it carries a
+// new/read/replied status and a createdAt:-1 index commented "the inbox is
+// always read newest-first") that was never built, and contact.route.js tells
+// the sender their message "still exists in the admin inbox" if the
+// notification email fails. That email is best-effort and its failure is
+// swallowed, so until now a dropped send meant a silently lost customer.
+router.get('/contact', async (req, res, next) => {
+  try {
+    const status = req.query.status || 'new';
+    const filter = status === 'all' ? {} : { status };
+    const messages = await ContactMessage.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .populate('user', 'fullName email')
+      .lean();
+    // Unread count is for the nav badge, so it ignores the current filter.
+    const unread = await ContactMessage.countDocuments({ status: 'new' });
+    return ok(res, { messages, unread }, 'Contact messages');
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.put(
+  '/contact/:id/status',
+  validate({ params: idParams, body: contactStatusBody }),
+  async (req, res, next) => {
+    try {
+      const note = await ContactMessage.findByIdAndUpdate(
+        req.params.id,
+        { status: req.body.status },
+        { returnDocument: 'after' }
+      ).lean();
+      if (!note) return fail(res, 'Message not found', 404, [{ code: 'NOT_FOUND' }]);
+      return ok(res, null, 'Status updated');
+    } catch (err) {
+      return next(err);
+    }
+  }
+);
 
 // ══ ANALYTICS ════════════════════════════════════════════
 router.get('/analytics/wishlist-counts', async (req, res, next) => {
