@@ -4,14 +4,20 @@
  * Re-price the catalogue to a target discount off comparePrice.
  *
  * `price` is what the customer pays; `comparePrice` is the struck-through
- * original. The shop ran at 10% off and is moving to 15%, so:
+ * original. The shop-wide discount is set here and the catalogue is re-priced
+ * to match it:
  *
  *     price = roundUp5(comparePrice * (1 - pct/100))
  *
- * Rounding is CEILING to the nearest 5 rupees, per the shop's convention:
- *   786 * 0.85 = 668.10  ->  670
- *   861 * 0.85 = 731.85  ->  735
- * Never plain Math.round: 732.41 would land on 730, and the shop prices up.
+ * Rounding is CEILING to the nearest 5 rupees, per the shop's convention, and
+ * it is also what keeps every stored price a whole number of rupees:
+ *   786 * 0.90 = 707.40  ->  710
+ *   861 * 0.90 = 774.90  ->  775
+ * Never plain Math.round: 707.40 would land on 705, and the shop prices up.
+ *
+ * A side effect worth knowing: on cheap books the 5-rupee ceiling eats part of
+ * the discount, so a 152 book at 10% lands on 140 and shows 8%. That is the
+ * convention working as intended, not a rounding bug.
  *
  * Notes on correctness:
  *  - Variant books (hardcover/paperback) carry their own price/comparePrice and
@@ -24,8 +30,8 @@
  *    render a 0% badge and look like a bug on the storefront.
  *
  * Usage:
- *   node scripts/reprice-discount.js                  # dry run, 15%
- *   node scripts/reprice-discount.js --pct 15
+ *   node scripts/reprice-discount.js                  # dry run at the default
+ *   node scripts/reprice-discount.js --pct 10
  *   node scripts/reprice-discount.js --apply          # writes, after backup
  */
 
@@ -45,7 +51,10 @@ const Book = require('../src/models/book.model.js');
 const args = process.argv.slice(2);
 const APPLY = args.includes('--apply');
 const pctIdx = args.indexOf('--pct');
-const PCT = pctIdx !== -1 && Number(args[pctIdx + 1]) > 0 ? Number(args[pctIdx + 1]) : 15;
+// The shop-wide discount. Change here, not at the call site, so a bare run and
+// sync-from-supplier.js (which prices new imports) cannot drift apart.
+const DEFAULT_PCT = 10;
+const PCT = pctIdx !== -1 && Number(args[pctIdx + 1]) > 0 ? Number(args[pctIdx + 1]) : DEFAULT_PCT;
 
 /** Ceiling to the nearest 5 rupees. */
 const roundUp5 = (n) => Math.ceil(n / 5) * 5;
