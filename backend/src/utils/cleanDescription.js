@@ -10,6 +10,27 @@ const stripInvisible = (s) => s.replace(/[​-‏‪-‮﻿]/g, '');
 // Lines that are pure metadata/boilerplate, not prose — dropped from the blurb.
 const JUNK_LINE = /^\s*(language|paperback|hardback|hardcover|binding|isbn[-\s]?1[03]|isbn\/issn|isbn|item\s*weight|weight|dimensions|genre|age\s*group|publisher|brand|sku|what['’]s in the box|country of origin|model)\b/i;
 
+// The supplier also leads a description with its own spec block, and none of
+// those labels are in JUNK_LINE above:
+//
+//     Author: Ruchir Sharma
+//     Publication: Penguin
+//     Format: Paperback
+//     Pages: 464pages
+//
+// Every one of those facts is already on the page twice, in the specifications
+// <dl> and in the Product JSON-LD, so leading with them is duplicated supplier
+// copy that pushes the real blurb out of every snippet and out of bookLd()'s
+// 500-character description. scripts/strip-spec-headers.js removed exactly this
+// from 724 live books; without the rule here, sync-from-supplier.js would put
+// it straight back on its next run.
+//
+// A COLON IS REQUIRED, unlike the labels above. These are ordinary English
+// words that open real sentences ("Pages turn slowly...", "Format is
+// everything here"), so matching them bare would eat prose. That is the same
+// reason strip-spec-headers.js uses an exact whitelist rather than /^Word:/.
+const SPEC_LINE = /^\s*(authors?|publication|publisher|format|pages?|binding|edition|imprint|translator|first published|reading age|readers age)\s*:/i;
+
 const DISCLAIMER = /the image provided here is only for reference purpose\.[\s\S]*?consuming a product\./i;
 
 /**
@@ -28,7 +49,7 @@ function cleanDaraz(raw) {
   const prose = text
     .split(/\r?\n/)
     .map((l) => l.trim())
-    .filter((l) => l && !JUNK_LINE.test(l))
+    .filter((l) => l && !JUNK_LINE.test(l) && !SPEC_LINE.test(l))
     .filter((l) => { const k = l.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; })
     .join('\n');
   return prose.replace(/[ \t]+/g, ' ').replace(/\n{2,}/g, '\n\n').trim();
