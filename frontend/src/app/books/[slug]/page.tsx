@@ -155,13 +155,27 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
             <h1 className="font-display text-4xl leading-tight text-text sm:text-5xl">{book.title}</h1>
             <p className="label-smallcaps mt-2 text-base">{book.author}</p>
 
-            <div className="mt-4 flex items-center gap-3">
-              <span className="inline-flex items-center gap-1 font-data text-sm text-text">
-                <Star className="size-4 fill-star text-star" />
-                {book.avgRating?.toFixed(1) ?? "0.0"}
-              </span>
-              <span className="font-body text-sm text-muted">({book.reviewCount} reviews)</span>
-            </div>
+            {/* Only show a rating when one exists. Every book ships with
+                avgRating 0 and reviewCount 0, so rendering this
+                unconditionally put a filled gold star beside "0.0" on all
+                5,863 books that have no reviews yet — which reads as a
+                zero-star rating rather than an absent one. BookCard already
+                guarded this; the detail page did not. bookLd() is unaffected:
+                it already omits aggregateRating when reviewCount is 0, so
+                nothing was being published to Google either way. */}
+            {book.reviewCount > 0 ? (
+              <div className="mt-4 flex items-center gap-3">
+                <span className="inline-flex items-center gap-1 font-data text-sm text-text">
+                  <Star className="size-4 fill-star text-star" />
+                  {book.avgRating.toFixed(1)}
+                </span>
+                <span className="font-body text-sm text-muted">
+                  ({book.reviewCount} {book.reviewCount === 1 ? "review" : "reviews"})
+                </span>
+              </div>
+            ) : (
+              <p className="mt-4 font-body text-sm text-muted">No reviews yet.</p>
+            )}
 
             {book.variants?.length ? (
               <>
