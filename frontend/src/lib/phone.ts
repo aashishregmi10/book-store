@@ -9,7 +9,7 @@
 
 const NEPAL_MOBILE = /^9[678]\d{8}$/;
 
-/** Digits only, with the country code and any trunk zero stripped. */
+/** Digits only, with the country code and any trunk zero0 stripped. */
 function localDigits(raw: string): string {
   return raw.replace(/\D/g, "").replace(/^977/, "").replace(/^0+/, "");
 }
