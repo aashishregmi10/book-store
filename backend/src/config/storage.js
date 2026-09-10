@@ -81,22 +81,33 @@ function publicUrl(key) {
  * Everything is normalised to WebP on the way in. The sources are already WebP
  * and re-encoding is cheap, but a hand-uploaded 4 MB phone photo is exactly how
  * a storage bill starts, and this is the only place to catch it.
+ *
+ * `format: 'jpeg'` is the one exception, and exists for a single caller: the
+ * Open Graph card at frontend/src/app/books/[slug]/opengraph-image.tsx. It
+ * composites the cover with next/og, whose renderer (Satori) refuses WebP
+ * outright — "Unsupported image type: image/webp" — and silently draws an empty
+ * box in its place. So each book also gets a JPEG sibling used by nothing but
+ * that card. See scripts/build-og-covers.js.
  */
-async function uploadBuffer(buffer, { folder = 'covers', key, maxWidth = 720, quality = 82 } = {}) {
+async function uploadBuffer(
+  buffer,
+  { folder = 'covers', key, maxWidth = 720, quality = 82, format = 'webp' } = {}
+) {
+  const jpeg = format === 'jpeg';
   const image = sharp(buffer).rotate(); // honour EXIF orientation before resizing
-  const out = await image
-    .resize({ width: maxWidth, withoutEnlargement: true })
-    .webp({ quality })
+  const resized = image.resize({ width: maxWidth, withoutEnlargement: true });
+  const out = await (jpeg ? resized.jpeg({ quality, mozjpeg: true }) : resized.webp({ quality }))
     .toBuffer({ resolveWithObject: true });
 
-  const objectKey = key || `${folder}/${crypto.randomUUID()}.webp`;
+  const ext = jpeg ? 'jpg' : 'webp';
+  const objectKey = key || `${folder}/${crypto.randomUUID()}.${ext}`;
 
   await getStorage().send(
     new PutObjectCommand({
       Bucket: bucket(),
       Key: objectKey,
       Body: out.data,
-      ContentType: 'image/webp',
+      ContentType: jpeg ? 'image/jpeg' : 'image/webp',
       // Immutable: a given key always holds the same picture. Replacing a cover
       // writes a new key, so a long TTL never serves a stale image.
       CacheControl: 'public, max-age=31536000, immutable',
@@ -109,7 +120,7 @@ async function uploadBuffer(buffer, { folder = 'covers', key, maxWidth = 720, qu
     width: out.info.width,
     height: out.info.height,
     bytes: out.data.length,
-    format: 'webp',
+    format: jpeg ? 'jpeg' : 'webp',
   };
 }
 

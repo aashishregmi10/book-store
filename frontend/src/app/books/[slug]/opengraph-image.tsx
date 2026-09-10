@@ -11,10 +11,27 @@ interface BookResp {
   book: BookDetail;
 }
 
+/**
+ * Covers are stored as WebP, and Satori — the renderer behind next/og — has no
+ * WebP decoder. It does not throw: it logs "Unsupported image type: image/webp",
+ * leaves an empty box where the cover should be, and returns a valid PNG. So
+ * every shared book link was showing a card with a blank space beside the title.
+ *
+ * backend/scripts/build-og-covers.js writes a JPEG sibling of each cover for
+ * this one consumer. Anything that is not one of our own R2 covers — the few
+ * still on the dead Cloudinary host, Open Library seeds in dev — is left alone
+ * and simply does not render, which is the same outcome as before.
+ */
+function ogCover(url?: string): string | undefined {
+  if (!url || !url.includes("/covers/") || !url.endsWith(".webp")) return undefined;
+  return url.replace(/\.webp$/, "-og.jpg");
+}
+
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const data = await apiGetOrNull<BookResp>(`/books/${slug}`);
   const book = data?.book;
+  const cover = ogCover(book?.coverImage?.secureUrl);
 
   return new ImageResponse(
     (
@@ -29,10 +46,10 @@ export default async function Image({ params }: { params: Promise<{ slug: string
           fontFamily: "Georgia, serif",
         }}
       >
-        {book?.coverImage?.secureUrl && (
+        {cover && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={book.coverImage.secureUrl}
+            src={cover}
             alt=""
             width={336}
             height={504}

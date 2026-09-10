@@ -19,11 +19,11 @@ const nextConfig: NextConfig = {
     // widths that actually exist fixes it everywhere at once, without editing
     // the ten call sites that pass a pixel-only "sizes" (Next only narrows the
     // list for "vw" units, so those emit the full set no matter what).
-    // Next builds its candidate list as [...deviceSizes, ...imageSizes] with no
-    // deduplication, so a width named in both is offered twice in every srcset.
-    // Both stored widths belong in deviceSizes (it is the list used when an
-    // <Image> has no `sizes` at all), which leaves imageSizes with nothing to
-    // add.
+    //
+    // Both widths go in deviceSizes and imageSizes is left empty, because Next
+    // concatenates the two without deduplicating — a width named in both is
+    // offered twice in every srcset — and deviceSizes is the list it falls back
+    // to for an <Image> with no `sizes` at all.
     deviceSizes: [300, 720],
     imageSizes: [],
     // Inert while loader is "custom" — Next does no format negotiation of its
@@ -31,12 +31,16 @@ const nextConfig: NextConfig = {
     formats: ["image/avif", "image/webp"],
     remotePatterns: [
       { protocol: "https", hostname: "covers.openlibrary.org" }, // seed/dev book covers
-      { protocol: "https", hostname: "res.cloudinary.com" }, // admin-uploaded covers
+      // Dead — the account was deactivated. Three combo listings still carry
+      // one of these URLs and render the BookCover fallback; delisting the host
+      // would turn that fallback into a thrown error instead.
+      { protocol: "https", hostname: "res.cloudinary.com" },
       // Supplier product photos. Every cover was originally copied from here,
       // and when the Cloudinary account was deactivated these were the only
       // surviving copies — see backend/scripts/restore-covers-from-scrape.js.
-      // Temporary: covers move to R2 in migrate-covers-to-r2.js, after which
-      // this entry can go.
+      // No book points here any more, but a cart saved during the days the
+      // catalogue did still holds one of these URLs in localStorage, and an
+      // unlisted host makes next/image throw rather than fall back.
       { protocol: "https", hostname: "img.drz.lazcdn.com" },
       // Cloudflare R2 — where covers actually live now. Two pre-built sizes per
       // book; see src/lib/image-loader.ts for which one gets requested.
@@ -117,7 +121,7 @@ const nextConfig: NextConfig = {
           X-Robots-Tag rather than a robots.txt Disallow: the card must stay
           FETCHABLE (that is the point of og:image), it just must not be indexed.
           Social crawlers ignore this header, so link previews are unaffected, and
-          the real covers are separate Cloudinary URLs that stay in Google Images.
+          the real covers are separate R2 URLs that stay in Google Images.
         */
         source: "/:path*/opengraph-image",
         headers: [{ key: "X-Robots-Tag", value: "noindex" }],
