@@ -21,11 +21,27 @@
  *   node scripts/prune-orphan-images.js                    # dry run
  *   node scripts/prune-orphan-images.js --apply
  *   node scripts/prune-orphan-images.js --apply --older-than 7   # only 7+ days old
+ *
+ * DISABLED — this reaper targets Cloudinary, which the shop no longer uses.
+ *
+ * Covers moved to Cloudflare R2 (src/config/storage.js) after the Cloudinary
+ * account was deactivated. Two things here are Cloudinary-shaped and neither
+ * survives the move: the listing walks `cloudinary.api.resources()`, which has
+ * no R2 equivalent on this client, and the referenced-set builder recovers a
+ * publicId out of an order snapshot by matching `/upload/<id>.<ext>`, which no
+ * R2 URL contains.
+ *
+ * Left in place rather than deleted because the reaper is still wanted: admins
+ * abandoning a half-filled book form is a real source of orphans. Rewriting it
+ * means swapping the listing for ListObjectsV2 and teaching the URL parser the
+ * R2 key format. Until then it refuses to run, because a reaper that resolves
+ * an empty referenced-set would delete the entire bucket.
  */
 
 require('dotenv').config({ quiet: true });
 
-const { getCloudinary, deleteImage } = require('../src/config/cloudinary');
+// Intentionally imports nothing from the storage layer: this script is disabled
+// (see the note above) and must not be able to delete anything by accident.
 const { connectMongo, disconnectMongo } = require('../src/config/database');
 const Book = require('../src/models/book.model');
 const Article = require('../src/models/article.model');
@@ -81,6 +97,12 @@ async function referencedPublicIds() {
 }
 
 async function main() {
+  // See the note at the top of this file. Refuse rather than mis-delete.
+  console.error('prune-orphan-images is disabled: it targets Cloudinary, and covers now live in R2.');
+  console.error('Rewrite the listing for ListObjectsV2 and the URL parser for R2 keys before re-enabling.');
+  process.exitCode = 1;
+  return;
+
   const args = parseArgs(process.argv.slice(2));
   const cloudinary = getCloudinary();
   await connectMongo();

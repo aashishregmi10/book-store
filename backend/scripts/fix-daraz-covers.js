@@ -34,7 +34,7 @@ const { connectMongo, disconnectMongo } = require('../src/config/database');
 const Book = require('../src/models/book.model');
 const { normalizeIsbns } = require('../src/utils/isbn');
 const { uploadCoverFromUrl } = require('../src/utils/coverUpload');
-const { deleteImage } = require('../src/config/cloudinary');
+const { deleteImage } = require('../src/config/storage');
 
 const JSONL_PATH = 'D:/daraz-scraper/data/books.jsonl';
 const APPLY = process.argv.includes('--apply');

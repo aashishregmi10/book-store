@@ -36,7 +36,7 @@ const User = require('../src/models/user.model');
 const Review = require('../src/models/review.model');
 const Question = require('../src/models/question.model');
 const Article = require('../src/models/article.model');
-const { deleteImage } = require('../src/config/cloudinary');
+const { deleteImage } = require('../src/config/storage');
 
 const APPLY = process.argv.includes('--apply');
 

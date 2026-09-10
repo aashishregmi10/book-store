@@ -38,3 +38,4 @@ repair-from-scrape-*.csv
 published-drafts-*.csv
 known-author-decided-*.csv
 restore-covers-backup-*.csv
+migrate-r2-backup-*.csv

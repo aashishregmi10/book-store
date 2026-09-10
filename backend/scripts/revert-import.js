@@ -18,7 +18,7 @@ const { connectMongo, disconnectMongo } = require('../src/config/database');
 const logger = require('../src/config/logger');
 const Book = require('../src/models/book.model');
 const User = require('../src/models/user.model');
-const { getCloudinary } = require('../src/config/cloudinary');
+const { deleteImage } = require('../src/config/storage');
 
 // The slugs created by the import run (from its log).
 const SLUGS = [
@@ -70,7 +70,7 @@ const dryRun = process.argv.includes('--dry');
       if (!b.coverImage?.publicId) continue;
       try {
         // eslint-disable-next-line no-await-in-loop
-        await getCloudinary().uploader.destroy(b.coverImage.publicId);
+        await deleteImage(b.coverImage.publicId);
         removedCovers += 1;
       } catch (err) {
         logger.warn({ slug: b.slug, err: err.message }, 'cover delete failed (left in Cloudinary)');

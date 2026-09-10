@@ -4,7 +4,7 @@
 // Mocking it lets the whole image lifecycle — upload, replace, delete — be
 // exercised for real (multer parsing, validation, and the cleanup bookkeeping
 // that decides which public IDs get destroyed) without touching the account.
-jest.mock('../src/config/cloudinary', () => {
+jest.mock('../src/config/storage', () => {
   let n = 0;
   return {
     uploadBuffer: jest.fn(async () => {
@@ -22,7 +22,7 @@ const app = require('../src/app');
 const User = require('../src/models/user.model');
 const Book = require('../src/models/book.model');
 const Article = require('../src/models/article.model');
-const { uploadBuffer, deleteImage } = require('../src/config/cloudinary');
+const { uploadBuffer, deleteImage } = require('../src/config/storage');
 
 const auth = (t) => ({ Authorization: `Bearer ${t}` });
 let adminToken;

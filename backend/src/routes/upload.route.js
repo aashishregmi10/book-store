@@ -4,7 +4,7 @@ const express = require('express');
 const multer = require('multer');
 
 const { authenticate, requireAdmin } = require('../middleware/auth');
-const { uploadBuffer } = require('../config/cloudinary');
+const { uploadBuffer } = require('../config/storage');
 const { ok, fail } = require('../utils/apiResponse');
 const logger = require('../config/logger');
 

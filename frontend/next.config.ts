@@ -21,6 +21,9 @@ const nextConfig: NextConfig = {
       // Temporary: covers move to R2 in migrate-covers-to-r2.js, after which
       // this entry can go.
       { protocol: "https", hostname: "img.drz.lazcdn.com" },
+      // Cloudflare R2 — where covers actually live now. Two pre-built sizes per
+      // book; see src/lib/image-loader.ts for which one gets requested.
+      { protocol: "https", hostname: "pub-42418bf059814fca83907788f2d769f1.r2.dev" },
       { protocol: "https", hostname: "lh3.googleusercontent.com" }, // Google profile avatars
     ],
   },

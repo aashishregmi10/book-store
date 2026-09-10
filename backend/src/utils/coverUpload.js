@@ -1,6 +1,6 @@
 'use strict';
 
-const { uploadBuffer } = require('../config/cloudinary');
+const { uploadBuffer } = require('../config/storage');
 
 // Download a single image URL and store it in Cloudinary (bookstemple/books).
 // Returns the image subdocument { publicId, secureUrl, name } or null on any
