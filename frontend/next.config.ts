@@ -15,6 +15,12 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "covers.openlibrary.org" }, // seed/dev book covers
       { protocol: "https", hostname: "res.cloudinary.com" }, // admin-uploaded covers
+      // Supplier product photos. Every cover was originally copied from here,
+      // and when the Cloudinary account was deactivated these were the only
+      // surviving copies — see backend/scripts/restore-covers-from-scrape.js.
+      // Temporary: covers move to R2 in migrate-covers-to-r2.js, after which
+      // this entry can go.
+      { protocol: "https", hostname: "img.drz.lazcdn.com" },
       { protocol: "https", hostname: "lh3.googleusercontent.com" }, // Google profile avatars
     ],
   },

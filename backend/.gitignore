@@ -37,3 +37,4 @@ author-held-*.csv
 repair-from-scrape-*.csv
 published-drafts-*.csv
 known-author-decided-*.csv
+restore-covers-backup-*.csv
