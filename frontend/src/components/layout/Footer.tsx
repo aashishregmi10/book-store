@@ -58,9 +58,12 @@ export function Footer() {
           />
           {/* Keep this number honest and rounded down. It was "over 2,000" long
               after the catalogue passed 3,000, and a figure like this gets
-              repeated back at us by AI answers and customers alike. */}
+              repeated back at us by AI answers and customers alike.
+              Last checked 2026-09-10: 5,867 active, purchasable titles. Count it
+              before changing it — `Book.countDocuments({ isActive: true })` — and
+              round down to the thousand rather than up to the nicer number. */}
           <p className="mt-4 max-w-md font-body text-sm leading-relaxed text-muted">
-            A bookshop for Nepali readers. Over 3,000 titles in English and Nepali, carefully packed and
+            A bookshop for Nepali readers. Over 5,000 titles in English and Nepali, carefully packed and
             carried to all 77 districts.
           </p>
 

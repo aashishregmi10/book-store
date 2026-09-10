@@ -15,7 +15,7 @@ import type { BookCardData } from "@/lib/types";
 export const metadata: Metadata = {
   title: "Buy Books Online in Kathmandu",
   description:
-    "Order books online in Kathmandu — 1–2 day delivery across the Valley (Kathmandu, Lalitpur, Bhaktapur). 3,000+ English and Nepali titles, cash on delivery.",
+    "Order books online in Kathmandu — 1–2 day delivery across the Valley (Kathmandu, Lalitpur, Bhaktapur). 5,000+ English and Nepali titles, cash on delivery.",
   alternates: { canonical: "/kathmandu" },
 };
 
@@ -104,7 +104,7 @@ export default async function KathmanduPage() {
         <p className="mt-5 border-l-2 border-accent pl-5 font-body text-lg leading-relaxed text-text">
           Books Temple Nepal is an online bookstore delivering across the Kathmandu Valley —
           Kathmandu, Lalitpur and Bhaktapur — typically within 1&ndash;2 days of dispatch. Browse
-          over 3,000 English and Nepali titles, pay in NPR by cash on delivery, and the same
+          over 5,000 English and Nepali titles, pay in NPR by cash on delivery, and the same
           shelves reach every district in Nepal. No online payment needed: order, then pay when
           the books are in your hands.
         </p>

@@ -22,8 +22,11 @@ const PRINCIPLES: [string, string][] = [
 // Only claims we can actually stand behind. This block used to advertise
 // "4.8★ average reader rating" for a shop that has not opened and has no
 // reviews, and "3,000+" titles against a catalogue of roughly 2,300.
+// The title count is the one figure here that moves; it is duplicated in the
+// footer and on /kathmandu, so all three change together. 5,867 active titles
+// as of 2026-09-10.
 const STATS: [string, string][] = [
-  ["2,000+", "Titles in English & Nepali"],
+  ["5,000+", "Titles in English & Nepali"],
   ["77 / 77", "Districts we deliver to"],
   ["1–2 days", "Inside the Kathmandu Valley"],
   ["COD", "Pay at your door"],
