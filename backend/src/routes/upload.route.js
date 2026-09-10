@@ -13,7 +13,7 @@ const router = express.Router();
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif'];
 const MAX_BYTES = 5 * 1024 * 1024; // 5MB
 
-// Buffer the file in memory; we stream it straight to Cloudinary (no disk writes).
+// Buffer the file in memory; we stream it straight to object storage (no disk writes).
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_BYTES },
@@ -52,8 +52,8 @@ router.post('/', authenticate, requireAdmin, (req, res, next) => {
         'Image uploaded'
       );
     } catch (e) {
-      // Log the real Cloudinary error (it can contain the API key); never echo it to the client.
-      logger.error({ err: e.message }, 'Cloudinary upload failed');
+      // Log the real storage error (it can contain credentials); never echo it to the client.
+      logger.error({ err: e.message }, 'Object storage upload failed');
       return fail(res, 'Image upload failed. Please check the image and try again.', 502, [{ code: 'UPLOAD_FAILED' }]);
     }
   });

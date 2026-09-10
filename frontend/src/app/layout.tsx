@@ -81,8 +81,15 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       className={`${montserrat.variable} ${jetbrains.variable} h-full antialiased`}
     >
       <head>
-        {/* Speed up the LCP cover image (covers are served from Cloudinary). */}
-        <link rel="preconnect" href="https://res.cloudinary.com" crossOrigin="" />
+        {/* The cover is the LCP element on book and genre pages, and it comes
+            from a different origin, so warm that handshake before the HTML
+            finishes parsing. Host is duplicated in next.config.ts's
+            remotePatterns — both must move together if the bucket does. */}
+        <link
+          rel="preconnect"
+          href="https://pub-42418bf059814fca83907788f2d769f1.r2.dev"
+          crossOrigin=""
+        />
         {/* Sign-in latency is dominated by round trips to these two origins:
             Google Identity Services for the button, and our own API for the
             token exchange. Warm the TCP + TLS handshakes before either is hit. */}

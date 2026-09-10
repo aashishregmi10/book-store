@@ -1,5 +1,4 @@
 import { SITE } from "@/lib/seo";
-import { cloudinaryAuto } from "@/lib/images";
 import {
   BOOKS_PER_SITEMAP,
   ARTICLES_PER_SITEMAP,
@@ -145,7 +144,7 @@ async function renderChild(id: string): Promise<Response> {
         items
           .filter((b) => b.slug) // slug is required in the model; defensive only
           .map((b) => {
-            const img = cloudinaryAuto(b.image);
+            const img = b.image;
             return {
               loc: `${base}/books/${b.slug}`,
               lastmod: b.updatedAt,

@@ -73,8 +73,9 @@ function renderInline(text: string, keyPrefix: string): React.ReactNode[] {
   return out;
 }
 
-/** `![alt](src)` — only Cloudinary/Open Library hosts are configured for
- *  next/image, which is where admin-uploaded article images land. */
+/** `![alt](src)` — the src host must be listed in next.config.ts's
+ *  remotePatterns or next/image throws; admin-uploaded article images land
+ *  in R2, which is. */
 function BodyImage({ alt, src }: { alt: string; src: string }) {
   return (
     <figure className="my-8">

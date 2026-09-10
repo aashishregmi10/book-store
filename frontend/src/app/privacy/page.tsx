@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 /**
  * Written from what the code actually does — the account and address schemas in
  * backend/src/models/user.model.js, the GA4 component, the Google Sign-In flow
- * and the Cloudinary image host. If any of those change, this page has to
+ * and the Cloudflare R2 image host. If any of those change, this page has to
  * change with them. It is a factual description of our processing, not a
  * template; it has not been through a Nepali lawyer, which is worth doing
  * before this is relied on in a dispute.
@@ -74,7 +74,7 @@ export default function PrivacyPage() {
           <ul className="mt-4 list-disc space-y-2 pl-5">
             <li><strong>The courier</strong>: your delivery name, address and phone, so they can reach you.</li>
             <li><strong>MongoDB Atlas</strong>: the database the shop runs on.</li>
-            <li><strong>Cloudinary</strong>: hosts book covers and profile pictures.</li>
+            <li><strong>Cloudflare R2</strong>: hosts book covers.</li>
             <li><strong>Google</strong>: sign-in, and analytics where enabled.</li>
             <li><strong>Our email provider</strong>: order confirmations and password resets.</li>
           </ul>

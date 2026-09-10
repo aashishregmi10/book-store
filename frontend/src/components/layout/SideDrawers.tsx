@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { BookCover } from "@/components/books/BookCover";
 import { X, ShoppingBag, Heart, Minus, Plus, Trash2 } from "lucide-react";
 import { useDrawer } from "@/lib/stores/uiDrawer";
 import { useCart, selectSubtotal, lineKey, type StockInfo } from "@/lib/stores/cart";
@@ -66,9 +66,11 @@ function CartPanel({ onClose }: { onClose: () => void }) {
     const ids = useCart.getState().items.map((i) => i.bookId);
     if (!ids.length) return;
     clientApi
-      .get<{ _id: string; stock: number; variants?: { variantId: string; stock: number }[] }[]>(`/books/active?ids=${ids.join(",")}`)
+      .get<{ _id: string; stock: number; cover?: string; variants?: { variantId: string; stock: number }[] }[]>(`/books/active?ids=${ids.join(",")}`)
       .then((books) =>
-        useCart.getState().reconcile(books.map((b): StockInfo => ({ bookId: b._id, stock: b.stock, variants: b.variants })))
+        useCart
+          .getState()
+          .reconcile(books.map((b): StockInfo => ({ bookId: b._id, stock: b.stock, cover: b.cover, variants: b.variants })))
       )
       .catch(() => {});
   }, []);
@@ -83,7 +85,10 @@ function CartPanel({ onClose }: { onClose: () => void }) {
         {items.map((i) => (
           <li key={lineKey(i)} className="flex gap-3 py-4">
             <Link href={`/books/${i.slug}`} onClick={onClose} className="relative h-24 w-16 shrink-0 overflow-hidden rounded-md border border-border bg-surface">
-              <Image src={i.coverImage} alt={`${i.title} cover`} fill sizes="64px" className="object-cover" />
+              {/* BookCover, not a bare Image: a cart line's cover is a snapshot
+                  and can outlive the file it points at. reconcile() refreshes it
+                  on open, but the first paint happens before that lands. */}
+              <BookCover src={i.coverImage} alt={`${i.title} cover`} title={i.title} sizes="64px" />
             </Link>
             <div className="flex min-w-0 flex-1 flex-col">
               <div className="flex items-start justify-between gap-2">
@@ -187,7 +192,7 @@ function WishlistPanel({ onClose }: { onClose: () => void }) {
         {books.map((b) => (
           <li key={b._id} className="flex gap-3 py-4">
             <Link href={`/books/${b.slug}`} onClick={onClose} className="relative h-24 w-16 shrink-0 overflow-hidden rounded-md border border-border bg-surface">
-              <Image src={b.coverImage.secureUrl} alt={`${b.title} cover`} fill sizes="64px" className="object-cover" />
+              <BookCover src={b.coverImage.secureUrl} alt={`${b.title} cover`} title={b.title} sizes="64px" />
             </Link>
             <div className="flex min-w-0 flex-1 flex-col">
               <div className="flex items-start justify-between gap-2">

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { BookCover } from "@/components/books/BookCover";
 import { ShoppingBag } from "lucide-react";
 import { useCart, selectSubtotal, lineKey, type StockInfo } from "@/lib/stores/cart";
 import { clientApi } from "@/lib/client-api";
@@ -26,9 +26,11 @@ export default function CartPage() {
     const ids = useCart.getState().items.map((i) => i.bookId);
     if (!ids.length) return;
     clientApi
-      .get<{ _id: string; stock: number; variants?: { variantId: string; stock: number }[] }[]>(`/books/active?ids=${ids.join(",")}`)
+      .get<{ _id: string; stock: number; cover?: string; variants?: { variantId: string; stock: number }[] }[]>(`/books/active?ids=${ids.join(",")}`)
       .then((books) =>
-        useCart.getState().reconcile(books.map((b): StockInfo => ({ bookId: b._id, stock: b.stock, variants: b.variants })))
+        useCart
+          .getState()
+          .reconcile(books.map((b): StockInfo => ({ bookId: b._id, stock: b.stock, cover: b.cover, variants: b.variants })))
       )
       .catch(() => {});
   }, []);
@@ -65,7 +67,9 @@ export default function CartPage() {
           {items.map((i) => (
             <li key={lineKey(i)} className="flex gap-5 p-5">
               <Link href={`/books/${i.slug}`} className="relative h-28 w-20 shrink-0 overflow-hidden rounded-lg border border-border bg-bg">
-                <Image src={i.coverImage} alt={`${i.title} cover`} fill sizes="80px" className="object-cover" />
+                {/* See SideDrawers: the stored cover is a snapshot, so it needs
+                    the same fallback every other cover surface has. */}
+                <BookCover src={i.coverImage} alt={`${i.title} cover`} title={i.title} sizes="80px" />
               </Link>
 
               <div className="flex min-w-0 flex-1 flex-col">

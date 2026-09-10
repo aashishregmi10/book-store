@@ -6,7 +6,7 @@ import { ImagePlus, Loader2, Trash2, UploadCloud, Plus } from "lucide-react";
 import { clientApi, ClientApiError } from "@/lib/client-api";
 import type { BookImage } from "./types";
 
-// Uploads one file to Cloudinary via the API and returns the image subdocument.
+// Uploads one file to object storage via the API and returns the image subdocument.
 async function uploadFile(file: File): Promise<BookImage> {
   const form = new FormData();
   form.append("image", file);
@@ -91,7 +91,7 @@ export function ImageUpload({
           {uploading ? (
             <>
               <Loader2 className="size-6 animate-spin text-accent" />
-              <span className="font-body text-sm text-muted">Uploading to Cloudinary…</span>
+              <span className="font-body text-sm text-muted">Uploading…</span>
             </>
           ) : (
             <>

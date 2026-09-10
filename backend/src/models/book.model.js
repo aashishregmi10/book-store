@@ -74,7 +74,7 @@ const bookSchema = new mongoose.Schema(
     reorderQuantity: { type: Number, default: 20, min: 0 },
     supplier: { type: String },
 
-    // Primary cover + gallery, stored as Cloudinary image subdocuments
+    // Primary cover + gallery, stored as image subdocuments
     // ({ publicId, secureUrl, name }). The frontend enforces gallery min/max.
     coverImage: { type: imageSchema, required: true },
     images: { type: [imageSchema], default: [] },

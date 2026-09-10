@@ -39,3 +39,5 @@ published-drafts-*.csv
 known-author-decided-*.csv
 restore-covers-backup-*.csv
 migrate-r2-backup-*.csv
+recover-covers-backup-*.csv
+recover-covers-plan-*.csv

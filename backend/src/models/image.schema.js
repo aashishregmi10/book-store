@@ -3,10 +3,15 @@
 const mongoose = require('mongoose');
 
 /**
- * Reusable Cloudinary image subdocument. Stores enough to both render the image
- * (secureUrl) and manage it later (publicId — needed to delete/transform the
- * asset). `name` keeps the original filename for admin UIs. Embed it anywhere a
- * model carries an uploaded image: `image: imageSchema` or `images: [imageSchema]`.
+ * Reusable stored-image subdocument. Holds enough to both render the image
+ * (secureUrl) and manage it later (publicId — the object key in R2, needed to
+ * delete it). `name` keeps the original filename for admin UIs. Embed it
+ * anywhere a model carries an uploaded image: `image: imageSchema` or
+ * `images: [imageSchema]`.
+ *
+ * The field names date from Cloudinary and were kept through the move to R2 so
+ * the migration touched no documents beyond the two values it rewrote; see
+ * src/config/storage.js.
  */
 const imageSchema = new mongoose.Schema(
   {

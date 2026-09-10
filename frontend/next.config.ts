@@ -19,8 +19,13 @@ const nextConfig: NextConfig = {
     // widths that actually exist fixes it everywhere at once, without editing
     // the ten call sites that pass a pixel-only "sizes" (Next only narrows the
     // list for "vw" units, so those emit the full set no matter what).
+    // Next builds its candidate list as [...deviceSizes, ...imageSizes] with no
+    // deduplication, so a width named in both is offered twice in every srcset.
+    // Both stored widths belong in deviceSizes (it is the list used when an
+    // <Image> has no `sizes` at all), which leaves imageSizes with nothing to
+    // add.
     deviceSizes: [300, 720],
-    imageSizes: [300],
+    imageSizes: [],
     // Inert while loader is "custom" — Next does no format negotiation of its
     // own. Kept so the intent survives if the loader is ever removed.
     formats: ["image/avif", "image/webp"],

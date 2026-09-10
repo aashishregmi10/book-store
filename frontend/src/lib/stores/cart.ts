@@ -28,10 +28,16 @@ export interface CartItem {
 export const lineKey = (i: { bookId: string; variantId?: string }) =>
   i.variantId ? `${i.bookId}:${i.variantId}` : i.bookId;
 
-// Fresh stock for reconcile: one entry per still-active book, with per-variant stock.
+// Fresh server state for reconcile: one entry per still-active book, with
+// per-variant stock and the book's current cover URL.
 export interface StockInfo {
   bookId: string;
   stock: number;
+  // Current cover. A line's stored coverImage is a snapshot taken when the book
+  // was added, so it outlives the cover moving hosts — which is how every saved
+  // cart ended up pointing at a 401 when Cloudinary was deactivated. Absent
+  // when the book has no cover, in which case the snapshot is left alone.
+  cover?: string;
   variants?: { variantId: string; stock: number }[];
 }
 
@@ -91,7 +97,7 @@ export const useCart = create<CartState>()(
             // Clamp down to fresh stock, but keep a sold-out line visible so the
             // user can see and remove it.
             const quantity = stock > 0 ? Math.min(i.quantity, stock) : i.quantity;
-            next.push({ ...i, stock, quantity });
+            next.push({ ...i, stock, quantity, coverImage: b.cover ?? i.coverImage });
           }
           return { items: next };
         }),

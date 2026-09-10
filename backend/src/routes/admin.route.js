@@ -147,7 +147,7 @@ async function notifyWishlistPriceDrop(book, oldPrice) {
   await Promise.all(recipients.map((u) => email.sendPriceDrop(u, book, oldPrice, book.price)));
 }
 
-// Best-effort Cloudinary cleanup for images no longer referenced by a book
+// Best-effort storage cleanup for images no longer referenced by a book
 // (removed cover, removed gallery entries, or the whole book deleted). Never
 // throws — a failed cleanup just leaves an orphaned asset, which is far
 // preferable to blocking or failing the admin's save/delete.
@@ -155,7 +155,7 @@ function cleanupImages(publicIds, slug) {
   const ids = [...new Set(publicIds.filter(Boolean))];
   if (!ids.length) return;
   Promise.all(
-    ids.map((id) => deleteImage(id).catch((err) => logger.warn({ err: err.message, publicId: id, slug }, 'cloudinary cleanup failed')))
+    ids.map((id) => deleteImage(id).catch((err) => logger.warn({ err: err.message, publicId: id, slug }, 'stored image cleanup failed')))
   ).catch(() => {});
 }
 
@@ -366,7 +366,7 @@ router.get('/books/lookup', validate({ query: lookupQuery }), async (req, res, n
     isbn13 = isbn13 || meta.isbn13 || null;
     isbn10 = isbn10 || meta.isbn10 || null;
 
-    // Store the cover in Cloudinary so we own a permanent, fast asset.
+    // Store the cover ourselves so we own a permanent, fast asset.
     const coverImage = await uploadCoverFromUrl(meta.coverUrl, meta.title || isbn13 || 'cover');
 
     const origin = detectOrigin({
@@ -432,7 +432,7 @@ async function mapPool(items, limit, fn) {
 }
 
 // One bulk item → a result row. Never throws; failures are reported per-item.
-// Bulk does NOT upload covers to Cloudinary (too heavy for 20×) — it returns the
+// Bulk does NOT upload covers (too heavy for 20×) — it returns the
 // raw coverUrl, and the cover is fetched/stored when the book is actually saved.
 async function lookupOneBulk(item, index) {
   try {
@@ -722,7 +722,7 @@ router.put('/books/:slug', validate({ params: slugParams }), async (req, res, ne
     const book = await Book.findOne({ slug: req.params.slug });
     if (!book) return fail(res, 'Book not found', 404, [{ code: 'NOT_FOUND' }]);
     const prevPrice = book.price; // capture before edits to detect a drop
-    // Cloudinary public IDs before the edit, so we can tell which cover/gallery
+    // Stored object keys before the edit, so we can tell which cover/gallery
     // images were removed once the new values are saved.
     const prevPublicIds = [book.coverImage?.publicId, ...(book.images || []).map((i) => i.publicId)];
     // Whitelist updatable fields.
@@ -736,7 +736,7 @@ router.put('/books/:slug', validate({ params: slugParams }), async (req, res, ne
     await book.save(); // triggers stockStatus + price (from variants) recompute
 
     // Any cover/gallery image present before the edit but not after was removed
-    // in the admin UI — delete it from Cloudinary now that the save succeeded.
+    // in the admin UI — delete it from storage now that the save succeeded.
     const nextPublicIds = new Set([book.coverImage?.publicId, ...(book.images || []).map((i) => i.publicId)].filter(Boolean));
     cleanupImages(prevPublicIds.filter((id) => id && !nextPublicIds.has(id)), book.slug);
 
@@ -913,7 +913,7 @@ router.put('/articles/:slug', validate({ params: slugParams }), async (req, res,
     if (!article) return fail(res, 'Article not found', 404, [{ code: 'NOT_FOUND' }]);
     // Remember the outgoing cover before it's overwritten — books already do
     // this on update, articles did not, so every replaced article cover leaked
-    // an orphaned Cloudinary asset that nothing would ever reference again.
+    // an orphaned stored object that nothing would ever reference again.
     const previousCoverId = article.coverImage?.publicId;
     const fields = ['title', 'excerpt', 'body', 'coverImage', 'author', 'category', 'tags', 'status', 'metaTitle', 'metaDesc', 'relatedBooks'];
     for (const f of fields) if (f in req.body) article[f] = req.body[f];

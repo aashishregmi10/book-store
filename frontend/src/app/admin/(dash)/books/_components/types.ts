@@ -1,4 +1,4 @@
-// Cloudinary image subdocument ({ publicId, secureUrl, name }) — matches the
+// Stored-image subdocument ({ publicId, secureUrl, name }) — matches the
 // backend `image.schema` and the /upload response.
 export interface BookImage {
   publicId: string;

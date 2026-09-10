@@ -292,8 +292,8 @@ const sitemapFilter = () => {
 // ── GET /api/books/sitemap?page=&limit= — paged indexable books for the sitemap ──
 // Returns { total, items } so the Next sitemap can compute its shard count and
 // page through titles, keeping each shard under the 50k-URL limit. `title` feeds
-// the cover image entry; `image` is the raw Cloudinary URL (the frontend applies
-// the f_auto,q_auto delivery transform).
+// the cover image entry; `image` is the stored cover URL, used as-is — R2 holds
+// pre-built WebP, so there is no delivery transform to apply.
 router.get('/sitemap', validate({ query: sitemapQuery }), async (req, res, next) => {
   try {
     const page = req.query.page || 1;
@@ -382,8 +382,15 @@ router.get('/sitemap/sections', async (_req, res, next) => {
 // ── GET /api/books/active?ids=… — which of these books are still purchasable ──
 // Lets the client cart/wishlist drop deleted/deactivated books AND refresh the
 // available stock so quantity steppers can cap at what's actually in stock.
-// Returns [{ _id, stock }] where stock is the purchasable count (0 when the
-// book is out-of-stock or discontinued).
+// Returns [{ _id, stock, cover }] where stock is the purchasable count (0 when
+// the book is out-of-stock or discontinued).
+//
+// `cover` is here because a cart line stores its own copy of the cover URL, so
+// the drawer can render without a round trip. That snapshot goes stale the
+// moment a cover moves, and when the Cloudinary account was deactivated every
+// saved cart was left pointing at URLs that now 401. Returning the current URL
+// on the call the cart already makes lets those snapshots heal themselves
+// instead of needing a storage migration in the client.
 router.get('/active', async (req, res, next) => {
   try {
     const ids = String(req.query.ids || '')
@@ -392,13 +399,14 @@ router.get('/active', async (req, res, next) => {
       .filter((s) => /^[a-f0-9]{24}$/i.test(s));
     if (!ids.length) return ok(res, [], 'Active');
     const found = await Book.find({ _id: { $in: ids }, isActive: true })
-      .select('stock stockStatus variants')
+      .select('stock stockStatus variants coverImage.secureUrl')
       .lean();
     const data = found.map((b) => {
       const dead = b.stockStatus === 'out-of-stock' || b.stockStatus === 'discontinued';
       return {
         _id: String(b._id),
         stock: dead ? 0 : b.stock,
+        ...(b.coverImage?.secureUrl ? { cover: b.coverImage.secureUrl } : {}),
         ...(b.variants?.length
           ? { variants: b.variants.map((v) => ({ variantId: String(v._id), stock: dead ? 0 : v.stock })) }
           : {}),

@@ -39,7 +39,7 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: [function requirePassword() { return !this.googleId; }, 'Password is required'], select: false },
     googleId: { type: String, unique: true, sparse: true, index: true }, // set for Google sign-in
     fullName: { type: String, required: true, trim: true },
-    avatar: { type: String }, // Cloudinary URL
+    avatar: { type: String }, // absolute URL; today always the Google profile photo
     avatarPublicId: { type: String },
     phone: { type: String, trim: true },
 

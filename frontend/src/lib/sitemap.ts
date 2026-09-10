@@ -22,7 +22,7 @@ export interface BookSitemapItem {
   slug: string;
   title: string;
   updatedAt?: string;
-  image?: string; // raw Cloudinary URL; transform with cloudinaryAuto()
+  image?: string; // cover URL, already a delivery-ready WebP on R2
 }
 export interface BookSitemapPage {
   total: number;

@@ -5,7 +5,7 @@ export interface ApiEnvelope<T> {
   message: string;
 }
 
-// Cloudinary image subdocument returned by the API (mirrors the backend
+// Stored-image subdocument returned by the API (mirrors the backend
 // `image.schema`). Cart/order line items snapshot just the URL as a string.
 export interface BookImage {
   publicId: string;

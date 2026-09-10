@@ -2,7 +2,7 @@
 
 const { uploadBuffer } = require('../config/storage');
 
-// Download a single image URL and store it in Cloudinary (bookstemple/books).
+// Download a single image URL and store it in object storage (covers/).
 // Returns the image subdocument { publicId, secureUrl, name } or null on any
 // failure (bad URL, non-image, tiny/empty body, upload error). Never throws.
 async function uploadCoverFromUrl(url, name) {

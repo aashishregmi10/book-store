@@ -243,7 +243,7 @@ async function seed() {
   await Book.create(
     BOOKS.map((b) => ({
       ...b,
-      // Seed covers come from Open Library (no Cloudinary asset) — synthesise a
+      // Seed covers come from Open Library (nothing in our bucket) — synthesise a
       // publicId so the required image subdocument validates.
       coverImage: {
         publicId: `seed/${b.isbn}`,
