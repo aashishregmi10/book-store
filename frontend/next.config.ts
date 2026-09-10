@@ -6,11 +6,23 @@ const nextConfig: NextConfig = {
     // Skip the optimizer in dev (it's slow and intermittently fails on large
     // covers); production keeps full AVIF/WebP optimization + edge caching.
     unoptimized: process.env.NODE_ENV === "development",
-    // Resize at Cloudinary instead of through Vercel's metered optimizer, which
-    // 402s every request once the monthly allowance is spent — see the loader.
+    // Covers are served straight from R2 as pre-built files, so Vercel's
+    // metered optimizer is bypassed entirely — it 402s once its allowance is
+    // spent, and a 402 renders as a broken image. See src/lib/image-loader.ts.
     loader: "custom",
     loaderFile: "./src/lib/image-loader.ts",
-    // Auto-serve AVIF/WebP and the right size per device.
+    // Covers exist as exactly two stored files (720px and 300px), so there is
+    // no point advertising sixteen. Next builds a srcset entry per candidate
+    // width, and with the defaults a 64px thumbnail was offering widths up to
+    // 3840 — which under Cloudinary meant sixteen separately billed renders,
+    // and is what exhausted the account. Constraining the candidate list to the
+    // widths that actually exist fixes it everywhere at once, without editing
+    // the ten call sites that pass a pixel-only "sizes" (Next only narrows the
+    // list for "vw" units, so those emit the full set no matter what).
+    deviceSizes: [300, 720],
+    imageSizes: [300],
+    // Inert while loader is "custom" — Next does no format negotiation of its
+    // own. Kept so the intent survives if the loader is ever removed.
     formats: ["image/avif", "image/webp"],
     remotePatterns: [
       { protocol: "https", hostname: "covers.openlibrary.org" }, // seed/dev book covers
