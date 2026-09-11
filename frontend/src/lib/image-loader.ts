@@ -19,8 +19,8 @@
  * commissioning a 3840px render. The free tier went, the account was
  * deactivated, and every cover on the site 401'd at once.
  *
- * So covers now live in Cloudflare R2 as exactly two pre-built files, written
- * by backend/scripts/migrate-covers-to-r2.js:
+ * So covers now live in Cloudflare R2 as pre-built files, written by
+ * backend/scripts/migrate-covers-to-r2.js:
  *
  *   covers/<slug>.webp       720px — detail pages
  *   covers/<slug>-300.webp   300px — cards, drawers, thumbnails (~8KB vs ~25KB)
@@ -28,6 +28,12 @@
  * This maps a requested width onto one of them. There is no meter to run up:
  * whatever Next asks for resolves to one of two static objects, and R2 charges
  * nothing for egress. The srcset can be as silly as it likes.
+ *
+ * Some covers sit under covers/v2/ instead — the set re-cropped to remove a
+ * supplier's advertising strip (backend/scripts/remove-supplier-bookmarks.js).
+ * They needed a new key rather than an overwrite because covers are served
+ * `immutable` for a year. Nothing here has to know: the test below is a
+ * substring and a suffix, so a directory prefix passes straight through.
  */
 
 // Anything wider than this gets the full-size file. 300 is the stored thumbnail

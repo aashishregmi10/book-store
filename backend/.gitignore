@@ -41,3 +41,5 @@ restore-covers-backup-*.csv
 migrate-r2-backup-*.csv
 recover-covers-backup-*.csv
 recover-covers-plan-*.csv
+bookmark-crop-backup-*.csv
+bookmark-report-*.csv
