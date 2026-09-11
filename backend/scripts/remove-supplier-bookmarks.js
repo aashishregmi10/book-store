@@ -56,8 +56,9 @@
  * Four independent checks, and a cover failing any of them is skipped rather
  * than written:
  *
- *   1. the greyscale fingerprint in data/supplier-bookmark-signature.json
- *      matches the cover's left edge;
+ *   1. the fingerprint in data/supplier-bookmark-signature.json matches the
+ *      strip's expected footprint, measured after the canvas padding is
+ *      trimmed off;
  *   2. the first non-background column is strip-blue, so a cover with an
  *      incidental pale band is not mistaken for one carrying the strip. Judging
  *      column 0 directly is not enough: a tenth of these listings begin with a
@@ -66,8 +67,20 @@
  *   3. the cut lands between 5% and 26% of the width;
  *   4. re-fingerprinting the cropped result no longer matches.
  *
- * Check 4 is the one that matters. A crop that failed to remove the strip is
- * rejected by the same measurement that found it.
+ * Check 4 is the one that matters for the crop. A crop that failed to remove
+ * the strip is rejected by the same measurement that found it.
+ *
+ * But note what that does *not* buy: the guards can only be as good as check 1
+ * is at noticing a cover in the first place, and a detector's false negatives
+ * are invisible to its own verification. The first version of this ran, then
+ * "confirmed" its own work with the same blind measurement and reported a clean
+ * catalogue with 76 bookmarked covers still live. The fingerprint is now
+ * calibrated against labelled pairs — each cover this script has cropped gives
+ * a has-strip original and a known-clean result — which is ground truth rather
+ * than a threshold chosen from a handful of covers read by eye. On 240 such
+ * pairs, has-strip tops out at 15.1 and cropped bottoms out at 44.1, so the
+ * threshold of 30 sits in open space. Re-calibrate the same way after any
+ * change to the fingerprint; do not eyeball it.
  *
  * ── Why a new key ────────────────────────────────────────────────────────────
  *
@@ -83,13 +96,16 @@
  * The originals stay where they are. Together with the backup CSV, rolling back
  * is restoring two fields per book.
  *
- * Resumable — anything already on covers/v2/ is skipped.
+ * Resumable — anything already on covers/v2/ is skipped. Pass --rescan to
+ * include them, which is how you check the cropped set is genuinely clean
+ * rather than merely believed to be.
  *
  * Dry run by default.
  *   node scripts/remove-supplier-bookmarks.js
  *   node scripts/remove-supplier-bookmarks.js --report   # full audit CSV, no writes
  *   node scripts/remove-supplier-bookmarks.js --apply
  *   node scripts/remove-supplier-bookmarks.js --apply --limit 25 --concurrency 4
+ *   node scripts/remove-supplier-bookmarks.js --rescan  # re-check already-cropped covers too
  */
 
 require('dotenv').config({ quiet: true });
@@ -123,7 +139,7 @@ const FULL_WIDTH = 720;
 const OG_WIDTH = 420;
 
 // Detection
-const { stripFraction: STRIP_FRAC, sigWidth: SIG_W, sigHeight: SIG_H, threshold: THRESHOLD } = FINGERPRINT;
+const { stripOfHeight: STRIP_OF_HEIGHT, sigWidth: SIG_W, sigHeight: SIG_H, threshold: THRESHOLD } = FINGERPRINT;
 const TEMPLATE = Buffer.from(FINGERPRINT.data);
 
 // Cropping
@@ -138,14 +154,31 @@ const HEIGHT_RATIO = 0.165;
 
 const csvCell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
 
-/** Greyscale fingerprint of a cover's left edge. */
-async function fingerprint(buf) {
-  const meta = await sharp(buf).metadata();
-  const w = Math.max(4, Math.round(meta.width * STRIP_FRAC));
-  return sharp(buf)
-    .extract({ left: 0, top: 0, width: w, height: meta.height })
+/** Strip the canvas padding so measurements start at the artwork, not the edge. */
+async function deframe(buf) {
+  return sharp(buf).trim({ threshold: 12 }).toBuffer().catch(() => buf);
+}
+
+/**
+ * RGB fingerprint of the strip's expected footprint.
+ *
+ * Three things here were wrong in the first version and each cost real
+ * accuracy. It sampled a fixed share of the *width*, which on a wide composite
+ * reaches well past the strip — the strip is a fixed-aspect graphic, so its
+ * width follows the height. It measured from the canvas edge, so a composite
+ * centred on a square canvas had its padding sampled instead of its strip;
+ * Hanuman Drama scored 108.7, clean by any threshold, with the strip plainly
+ * there. And it compared in greyscale, discarding the single most
+ * distinguishing thing about a blue strip.
+ */
+async function fingerprint(framed) {
+  const m = await sharp(framed).metadata();
+  if (!m.width || !m.height) return null;
+  const w = Math.max(4, Math.min(Math.round(m.height * STRIP_OF_HEIGHT), Math.floor(m.width * 0.4)));
+  return sharp(framed)
+    .extract({ left: 0, top: 0, width: w, height: m.height })
     .resize(SIG_W, SIG_H, { fit: 'fill' })
-    .greyscale().raw().toBuffer();
+    .removeAlpha().raw().toBuffer();
 }
 
 /** Mean absolute difference against the stored fingerprint, 0 (identical)–255. */
@@ -210,8 +243,17 @@ async function stripEdge(buf) {
   return { edge: fallback, width, height, why: 'height-ratio' };
 }
 
-/** Crop the strip away and re-frame the book. Returns null when no cut is safe. */
-async function debookmark(buf) {
+/**
+ * Crop the strip away and re-frame the book. Returns null when no cut is safe.
+ *
+ * Works on the de-framed image throughout. Where the supplier centred the
+ * composite on a square canvas the left padding can run to 16% of the width,
+ * which is past every window this reasons over — the column walk gives up
+ * before reaching the strip, and the height-ratio fallback measures against a
+ * canvas taller than the artwork.
+ */
+async function debookmark(raw) {
+  const buf = await deframe(raw);
   const { edge, width, height, why } = await stripEdge(buf);
   if (edge === null) return { out: null, why };
   const cut = await sharp(buf).extract({ left: edge, top: 0, width: width - edge, height }).toBuffer();
@@ -253,7 +295,10 @@ async function pool(items, size, worker) {
       .select('slug title isActive coverImage.secureUrl')
       .lean();
 
-    const pending = books.filter((b) => !b.coverImage.secureUrl.includes(`/${CLEAN_PREFIX}/`));
+    const RESCAN = process.argv.includes('--rescan');
+    const pending = RESCAN
+      ? books
+      : books.filter((b) => !b.coverImage.secureUrl.includes(`/${CLEAN_PREFIX}/`));
     console.log(`${APPLY ? 'APPLYING' : 'DRY RUN'} — ${books.length} cover(s) on R2, ${books.length - pending.length} already cleaned\n`);
     console.log('scanning for the supplier strip...');
 
@@ -262,7 +307,7 @@ async function pool(items, size, worker) {
     await pool(pending, Math.max(CONCURRENCY, 10), async (b) => {
       try {
         const buf = Buffer.from(await (await fetch(thumbOf(b.coverImage.secureUrl))).arrayBuffer());
-        const d = score(await fingerprint(buf));
+        const d = score(await fingerprint(await deframe(buf)));
         if (d < THRESHOLD) flagged.push({ ...b, d: +d.toFixed(1) });
       } catch { /* unreadable cover — leave it alone */ }
       scanned += 1;
@@ -314,7 +359,7 @@ async function pool(items, size, worker) {
         }
 
         // Guard 4: the crop has to actually have removed it.
-        const after = score(await fingerprint(out));
+        const after = score(await fingerprint(await deframe(out)));
         if (after < THRESHOLD) {
           skipped.push({ ...b, why: `still matches after crop (${after.toFixed(1)})` });
           return;
