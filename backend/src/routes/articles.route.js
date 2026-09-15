@@ -99,11 +99,14 @@ router.get(
       const filter = { status: 'published' };
       if (req.query.category) filter.category = String(req.query.category);
       if (req.query.tag) filter.tags = String(req.query.tag);
+      // Set only for a genre query, and carries the ranked id order the results
+      // have to be re-sorted into further down.
+      let genreOrder = null;
       if (req.query.genre) {
-        const ids = (await genreIndex()).byGenre[String(req.query.genre)] || [];
+        genreOrder = (await genreIndex()).byGenre[String(req.query.genre)] || [];
         // An empty list has to mean "no matches", not "no filter" — otherwise a
         // genre with no guides quietly shows the newest articles on the site.
-        filter._id = { $in: ids };
+        filter._id = { $in: genreOrder };
       }
       if (req.query.search) {
         // Escaped: this is user input reaching a regex. Title and excerpt only —
@@ -117,6 +120,33 @@ router.get(
       // stale list, it serves a different genre's list under this genre's URL.
       const key = `articles_list:${page}:${limit}:${req.query.category || ''}:${req.query.tag || ''}:${req.query.search || ''}:${req.query.genre || ''}`;
       const data = await withCache(key, 600, async () => {
+        // A genre list is ranked, not chronological. genreIndex() orders each
+        // genre's articles by how many of its books they recommend, and sorting
+        // the query by publishedAt threw that away — so a genre page showed the
+        // three newest guides that happen to touch the shelf rather than the
+        // three most about it. On fiction that buried the guide to spotting
+        // pirated books, whose every recommendation is a fiction title, below
+        // eight broader lists, and left it the one guide on the site with no
+        // contextual inbound link anywhere.
+        //
+        // Reordering in memory rather than in Mongo because the order lives in
+        // the index, not in any field. The set is at most the article count, so
+        // fetching it whole and slicing is cheaper than it looks.
+        if (genreOrder) {
+          const rank = new Map(genreOrder.map((id, i) => [id, i]));
+          const all = await Article.find(filter).select(LIST).lean();
+          all.sort(
+            (a, b) =>
+              (rank.get(String(a._id)) ?? Infinity) - (rank.get(String(b._id)) ?? Infinity)
+          );
+          return {
+            items: all.slice((page - 1) * limit, page * limit),
+            total: all.length,
+            page,
+            pages: Math.ceil(all.length / limit) || 1,
+          };
+        }
+
         const [items, total] = await Promise.all([
           // _id tiebreaker: a seeded batch shares publishedAt to the millisecond, and
           // tied documents have no stable order across requests, so paging without
@@ -237,17 +267,29 @@ router.get('/:slug', validate({ params: slugParams }), async (req, res, next) =>
       const score = (a) => {
         let s = 0;
         for (const t of a.tags || []) if (mine.has(t)) s += weight(t);
-        // Capped, because it stacks. A wide-ranging gift list recommends books
-        // from eight shelves and so overlaps with everything; uncapped, that
-        // out-scored a rare shared tag and pushed the Colleen Hoover guide off
-        // the romance article. Worth less in total than one exact rare-tag
-        // match (~3.3): a genuine signal, not a deciding one.
-        let g = 0;
-        for (const genre of bySlug[a.slug] || []) if (myGenres.has(genre)) g += 1.5;
-        s += Math.min(g, 3);
-        // A small nudge, not a tiebreaker of its own: it keeps a buying guide
-        // beside buying guides when everything else is genuinely equally close.
-        if (a.category === article.category) s += 0.25;
+        const theirs = bySlug[a.slug] || [];
+        if (theirs.length && myGenres.size) {
+          // Capped, because it stacks. A wide-ranging gift list recommends books
+          // from eight shelves and so overlaps with everything; uncapped, that
+          // out-scored a rare shared tag and pushed the Colleen Hoover guide off
+          // the romance article. Worth less in total than one exact rare-tag
+          // match (~3.3): a genuine signal, not a deciding one.
+          let g = 0;
+          for (const genre of theirs) if (myGenres.has(genre)) g += 1.5;
+          s += Math.min(g, 3);
+          // A small nudge, not a tiebreaker of its own: it keeps a buying guide
+          // beside buying guides when everything else is genuinely equally close.
+          if (a.category === article.category) s += 0.25;
+        } else if (a.category === article.category) {
+          // One side has no shelves to compare — a delivery guide recommends no
+          // books at all. Scoring that as zero overlap marks it down for
+          // *lacking* a signal rather than for being unrelated, and every rival
+          // can earn up to 3 where it can earn nothing. That is what dropped the
+          // outside-Kathmandu delivery guide off the cash-on-delivery guide it
+          // is plainly a sequel to, and left it with no inbound link at all.
+          // The editorial category is the topical signal these guides do have.
+          s += 1.5;
+        }
         return s;
       };
       return pool
