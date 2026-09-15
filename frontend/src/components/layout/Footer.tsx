@@ -100,7 +100,11 @@ export function Footer() {
             <li><Link href="/genre/fiction" className="hover:text-accent">Fiction</Link></li>
             <li><Link href="/genre/self-help" className="hover:text-accent">Self-help</Link></li>
             <li><Link href="/category/kids" className="hover:text-accent">Children&apos;s books</Link></li>
-            <li><Link href="/category/loksewa" className="hover:text-accent">Loksewa</Link></li>
+            {/* Loksewa is deliberately absent. The section holds zero books —
+                not zero in stock, zero records — so this link sent every visitor
+                and every crawler from all ~6,000 pages of the site to an empty
+                shelf. Put it back when there is something on it; the section
+                page itself now noindexes while empty. */}
             <li><Link href="/blog" className="hover:text-accent">Reading guides</Link></li>
           </ul>
         </div>

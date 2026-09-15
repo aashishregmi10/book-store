@@ -4,12 +4,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { apiGet, apiGetOrNull, CACHE_TTL } from "@/lib/api";
-import type { Genre, BookCardData, Paged } from "@/lib/types";
+import type { Genre, BookCardData, Paged, ArticleCard } from "@/lib/types";
 import { itemListLd, breadcrumbLd, listingIndexing } from "@/lib/seo";
 import { JsonLd } from "@/components/JsonLd";
 import { BooksFilters } from "@/components/books/BooksFilters";
 import { BooksToolbar } from "@/components/books/BooksToolbar";
 import { BooksGrid } from "@/components/books/BooksGrid";
+import { GuideLinks } from "@/components/blog/GuideLinks";
 
 // Reads `searchParams`, so it renders per request — but its catalogue fetches
 // are shared and cached. See the note in app/books/page.tsx.
@@ -72,7 +73,7 @@ export default async function GenrePage({
   // Books come from /books rather than /genres/:slug because that endpoint
   // already implements every facet the sidebar offers — and it is the same
   // endpoint BooksGrid pages against, so "load more" can't drift from page 1.
-  const [data, genres, facets] = await Promise.all([
+  const [data, genres, guides, facets] = await Promise.all([
     apiGet<Paged<BookCardData>>("/books", {
       tags: ["books", `genre:${genre.slug}`],
       searchParams: {
@@ -90,6 +91,15 @@ export default async function GenrePage({
       },
     }).catch(() => null),
     apiGet<Genre[]>("/genres", { tags: ["genres"], revalidate: CACHE_TTL.genres }).catch(() => [] as Genre[]),
+    // Guides relevant to this shelf, matched server-side through the books each
+    // one recommends. This is the only inbound link most articles have other
+    // than the blog index, and it gives the genre page the one thing a
+    // catalogue listing otherwise lacks: writing of our own.
+    apiGet<Paged<ArticleCard>>("/articles", {
+      tags: ["articles", `genre:${genre.slug}`],
+      revalidate: CACHE_TTL.articles,
+      searchParams: { genre: genre.slug, limit: 3 },
+    }).catch(() => null),
     apiGet<{ authors: string[]; publishers: string[] }>("/books/filters/metadata", { tags: ["books"], revalidate: CACHE_TTL.genres }).catch(() => ({
       authors: [],
       publishers: [],
@@ -201,6 +211,20 @@ export default async function GenrePage({
                 apiParams={apiParams}
                 path={`/genre/${genre.slug}`}
                 urlQuery={urlQuery}
+              />
+            )}
+
+            {/* Below the grid on purpose. The shelf is what the visitor came
+                for; the guides are what they read next, and what gives this URL
+                something to say that a product listing cannot. Only renders on
+                the unfiltered first page — a narrowed slice is a different
+                intent, and these links would just be noise under it. */}
+            {!urlQuery && (
+              <GuideLinks
+                className="mt-14"
+                heading={`Reading guides for ${genre.name.toLowerCase()}`}
+                intro="Written by us, not scraped — what to read first, which edition to buy, and what it costs in Nepal."
+                articles={guides?.items ?? []}
               />
             )}
           </div>

@@ -13,6 +13,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { MarkdownLite } from "@/components/MarkdownLite";
 import { BookCard } from "@/components/books/BookCard";
 import { ArticleCover } from "@/components/blog/ArticleCover";
+import { GuideLinks } from "@/components/blog/GuideLinks";
 
 // ISR — articles are published once and rarely edited afterwards.
 export const revalidate = 900;
@@ -190,6 +191,15 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             </div>
           </section>
         )}
+
+        {/* Guide-to-guide links. The catalogue funnel above has always existed;
+            the path sideways did not, so each guide was a cul-de-sac that sent
+            every visitor and every crawler back to a product page or nowhere. */}
+        <GuideLinks
+          className="mt-16"
+          heading="Keep reading"
+          articles={a.relatedArticles ?? []}
+        />
       </div>
     </>
   );

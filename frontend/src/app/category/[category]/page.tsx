@@ -84,10 +84,30 @@ export async function generateMetadata({
   const sp = await searchParams;
   const s = SECTIONS[category];
   const page = Math.max(1, Number(sp.page) || 1);
+  const indexing = listingIndexing(`/category/${category}`, sp, FILTER_KEYS);
+
+  // A section with nothing on it is a soft 404: the page answers 200 with a
+  // heading, a blurb and no books, which is exactly what Google treats as a
+  // thin or empty result. /category/loksewa sat like that for weeks while being
+  // linked from the footer of every page on the site.
+  //
+  // Checked live rather than hardcoded, because a section empties out on its own
+  // — the last Manga title selling through would do it — and nobody would think
+  // to come back and edit this file.
+  const stocked = await getBooks(category, { ...sp, page: undefined });
+  if ((stocked?.total ?? 0) === 0) {
+    return {
+      title: `${s.heading} | Buy Online`,
+      description: s.blurb,
+      ...indexing,
+      robots: { index: false, follow: true },
+    };
+  }
+
   return {
     title: page > 1 ? `${s.heading} — page ${page} | Buy Online` : `${s.heading} | Buy Online`,
     description: s.blurb,
-    ...listingIndexing(`/category/${category}`, sp, FILTER_KEYS),
+    ...indexing,
   };
 }
 

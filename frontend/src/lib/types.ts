@@ -94,6 +94,8 @@ export interface ArticleDetail extends ArticleCard {
   metaDesc?: string;
   updatedAt?: string;
   relatedBooks?: BookCardData[];
+  /** Sibling guides, ranked server-side by shared tags and recommended-book genres. */
+  relatedArticles?: ArticleCard[];
 }
 
 export interface QuestionData {
