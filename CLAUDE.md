@@ -63,12 +63,13 @@ Every page ships with its metadata + JSON-LD + a BLUF intro. Non-negotiables:
 - Self-referencing canonical on every page. `next/image` with width/height everywhere (ESLint enforces; `<img>` is an error).
 - Genre silo: book pages link only within their own genre. Slugs are `lower-kebab` and must match across URL, breadcrumb, and DB.
 
-### Genre taxonomy — closed list, 16 slugs
+### Genre taxonomy — closed list, 21 slugs
 
 `fiction` · `sci-fi-fantasy` · `mystery-thriller` · `romance` · `young-adult` ·
 `childrens` · `biography-memoir` · `business-economics` · `self-help` ·
 `psychology` · `spirituality-religion` · `philosophy` · `politics-society` ·
-`science-technology` · `poetry` · `nepali-literature`
+`science-technology` · `poetry` · `nepali-literature` · `food-cooking` ·
+`art-craft` · `health-wellness` · `games-hobbies` · `education-reference`
 
 **Never invent a new genre slug per book.** Free-text genres are what produced
 the original mess: the import fell back to a catch-all whenever its subject

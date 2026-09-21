@@ -45,6 +45,11 @@ const TAXONOMY = [
   ['science-technology', 'Science & Technology', 'Popular science, technology and mathematics for general readers, delivered across Nepal.'],
   ['poetry', 'Poetry', 'Verse collections and anthologies, in English and in translation.'],
   ['nepali-literature', 'Nepali Literature', 'Nepali-language writing and books by Nepali authors — fiction, essays and poetry from Nepal’s own publishing scene.'],
+  ['food-cooking', 'Food & Cooking', 'Cookbooks, recipe collections and food writing for home cooks in Nepal — regional Nepali and Indian cuisine, international recipes, baking, and the culture of spices and flavour. Priced in NPR with cash on delivery to all seven provinces.'],
+  ['art-craft', 'Art & Craft', 'Art and craft books for makers in Nepal — drawing, painting and calligraphy, arts-and-crafts project books, art journals and colouring, and titles on design and handmade work. Practical guides and inspiration, priced in NPR with cash on delivery nationwide.'],
+  ['health-wellness', 'Health & Wellness', 'Health and wellness books stocked in Nepal — nutrition and diet, fitness, sleep, mental wellbeing and everyday self-care, and accessible guides to the body and healthy living. Written for general readers, priced in NPR with cash on delivery.'],
+  ['games-hobbies', 'Games & Hobbies', 'Books on games and hobbies for readers in Nepal — chess and puzzles, card and board games, gardening and other pastimes, and guides to picking up a new skill for fun. Priced in NPR with cash on delivery across all seven provinces.'],
+  ['education-reference', 'Education & Reference', 'Reference and learning books for students and self-learners in Nepal — dictionaries, grammar and vocabulary, language-learning courses, encyclopedias, and study and exam guides. Everyday reference priced in NPR with cash on delivery nationwide.'],
 ];
 
 // Slugs the restructure removes. Kept until they are empty.

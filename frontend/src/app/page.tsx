@@ -15,6 +15,11 @@ import {
   Heart,
   Sparkles,
   FlaskConical,
+  ChefHat,
+  Palette,
+  HeartPulse,
+  Puzzle,
+  Library,
   type LucideIcon,
 } from "lucide-react";
 import { apiGet, CACHE_TTL } from "@/lib/api";
@@ -43,6 +48,11 @@ const GENRE_ICONS: Record<string, LucideIcon> = {
   "self-help": Compass,
   "spirituality-religion": Flower2,
   "young-adult": GraduationCap,
+  "food-cooking": ChefHat,
+  "art-craft": Palette,
+  "health-wellness": HeartPulse,
+  "games-hobbies": Puzzle,
+  "education-reference": Library,
 };
 
 /**

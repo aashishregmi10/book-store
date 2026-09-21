@@ -35,6 +35,11 @@ const GENRES = [
   'science-technology',
   'poetry',
   'nepali-literature',
+  'food-cooking',
+  'art-craft',
+  'health-wellness',
+  'games-hobbies',
+  'education-reference',
 ];
 
 // [genre, weight, ...substrings]. Weight 3 = the subject names the genre almost
@@ -93,6 +98,21 @@ const RULES = [
   // "Social Science" would otherwise tie this against politics-society.
   ['science-technology', 3, 'technology', 'computers', 'mathematics', 'engineering', 'medical'],
   ['science-technology', 2, 'physics', 'biology', 'chemistry', 'astronomy', 'artificial intelligence', 'nature', 'education', 'study aids'],
+
+  // The five gap genres. Rules stay specific on purpose: bare words like "art"
+  // (The Art of War), "game" (novels) or "food" (food for thought) would false-
+  // match, so only unambiguous stems/phrases score, and soft hints sit at 2.
+  ['food-cooking', 3, 'cookbook', 'cooking', 'recipe', 'cuisine', 'culinary', 'baking', 'gastronom'],
+  ['art-craft', 3, 'arts and crafts', 'art and craft', 'calligraphy', 'origami', 'colouring book', 'coloring book', 'art journal', 'how to draw', 'watercolour', 'watercolor', 'handicraft'],
+  ['art-craft', 2, 'painting', 'drawing', 'crafts', 'sketching'],
+  ['health-wellness', 3, 'wellness', 'nutrition', 'mental health', 'wellbeing', 'well-being', 'healthy living', 'fitness'],
+  ['health-wellness', 2, 'health', 'diet', 'exercise'],
+  // No bare 'hobby'/'hobbies' — it collides with the common "Crafts & Hobbies"
+  // label, which should read as art-craft. Concrete hobbies still score here.
+  ['games-hobbies', 3, 'chess', 'sudoku', 'crossword', 'jigsaw', 'board game', 'card game', 'gardening', 'knitting', 'puzzle'],
+  // Stems so plurals match: 'dictionar' covers dictionaries, 'encyclop' both spellings, 'vocabular' vocabularies.
+  ['education-reference', 3, 'dictionar', 'thesaur', 'encyclop', 'grammar', 'vocabular', 'language learning', 'textbook'],
+  ['education-reference', 2, 'reference', 'study guide', 'workbook', 'exam'],
 
   // Deliberately weak: providers stamp "Fiction" on nearly every novel, so it
   // must lose to any specific fiction sub-genre that also matched. The supplier
