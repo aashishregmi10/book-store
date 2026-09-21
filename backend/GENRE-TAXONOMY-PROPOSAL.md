@@ -29,6 +29,11 @@ Two consequences worth naming:
 
 ## Proposed taxonomy — 16 genres
 
+> **Superseded — now 21.** This section records the original 16-genre proposal
+> as signed off. Five gap genres were added later; see
+> *[Addendum — expansion to 21](#addendum-2026-09-21--expansion-to-21-genres)*
+> at the end. `CLAUDE.md` carries the current closed list.
+
 Derived from a random sample of what is actually in `general`, not from a
 generic list. Every proposed genre has real volume behind it.
 
@@ -94,3 +99,36 @@ shown. Folding is cleaner unless the shop intends to stock them properly.
 4. Redirect old slugs, update the sitemap, delete the retired genres.
 5. Fix `Genre.bookCount` — every genre currently reports 0, so the mega-menu
    counts and any "N books" copy are wrong regardless of this work.
+
+## Addendum (2026-09-21) — expansion to 21 genres
+
+The 16-genre migration above cleared `general`, but a second holding pen,
+`unclassified` (hidden, `isActive: false`), collected every later import whose
+subject data was inconclusive. Sampling that backlog surfaced five real
+clusters the 16-genre list had no home for — practical non-fiction that had
+been landing nowhere. These are **additive**: no slug is retired and no URL
+changes, so unlike the original restructure there are **no new 301s**.
+
+| Slug | Name | Covers |
+| --- | --- | --- |
+| `food-cooking` | Food & Cooking | Cookbooks, recipes, cuisine, baking |
+| `art-craft` | Art & Craft | Drawing, painting, calligraphy, crafts, colouring |
+| `health-wellness` | Health & Wellness | Nutrition, fitness, mental wellbeing, healthy living |
+| `games-hobbies` | Games & Hobbies | Chess, puzzles, board/card games, gardening, knitting |
+| `education-reference` | Education & Reference | Dictionaries, grammar, vocabulary, encyclopedias, study guides |
+
+Closed list is now **21 slugs** (see `CLAUDE.md`). Each new genre has: a
+`seed-taxonomy.js` entry with a Nepal-specific BLUF, scoring rules in
+`genreMap.js` `RULES` so future imports auto-select it, and a homepage icon in
+`app/page.tsx` `GENRE_ICONS`.
+
+**Shelving status.** `scripts/shelve-new-genres.js` did a conservative,
+no-network first pass: it moves an `unclassified` book into one of the five
+only when the **title alone** matches exactly one genre's keywords, and it
+sets `genre` **only — it does not publish** (the import-quality-bar rule:
+hidden books stay hidden until enriched). That pass filed 10 books. The rest of
+the `unclassified` backlog is still hidden and awaits the network-bound
+`reclassify-genres.js` pass (subject lookup via Open Library / Google Books),
+which is where the bulk of these five genres will be populated — and which, per
+step 4's confidence threshold, publishes a book only when it wins a genre
+outright.
