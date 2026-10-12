@@ -9,7 +9,7 @@ const mongoose = require('mongoose');
  * admin page polls it. `results` holds what the two panels render.
  */
 const newBookSchema = new mongoose.Schema(
-  { title: String, isbn13: String, price: Number, coverUrl: String, url: String },
+  { title: String, author: String, isbn13: String, price: Number, coverUrl: String, url: String },
   { _id: false }
 );
 const outOfStockSchema = new mongoose.Schema(
@@ -37,10 +37,12 @@ const supplierSyncJobSchema = new mongoose.Schema(
       outOfStock: { type: [outOfStockSchema], default: [] }, // confirmed (crossed the miss threshold)
       absentThisRun: { type: Number, default: 0 }, // absent but not yet confirmed
       restoredCount: { type: Number, default: 0 }, // previously-zeroed books auto-restored (back in stock)
+      newReadyToPublish: { type: Number, default: 0 }, // new books with an ISBN-13 after enrichment (the rest are held)
     },
     // publish lifecycle (import of the new books) — a second background step
     publishStatus: { type: String, enum: ['idle', 'running', 'done', 'failed'], default: 'idle' },
     publishedCount: { type: Number, default: 0 },
+    heldCount: { type: Number, default: 0 }, // new books skipped at publish for still lacking an ISBN-13
     publishError: { type: String },
     // apply-stock lifecycle (fast, inline)
     stockApplied: { type: Boolean, default: false },

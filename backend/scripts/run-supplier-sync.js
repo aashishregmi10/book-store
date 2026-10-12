@@ -33,6 +33,7 @@ const SCRAPER_DIR = 'D:/daraz-scraper';
 const SNAPSHOT_DIR = path.join(SCRAPER_DIR, 'data-nbh-snapshot');
 const STATE_FILE = path.join(SCRAPER_DIR, 'availability-state.json'); // OUTSIDE the cleared snapshot dir
 const HARVEST = path.join(SCRAPER_DIR, 'harvest-listing.js');
+const ENRICH = path.join(SCRAPER_DIR, 'enrich-new-details.js');
 const LISTING = 'https://www.daraz.com.np/new-book-house/?from=wangpu&langFlag=en&pageTypeId=2&q=All-Products';
 const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const CHROME_PROFILE = 'D:\\daraz-scraper\\data\\chrome-cdp';
@@ -112,9 +113,8 @@ async function scan() {
 
   // New books via the existing collision reporter (writes books.new.jsonl).
   await setJob({ phase: 'diffing against the catalogue', coverage });
+  const NEW_FILE = path.join(SNAPSHOT_DIR, 'books.new.jsonl');
   const cc = await run(process.cwd(), ['scripts/report-scrape-collisions.js', path.join(SNAPSHOT_DIR, 'books.jsonl')]);
-  const newRecs = cc === 0 ? readJsonl(path.join(SNAPSHOT_DIR, 'books.new.jsonl')) : [];
-  const newBooks = newRecs.slice(0, 500).map((r) => ({ title: r.title, isbn13: r.isbn13 || '', price: r.price, coverUrl: r.coverUrl || '', url: r.url || '' }));
 
   // Out of stock = NBH store books absent from this snapshot, gated + confirmed
   // over MISS_THRESHOLD consecutive complete syncs.
@@ -164,12 +164,31 @@ async function scan() {
   }
   saveState(state);
 
+  // The listing almost never carries author/ISBN, so fill those from each new
+  // book's detail page (same CDP Chrome) BEFORE anyone reviews or publishes
+  // them — otherwise they'd land as "Unknown" author with no ISBN. Done last so
+  // a challenge here can't lose the out-of-stock result above; books that are
+  // still blank afterwards are simply held back at publish time.
+  let enrichNote = '';
+  if (cc === 0 && readJsonl(NEW_FILE).length) {
+    await setJob({ phase: 'reading ISBN & author from detail pages' });
+    const ec = await run(SCRAPER_DIR, [ENRICH, '--file', NEW_FILE, '--cdp', 'http://localhost:9222', '--delay', '2500']);
+    if (ec === 3) enrichNote = ' — detail enrichment hit a Daraz challenge; some new books still need author/ISBN, re-run to finish';
+    else if (ec !== 0) enrichNote = ' — detail enrichment had errors; some new books may still need author/ISBN';
+  }
+
+  const newRecs = cc === 0 ? readJsonl(NEW_FILE) : [];
+  const newBooks = newRecs.slice(0, 500).map((r) => ({
+    title: r.title, author: r.author || '', isbn13: r.isbn13 || '', price: r.price, coverUrl: r.coverUrl || '', url: r.url || '',
+  }));
+  const newWithIsbn = newRecs.filter((r) => /^\d{13}$/.test(String(r.isbn13 || ''))).length;
+
   await setJob({
     status: 'done',
-    phase: goodHarvest ? 'done' : `done (coverage ${coverage}% / ${Math.round(absentPct)}% absent — availability skipped this run)`,
+    phase: (goodHarvest ? 'done' : `done (coverage ${coverage}% / ${Math.round(absentPct)}% absent — availability skipped this run)`) + enrichNote,
     coverage,
     finishedAt: new Date(),
-    results: { newBooks, outOfStock: outOfStock.slice(0, 500), absentThisRun: absent.length, restoredCount },
+    results: { newBooks, outOfStock: outOfStock.slice(0, 500), absentThisRun: absent.length, restoredCount, newReadyToPublish: newWithIsbn },
   });
 }
 
@@ -177,15 +196,25 @@ async function scan() {
 async function publish() {
   await setJob({ publishStatus: 'running', publishError: '' });
   const newFile = path.join(SNAPSHOT_DIR, 'books.new.jsonl');
-  if (!fs.existsSync(newFile) || readJsonl(newFile).length === 0) {
-    await setJob({ publishStatus: 'done', publishedCount: 0 });
+  const all = fs.existsSync(newFile) ? readJsonl(newFile) : [];
+
+  // Quality gate (the import-quality bar): a book with no ISBN-13 would import
+  // as "Unknown" author with no ISBN — never push that live. Publish only the
+  // ones detail enrichment resolved; hold the rest back for a later re-run.
+  const publishable = all.filter((r) => /^\d{13}$/.test(String(r.isbn13 || '')));
+  const held = all.length - publishable.length;
+  if (publishable.length === 0) {
+    await setJob({ publishStatus: 'done', publishedCount: 0, heldCount: held });
     return;
   }
+
+  const publishFile = path.join(SNAPSHOT_DIR, 'books.publish.jsonl');
+  fs.writeFileSync(publishFile, publishable.map((r) => JSON.stringify(r)).join('\n') + '\n', 'utf8');
   const before = await Book.countDocuments({});
-  const code = await run(process.cwd(), ['scripts/import-from-scrape.js', newFile, '--stock', '2']);
+  const code = await run(process.cwd(), ['scripts/import-from-scrape.js', publishFile, '--stock', '2']);
   const after = await Book.countDocuments({});
-  if (code !== 0) { await setJob({ publishStatus: 'failed', publishError: `import exited ${code}`, publishedCount: Math.max(0, after - before) }); return; }
-  await setJob({ publishStatus: 'done', publishedCount: Math.max(0, after - before) });
+  if (code !== 0) { await setJob({ publishStatus: 'failed', publishError: `import exited ${code}`, publishedCount: Math.max(0, after - before), heldCount: held }); return; }
+  await setJob({ publishStatus: 'done', publishedCount: Math.max(0, after - before), heldCount: held });
 }
 
 (async function main() {

@@ -6,7 +6,7 @@ import { RefreshCw, PackageX, PlusCircle, AlertTriangle, Loader2 } from "lucide-
 import { clientApi } from "@/lib/client-api";
 import { npr } from "@/lib/format";
 
-interface NewBook { title: string; isbn13?: string; price?: number; coverUrl?: string; url?: string }
+interface NewBook { title: string; author?: string; isbn13?: string; price?: number; coverUrl?: string; url?: string }
 interface OutOfStock { book: string; slug?: string; title: string; isbn?: string; missCount?: number }
 interface Job {
   _id: string;
@@ -14,14 +14,17 @@ interface Job {
   phase?: string;
   coverage?: number;
   error?: string;
-  results?: { newBooks?: NewBook[]; outOfStock?: OutOfStock[]; absentThisRun?: number; restoredCount?: number };
+  results?: { newBooks?: NewBook[]; outOfStock?: OutOfStock[]; absentThisRun?: number; restoredCount?: number; newReadyToPublish?: number };
   publishStatus?: "idle" | "running" | "done" | "failed";
   publishedCount?: number;
+  heldCount?: number;
   publishError?: string;
   stockApplied?: boolean;
   stockAppliedCount?: number;
   finishedAt?: string;
 }
+
+const hasIsbn13 = (s?: string) => !!s && /^\d{13}$/.test(s);
 
 const ACTIVE = (j?: Job | null) => !!j && (j.status === "queued" || j.status === "running" || j.publishStatus === "running");
 
@@ -75,6 +78,8 @@ export default function SupplierSyncPage() {
   const r = job?.results;
   const newBooks = r?.newBooks ?? [];
   const outOfStock = r?.outOfStock ?? [];
+  const readyToPublish = r?.newReadyToPublish ?? newBooks.filter((b) => hasIsbn13(b.isbn13)).length;
+  const needIsbn = newBooks.length - readyToPublish;
 
   return (
     <div>
@@ -123,30 +128,51 @@ export default function SupplierSyncPage() {
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           {/* New books */}
           <section className="border border-border bg-surface">
-            <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <h2 className="inline-flex items-center gap-2 font-display text-xl text-text"><PlusCircle className="size-5 text-accent" /> New books ({newBooks.length})</h2>
-              {newBooks.length > 0 && (
+            <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+              <div className="min-w-0">
+                <h2 className="inline-flex items-center gap-2 font-display text-xl text-text"><PlusCircle className="size-5 text-accent" /> New books ({newBooks.length})</h2>
+                {newBooks.length > 0 && (
+                  <p className="mt-0.5 font-data text-[11px] text-muted">
+                    {readyToPublish} ready to publish{needIsbn > 0 && <> · <span className="text-sale">{needIsbn} held — no ISBN found</span></>}
+                  </p>
+                )}
+              </div>
+              {readyToPublish > 0 && (
                 <button
                   onClick={publish}
                   disabled={busy || job.publishStatus === "running"}
-                  className="inline-flex items-center gap-2 border border-accent px-3 py-1.5 font-data text-xs uppercase tracking-wide text-accent hover:bg-accent hover:text-white disabled:opacity-50"
+                  className="inline-flex shrink-0 items-center gap-2 border border-accent px-3 py-1.5 font-data text-xs uppercase tracking-wide text-accent hover:bg-accent hover:text-white disabled:opacity-50"
                 >
                   {job.publishStatus === "running" ? <Loader2 className="size-3.5 animate-spin" /> : null}
-                  {job.publishStatus === "running" ? "Publishing…" : job.publishStatus === "done" ? `Published ${job.publishedCount}` : "Publish all"}
+                  {job.publishStatus === "running"
+                    ? "Publishing…"
+                    : job.publishStatus === "done"
+                      ? `Published ${job.publishedCount}${job.heldCount ? ` · ${job.heldCount} held` : ""}`
+                      : `Publish ${readyToPublish}`}
                 </button>
               )}
             </div>
             <ul className="max-h-[28rem] divide-y divide-border overflow-y-auto">
               {newBooks.length === 0 && <li className="px-4 py-8 text-center font-body text-sm text-muted">Nothing new this run.</li>}
-              {newBooks.map((b, i) => (
-                <li key={b.isbn13 || b.url || i} className="flex items-center gap-3 px-4 py-2">
-                  <div className="relative h-12 w-9 shrink-0 overflow-hidden rounded border border-border bg-bg">
-                    {b.coverUrl ? <Image src={b.coverUrl} alt="" fill sizes="36px" className="object-cover" unoptimized /> : null}
-                  </div>
-                  <p className="min-w-0 flex-1 truncate font-body text-sm text-text">{b.title}</p>
-                  {typeof b.price === "number" && <span className="font-data text-xs text-muted">{npr(b.price)}</span>}
-                </li>
-              ))}
+              {newBooks.map((b, i) => {
+                const ready = hasIsbn13(b.isbn13);
+                return (
+                  <li key={b.isbn13 || b.url || i} className="flex items-center gap-3 px-4 py-2">
+                    <div className="relative h-12 w-9 shrink-0 overflow-hidden rounded border border-border bg-bg">
+                      {b.coverUrl ? <Image src={b.coverUrl} alt="" fill sizes="36px" className="object-cover" unoptimized /> : null}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-body text-sm text-text">{b.title}</p>
+                      <p className="truncate font-data text-[11px] text-muted">
+                        {b.author ? <span className="uppercase tracking-wide">{b.author}</span> : <span className="text-sale/80">no author</span>}
+                        {" · "}
+                        {ready ? <span>{b.isbn13}</span> : <span className="text-sale/80">no ISBN — held</span>}
+                      </p>
+                    </div>
+                    {typeof b.price === "number" && <span className="shrink-0 font-data text-xs text-muted">{npr(b.price)}</span>}
+                  </li>
+                );
+              })}
             </ul>
           </section>
 
