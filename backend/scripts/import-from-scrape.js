@@ -99,7 +99,9 @@ async function importBook(b, opts) {
   // for both SEO and the book-card design.
   const needsDescription = !isMeaningful(description, b.title);
   if (opts.enrich && isbn13 && (needsDescription || !b.author)) {
-    try { meta = await lookupByIsbn(isbn13); } catch { meta = null; }
+    // Title/author let the lookup search Google by words when its ISBN query
+    // comes back empty (see bookLookup.js) — the common case since Oct 2026.
+    try { meta = await lookupByIsbn(isbn13, { title: b.title, author: b.author, language: b.language }); } catch { meta = null; }
     if (needsDescription && meta?.description && isMeaningful(meta.description, b.title)) {
       description = meta.description.trim();
     }

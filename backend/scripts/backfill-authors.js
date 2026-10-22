@@ -54,7 +54,7 @@ async function resolveOne(book, opts) {
 
   if (book.isbn) {
     try {
-      const meta = await lookupByIsbn(book.isbn);
+      const meta = await lookupByIsbn(book.isbn, { title: book.title });
       author = cleanAuthor(meta?.author);
       if (author) source = meta.source || 'isbn';
     } catch { /* fall through to the title search */ }

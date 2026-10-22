@@ -68,10 +68,10 @@ function clean(html) {
 }
 
 /** One lookup, retried past the transient 503s Google returns under load. */
-async function lookupWithRetry(isbn, tries = 3) {
+async function lookupWithRetry(isbn, hints, tries = 3) {
   for (let attempt = 1; attempt <= tries; attempt += 1) {
     try {
-      return await lookupByIsbn(isbn);
+      return await lookupByIsbn(isbn, hints);
     } catch (err) {
       const transient = /503|502|504|ETIMEDOUT|ECONNRESET|fetch failed/i.test(err.message || '');
       if (!transient || attempt === tries) return null;
@@ -130,7 +130,7 @@ async function pool(items, size, worker) {
     let done = 0;
 
     await pool(withIsbn, args.concurrency, async (b) => {
-      const meta = await lookupWithRetry(b.isbn);
+      const meta = await lookupWithRetry(b.isbn, { title: b.title, author: b.author });
       const text = clean(meta && meta.description);
       done += 1;
       if (done % 100 === 0) logger.info({ done, of: withIsbn.length, filled }, 'progress');

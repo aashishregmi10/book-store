@@ -51,7 +51,9 @@ async function fixOne(book, opts) {
   let realPublisher = '';
   if (book.isbn && /^\d{13}$/.test(book.isbn)) {
     try {
-      const meta = await lookupByIsbn(book.isbn);
+      // Publisher is an edition fact: lookupByIsbn only reports one from a source
+      // that matched this exact ISBN. The title just lets Google find that edition.
+      const meta = await lookupByIsbn(book.isbn, { title: book.title, author: book.author });
       realPublisher = meta?.specifications?.publisher?.trim() || '';
     } catch { /* leave blank on lookup failure */ }
   }
