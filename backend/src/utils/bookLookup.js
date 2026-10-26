@@ -81,6 +81,16 @@ function plainText(text) {
     .replace(/^\s*\[\d+\]:\s*\S+.*$/gm, "") // Markdown link references
     .replace(/\[([^\]]+)\]\((?:https?:)?[^)]*\)/g, "$1") // [text](url) -> text
     .replace(/\(\[source\]\[\d+\]\)/gi, "")
+    // Markdown emphasis and hard breaks ("**bold**", "*italic*", trailing "\").
+    // A single asterisk inside a word is left alone — "F*ck" is a real title.
+    .replace(/\*\*([^*\n]+)\*\*/g, "$1")
+    // Bold wrapped around an italic title ("***Title* rest of sentence.**"):
+    // drop the italic pair, then the bold markers left over as bare runs.
+    .replace(/\*{3}([^*\n]+?)\*(?!\*)/g, "$1")
+    .replace(/\*{2,}/g, "")
+    .replace(/__([^_\n]+)__/g, "$1")
+    .replace(/(^|[\s("'‘“])\*([^*\n]+?)\*(?=[\s).,!?;:'"’”]|$)/gm, "$1$2")
+    .replace(/\\(?=\s|$)/gm, "")
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/p>/gi, "\n\n")
     .replace(/<[^>]+>/g, "")
@@ -472,4 +482,4 @@ async function lookupSubjects({ isbn, title, author } = {}) {
   return fallbackAuthor ? { subjects: [], author: fallbackAuthor } : null;
 }
 
-module.exports = { lookupByIsbn, lookupBook, lookupSubjects };
+module.exports = { lookupByIsbn, lookupBook, lookupSubjects, plainText };

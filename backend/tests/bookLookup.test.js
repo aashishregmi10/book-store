@@ -1,6 +1,6 @@
 'use strict';
 
-const { lookupByIsbn, lookupBook } = require('../src/utils/bookLookup');
+const { lookupByIsbn, lookupBook, plainText } = require('../src/utils/bookLookup');
 
 // Route every request by URL to a canned response. Anything unrouted is a 404,
 // so a test fails loudly if the code calls something it was not meant to.
@@ -115,6 +115,21 @@ describe('lookupByIsbn — Open Library exact edition', () => {
   it('returns null when no provider knows the ISBN', async () => {
     mockFetch([[isbnQuery, googleEmpty]]);
     expect(await lookupByIsbn('9789999999999', { title: 'Nothing Here', author: 'Nobody' })).toBeNull();
+  });
+});
+
+describe('plainText', () => {
+  it('strips Markdown emphasis and hard line breaks that providers send', () => {
+    expect(plainText('**…the future of India may lie in unexpected hands.**\\ \\ *1940, Shimla.* A story.'))
+      .toBe('…the future of India may lie in unexpected hands. 1940, Shimla. A story.');
+    expect(plainText('*I hate that woman.* Tyler has spent years looking.')).toBe('I hate that woman. Tyler has spent years looking.');
+    // Bold wrapped around an italic title, as one Google record sends it.
+    expect(plainText('***A Shimla Affair* follows three women.**')).toBe('A Shimla Affair follows three women.');
+  });
+
+  it('leaves an asterisk that is part of the text alone', () => {
+    expect(plainText('The Subtle Art of Not Giving a F*ck is a book.')).toBe('The Subtle Art of Not Giving a F*ck is a book.');
+    expect(plainText('Five * three is fifteen.')).toBe('Five * three is fifteen.');
   });
 });
 
