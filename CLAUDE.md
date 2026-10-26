@@ -75,7 +75,9 @@ Every page ships with its metadata + JSON-LD + a BLUF intro. Non-negotiables:
 the original mess: the import fell back to a catch-all whenever its subject
 mapping failed, and 90% of the catalogue ended up in one bucket. Adding a genre
 means adding it to `backend/scripts/seed-taxonomy.js`, giving `genreMap.js`
-rules that can actually select it, and adding an icon in `app/page.tsx`.
+rules that can actually select it, and placing it in a group in
+`frontend/src/lib/genreGroups.ts` (the header's category menu; an unlisted
+genre falls to the end of Non-fiction).
 
 - `kids` / `manga` / `loksewa` are **sections** (`book.category`), a separate
   axis from genre — a book can be `genre: 'fiction'` *and* `category: 'kids'`.

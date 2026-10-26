@@ -119,8 +119,9 @@ changes, so unlike the original restructure there are **no new 301s**.
 
 Closed list is now **21 slugs** (see `CLAUDE.md`). Each new genre has: a
 `seed-taxonomy.js` entry with a Nepal-specific BLUF, scoring rules in
-`genreMap.js` `RULES` so future imports auto-select it, and a homepage icon in
-`app/page.tsx` `GENRE_ICONS`.
+`genreMap.js` `RULES` so future imports auto-select it, and a place in the
+header's category menu (`frontend/src/lib/genreGroups.ts`). The homepage
+genre-icon row this originally listed was removed on 2026-10-26.
 
 **Shelving status.** `scripts/shelve-new-genres.js` did a conservative,
 no-network first pass: it moves an `unclassified` book into one of the five
