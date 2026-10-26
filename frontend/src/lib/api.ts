@@ -4,7 +4,7 @@ import type { ApiEnvelope } from "./types";
  * Server-side base URL for the Express API. The frontend never touches
  * MongoDB directly (see /CLAUDE.md) — it always goes through this API.
  */
-const API_BASE = process.env.API_URL || "http://localhost:5000/api";
+export const API_BASE = process.env.API_URL || "http://localhost:5000/api";
 
 /**
  * Marks a request as coming from our own server rather than a browser, so the
@@ -32,6 +32,13 @@ export class ApiError extends Error {
  * time window is what actually makes the catalogue self-heal.
  */
 export const DEFAULT_REVALIDATE = 300; // 5 minutes
+
+/**
+ * Tag on every read of the homepage rails (Bestsellers / New arrivals / Staff
+ * favourites). The admin's "Shuffle homepage" expires exactly this tag, so a
+ * shuffle shows up on the next visit without invalidating the whole catalogue.
+ */
+export const RAILS_TAG = "rails";
 
 /**
  * Revalidation windows, longest-lived first. Kept together so the whole

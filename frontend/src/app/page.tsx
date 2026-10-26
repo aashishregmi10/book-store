@@ -22,7 +22,7 @@ import {
   Library,
   type LucideIcon,
 } from "lucide-react";
-import { apiGet, CACHE_TTL } from "@/lib/api";
+import { apiGet, CACHE_TTL, RAILS_TAG } from "@/lib/api";
 import { itemListLd } from "@/lib/seo";
 import { JsonLd } from "@/components/JsonLd";
 import type { BookCardData, Genre } from "@/lib/types";
@@ -73,7 +73,7 @@ interface Featured {
 async function getFeatured(): Promise<Featured | null> {
   try {
     return await apiGet<Featured>("/books/featured/books", {
-      tags: ["books"],
+      tags: ["books", RAILS_TAG],
       revalidate: CACHE_TTL.catalogue,
     });
   } catch {

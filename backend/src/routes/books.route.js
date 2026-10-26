@@ -13,6 +13,7 @@ const { validate } = require('../middleware/validate');
 const { authenticate, optionalAuth } = require('../middleware/auth');
 const { z, trimmedString, intQuery, email: emailSchema } = require('../utils/zod');
 const { withCache } = require('../utils/cache');
+const { buildRails } = require('../services/homepageRails');
 const { isbnSearchForms } = require('../utils/isbn');
 const { cacheDel } = require('../config/redis');
 const { ok, created, fail } = require('../utils/apiResponse');
@@ -228,48 +229,12 @@ router.get('/filters/metadata', async (_req, res, next) => {
   }
 });
 
-// A curated rail (isFeatured/isBestseller/isNewArrival) with fewer than this
-// many books looks sparse/broken rather than "lightly curated" — top it up
-// from a catalogue-wide fallback so the homepage rails are never empty just
-// because an admin hasn't (or no longer has) flagged enough books.
-const MIN_RAIL_SIZE = 6;
-
-async function withFallback(curatedQuery, fallbackQuery) {
-  const curated = await curatedQuery;
-  if (curated.length >= MIN_RAIL_SIZE) return curated;
-  const fallback = await fallbackQuery;
-  const seen = new Set(curated.map((b) => String(b._id)));
-  const merged = [...curated, ...fallback.filter((b) => !seen.has(String(b._id)))];
-  return merged.slice(0, 20);
-}
-
 // ── GET /api/books/featured/books — homepage rails ──
+// Bestsellers / New arrivals / Staff favourites, in the order set by the last
+// admin shuffle (services/homepageRails.js). The shuffle clears this cache key.
 router.get('/featured/books', async (_req, res, next) => {
   try {
-    const data = await withCache('featured_books', 600, async () => {
-      const base = { isActive: true };
-      // Up to 20 per rail — the homepage rails scroll horizontally. Curated
-      // picks come first; a catalogue-wide fallback tops up short rails so
-      // they never go sparse or empty (see MIN_RAIL_SIZE above).
-      const [featured, bestsellers, newArrivals] = await Promise.all([
-        withFallback(
-          Book.find({ ...base, isFeatured: true }).select(LIST_FIELDS).limit(20).lean(),
-          // Rated first (best reviewed), soldCount as a tiebreaker for a young
-          // catalogue where most books have no reviews yet — never comes back
-          // empty just because nobody has reviewed anything.
-          Book.find(base).select(LIST_FIELDS).sort({ avgRating: -1, soldCount: -1 }).limit(20).lean()
-        ),
-        withFallback(
-          Book.find({ ...base, isBestseller: true }).select(LIST_FIELDS).sort({ soldCount: -1 }).limit(20).lean(),
-          Book.find(base).select(LIST_FIELDS).sort({ soldCount: -1 }).limit(20).lean()
-        ),
-        withFallback(
-          Book.find({ ...base, isNewArrival: true }).select(LIST_FIELDS).sort({ createdAt: -1 }).limit(20).lean(),
-          Book.find(base).select(LIST_FIELDS).sort({ createdAt: -1 }).limit(20).lean()
-        ),
-      ]);
-      return { featured, bestsellers, newArrivals };
-    });
+    const data = await withCache('featured_books', 600, () => buildRails(LIST_FIELDS));
     return ok(res, data, 'Featured');
   } catch (err) {
     return next(err);

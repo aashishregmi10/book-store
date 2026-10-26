@@ -9,6 +9,7 @@ import { npr } from "@/lib/format";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 import { Pagination } from "@/components/books/Pagination";
 import type { AdminBook, Genre } from "./_components/types";
+import { ShuffleRails } from "./_components/ShuffleRails";
 
 // 10 rows against a 6,000-title catalogue meant 600+ pages, and the shelving
 // backlog is worked in batches — you want a screenful, judged together.
@@ -286,6 +287,8 @@ function AdminBooksContent() {
           </Link>
         </div>
       </div>
+
+      <ShuffleRails />
 
       {/* Status / merchandising tabs */}
       <div className="mt-5 flex flex-wrap gap-1 border-b border-border">

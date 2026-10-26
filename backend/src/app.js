@@ -128,6 +128,7 @@ app.use('/api/upload', require('./routes/upload.route'));
 app.use('/api/feed', require('./routes/feed.route'));
 // Mounted before the /api/admin catch-all so its own routes resolve first.
 app.use('/api/admin/supplier-sync', require('./routes/supplierSync.route'));
+app.use('/api/admin/merchandising', require('./routes/merchandising.route'));
 app.use('/api/admin', require('./routes/admin.route'));
 
 // ── 404 + central error handler (must be last) ───────────

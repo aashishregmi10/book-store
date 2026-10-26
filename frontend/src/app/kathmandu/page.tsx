@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { apiGet, CACHE_TTL } from "@/lib/api";
+import { apiGet, CACHE_TTL, RAILS_TAG } from "@/lib/api";
 import { breadcrumbLd, itemListLd } from "@/lib/seo";
 import { JsonLd } from "@/components/JsonLd";
 import { BookShelf } from "@/components/books/BookShelf";
@@ -31,7 +31,7 @@ interface Featured {
 async function getBestsellers(): Promise<BookCardData[]> {
   try {
     const data = await apiGet<Featured>("/books/featured/books", {
-      tags: ["books"],
+      tags: ["books", RAILS_TAG],
       revalidate: CACHE_TTL.catalogue,
     });
     return data.bestsellers;
