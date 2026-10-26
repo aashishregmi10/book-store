@@ -31,9 +31,18 @@ const genreListQuery = z.object({
 // ── GET /api/genres — all active genres (nav + footer + homepage row) ──
 router.get('/', async (_req, res, next) => {
   try {
-    const data = await withCache('genres_list', 3600, () =>
-      Genre.find({ isActive: true }).select('slug name description color icon bookCount').sort({ name: 1 }).lean()
-    );
+    const data = await withCache('genres_list', 3600, async () => {
+      // bookCount is counted live here rather than read from the stored field,
+      // which only seed-taxonomy.js ever wrote: genres added later sat at 0 no
+      // matter how many books were shelved in them. One grouped count over the
+      // live catalogue, cached with the list.
+      const [genres, counts] = await Promise.all([
+        Genre.find({ isActive: true }).select('slug name description color icon').sort({ name: 1 }).lean(),
+        Book.aggregate([{ $match: { isActive: true } }, { $group: { _id: '$genre', n: { $sum: 1 } } }]),
+      ]);
+      const bySlug = new Map(counts.map((c) => [c._id, c.n]));
+      return genres.map((g) => ({ ...g, bookCount: bySlug.get(g.slug) || 0 }));
+    });
     res.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
     return ok(res, data, 'Genres');
   } catch (err) {
