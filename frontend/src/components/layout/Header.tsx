@@ -4,7 +4,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Search, ShoppingCart, Heart, LogIn } from "lucide-react";
+import { Search, ShoppingBag, Heart, User, Truck } from "lucide-react";
 import { useCart, selectCount } from "@/lib/stores/cart";
 import { useAuth } from "@/lib/stores/auth";
 import { useAuthModal } from "@/lib/stores/authModal";
@@ -14,16 +14,14 @@ import { useSuggestions } from "@/lib/hooks/useSuggestions";
 import { SearchSuggestions } from "@/components/books/SearchSuggestions";
 import type { Genre } from "@/lib/types";
 import { AccountMenu } from "./AccountMenu";
-import { CategoryMenu } from "./CategoryMenu";
+import { CategoryNav } from "./CategoryNav";
 
-// "Category" is handled separately — it opens the genre mega-menu.
-const NAV = [
-  { to: "/blog", label: "Articles" },
-  { to: "/about", label: "Our Story" },
-  { to: "/contact", label: "Contact" },
-  { to: "/account", label: "Rewards" },
-];
-
+/**
+ * Two rows: brand, search and the shopper's actions (sticky, so search and the
+ * bag are always one tap away), then the category bar, which scrolls away.
+ * Articles, Our Story and Contact moved to the footer; Rewards lives in the
+ * account menu.
+ */
 export function Header({ genres = [] }: { genres?: Genre[] }) {
   const pathname = usePathname();
   const count = useCart(selectCount);
@@ -42,13 +40,13 @@ export function Header({ genres = [] }: { genres?: Genre[] }) {
     else useWishlist.getState().clear();
   }, [authHydrated, user]);
 
-  const isActive = (to: string) => pathname === to || (to !== "/" && pathname?.startsWith(to));
   const cartCount = cartHydrated ? count : 0;
   const wishCount = authHydrated && user ? wishlistCount : 0;
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/70 bg-bg/85 backdrop-blur">
-      <div className="shell flex items-center gap-6 py-3.5">
+    <>
+    <header className="sticky top-0 z-50 border-b border-border bg-bg/95 backdrop-blur">
+      <div className="shell flex items-center gap-4 py-3 lg:gap-8 lg:py-4">
         {/* Brand lockup. Sized by height with width:auto so the aspect ratio is
             never distorted; the source PNG is trimmed to its ink so there's no
             dead margin to compensate for.
@@ -70,24 +68,8 @@ export function Header({ genres = [] }: { genres?: Genre[] }) {
           />
         </Link>
 
-        {/* Primary nav — beside the logo */}
-        <nav className="hidden items-center gap-5 lg:flex" aria-label="Primary">
-          <CategoryMenu genres={genres} active={isActive("/books")} />
-          {NAV.map((n) => (
-            <Link
-              key={n.to}
-              href={n.to}
-              className={`whitespace-nowrap font-data text-sm font-medium transition-colors hover:text-accent ${
-                isActive(n.to) ? "text-accent" : "text-text/80"
-              }`}
-            >
-              {n.label}
-            </Link>
-          ))}
-        </nav>
-
         {/* Search — fills the middle (keeps the typed query visible after search) */}
-        <Suspense fallback={<div className="mx-4 hidden max-w-md flex-1 md:flex" />}>
+        <Suspense fallback={<div className="hidden flex-1 md:block" />}>
           <HeaderSearch />
         </Suspense>
 
@@ -99,47 +81,59 @@ export function Header({ genres = [] }: { genres?: Genre[] }) {
             container and — because nothing here clips overflow-x — that
             pushed the whole page wider than the viewport, showing as dead
             space down the right edge with the sign-in control stranded at it. */}
-        <div className="ml-auto flex shrink-0 items-center gap-1.5">
-          {/* Wishlist — icon only with count badge (opens drawer) */}
-          <button onClick={openWishlist} aria-label={`Wishlist, ${wishCount} saved`} className="relative p-2 text-text transition-colors hover:text-[#e3534c]">
-            <Heart className="size-5" />
-            {wishCount > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 grid min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-semibold leading-4 text-white">
-                {wishCount}
-              </span>
-            )}
+        <div className="ml-auto flex shrink-0 items-center gap-1 lg:gap-4">
+          {/* Tracking is a top-level action: COD shoppers check on a parcel
+              far more often than they change account settings. */}
+          <Link href="/track" className={`${action} hidden lg:flex ${pathname === "/track" ? "text-accent" : ""}`}>
+            <Truck className="size-5" aria-hidden />
+            <span className={actionLabel}>Track order</span>
+          </Link>
+
+          {/* Wishlist — opens the drawer */}
+          <button onClick={openWishlist} aria-label={`Wishlist, ${wishCount} saved`} className={action}>
+            <span className="relative">
+              <Heart className="size-5" aria-hidden />
+              <Badge count={wishCount} />
+            </span>
+            <span className={actionLabel}>Wishlist</span>
           </button>
 
-          {/* Cart icon + count badge (opens drawer) — md+ only, see above */}
-          <button
-            onClick={openCart}
-            aria-label={`Cart, ${cartCount} items`}
-            className="relative hidden p-2 text-text hover:text-accent md:inline-flex"
-          >
-            <ShoppingCart className="size-5" />
-            {cartCount > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 grid min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-semibold leading-4 text-white">
-                {cartCount}
-              </span>
-            )}
+          {/* Bag — md+ only; BottomNav carries it on phones */}
+          <button onClick={openCart} aria-label={`Bag, ${cartCount} items`} className={`${action} hidden md:flex`}>
+            <span className="relative">
+              <ShoppingBag className="size-5" aria-hidden />
+              <Badge count={cartCount} />
+            </span>
+            <span className={actionLabel}>Bag</span>
           </button>
 
-          {/* Auth: account menu when signed in; a clear "Sign in" control otherwise */}
           {authHydrated && user ? (
             <AccountMenu />
           ) : (
-            <button
-              onClick={() => openLogin()}
-              aria-label="Sign in"
-              className="flex items-center gap-1.5 rounded-full border border-border px-3.5 py-1.5 font-data text-sm font-medium text-text transition-colors hover:border-accent hover:text-accent md:px-3.5"
-            >
-              <LogIn className="size-4 text-accent" />
-              <span className="hidden sm:inline">Sign in</span>
+            <button onClick={() => openLogin()} className={action}>
+              <User className="size-5" aria-hidden />
+              <span className="hidden font-body text-sm sm:inline lg:text-[13px]">Sign in</span>
             </button>
           )}
         </div>
       </div>
     </header>
+    <CategoryNav genres={genres} />
+    </>
+  );
+}
+
+// Icon over label from lg up (like a shop counter's signage); icon only below.
+const action =
+  "relative flex min-h-11 items-center gap-2 rounded-md px-2.5 py-1 text-text transition-colors hover:text-accent lg:flex-col lg:gap-1";
+const actionLabel = "hidden font-body text-[13px] lg:inline";
+
+function Badge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span className="absolute -right-2 -top-1.5 grid min-w-4 place-items-center rounded-full bg-accent px-1 font-data text-[10px] font-semibold leading-4 text-white">
+      {count}
+    </span>
   );
 }
 
@@ -170,29 +164,27 @@ function HeaderSearch() {
   }
 
   return (
-    <div ref={ref} className="relative mx-4 hidden max-w-md flex-1 md:block">
-      <form onSubmit={submit} className="flex items-center">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
-          <input
-            value={q}
-            onChange={(e) => {
-              setQ(e.target.value);
-              setOpen(true);
-            }}
-            onFocus={() => setOpen(true)}
-            type="search"
-            name="q"
-            placeholder="Search by title, author, or ISBN"
-            aria-label="Search books"
-            className="w-full rounded-l-md border border-border bg-surface py-2 pl-9 pr-3 font-body text-sm text-text outline-none placeholder:text-muted focus:border-accent"
-          />
-        </div>
+    <div ref={ref} className="relative hidden min-w-0 flex-1 md:block">
+      <form onSubmit={submit} className="flex items-stretch">
+        <input
+          value={q}
+          onChange={(e) => {
+            setQ(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          type="search"
+          name="q"
+          placeholder="Search by title, author or ISBN"
+          aria-label="Search books"
+          className="h-12 min-w-0 flex-1 rounded-l-md border border-r-0 border-border bg-surface px-4 font-body text-[15px] text-text outline-none placeholder:text-muted focus:border-accent"
+        />
         <button
           type="submit"
-          className="inline-flex items-center gap-1.5 rounded-r-md border border-l-0 border-border bg-surface px-3 py-2 font-data text-sm text-text transition-colors hover:border-accent hover:text-accent"
+          aria-label="Search"
+          className="grid w-14 shrink-0 place-items-center rounded-r-md bg-accent text-white transition-colors hover:bg-accent-hover"
         >
-          <Search className="size-4" /> Search
+          <Search className="size-5" />
         </button>
       </form>
 

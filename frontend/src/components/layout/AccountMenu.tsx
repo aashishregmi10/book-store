@@ -53,10 +53,10 @@ export function AccountMenu() {
         aria-label="Account menu"
         aria-expanded={open}
         aria-haspopup="menu"
-        className="flex items-center gap-2 rounded-full px-2.5 py-1.5 text-text transition-colors hover:bg-hover hover:text-accent"
+        className="flex min-h-11 items-center gap-2 rounded-md px-2.5 py-1 text-text transition-colors hover:text-accent lg:flex-col lg:gap-1"
       >
         <User className="size-5 shrink-0" />
-        <span className="hidden max-w-[8rem] truncate font-data text-sm font-medium sm:inline">
+        <span className="hidden max-w-[8rem] truncate font-body text-sm sm:inline lg:text-[13px]">
           {user.fullName.split(" ")[0]}
         </span>
       </button>

@@ -28,6 +28,7 @@ import { JsonLd } from "@/components/JsonLd";
 import type { BookCardData, Genre } from "@/lib/types";
 import { BookShelf } from "@/components/books/BookShelf";
 import { CategoryCircles } from "@/components/home/CategoryCircles";
+import { HeroCarousel } from "@/components/home/HeroCarousel";
 
 // Icon per genre slug — BookOpen is the fallback for any genre added later
 // without a dedicated icon here.
@@ -119,42 +120,54 @@ export default async function HomePage() {
   return (
     <>
       {shelves.length > 0 && <JsonLd data={shelves.map((s) => itemListLd(s.name, s.books))} />}
-      {/* Welcome strip. Takes the place the hero used to occupy, at a fraction
-          of its height: the hero was a full-bleed shelf photo carrying one
-          headline and one CTA, and it pushed every actual book below the fold.
-          Deliberately just a greeting — no delivery promise. We don't set or
-          collect the courier's charge (see the note in services/pricing.js),
-          so a banner claiming anything about delivery cost would be writing a
-          cheque the checkout can't cash. */}
-      <section className="border-b border-promo-border bg-promo">
-        <div className="shell py-5">
-          {/* This is the homepage <h1>, not a decorative line. Removing the old
-              hero took the only h1 on the site's most important page with it,
-              leaving the document outline starting at h2. Styled to sit quietly
-              in the strip — heading level and type scale are separate calls.
-
-              It says what the shop is, because after <title> this is the
-              strongest relevance signal on the page the domain's authority
-              concentrates on, and "Welcome in. Pull up a chair" said nothing a
-              search for "buy books online in nepal" could match. The warmth
-              didn't have to be sacrificed for that — it moved one line down.
-
-              The sentence beneath is deliberately extractable: entity, then
-              category, then geography, then three concrete facts. That is the
-              shape an answer engine can lift whole and attribute, and it is
-              doing double duty as the page's opening line. */}
-          <h1 className="font-display text-lg font-semibold text-text sm:text-xl">
-            Buy books online in Nepal
-          </h1>
-          <p className="mt-1 font-body text-sm text-muted">
-            Books Temple Nepal is an online bookstore delivering to all seven provinces. Prices in
-            NPR, cash on delivery, 1&ndash;2 days inside the{" "}
-            <Link href="/kathmandu" className="text-accent underline-offset-4 hover:underline">
-              Kathmandu Valley
-            </Link>{" "}
-            and 3&ndash;5 days elsewhere. Pull up a chair and have a browse.
-          </p>
-        </div>
+      {/* Opening banner, after the reference layout the owner chose. It took over
+          from the welcome strip and keeps its two SEO jobs: the homepage <h1>
+          ("Buy books online in Nepal", the first slide's kicker) and the
+          extractable sentence that says what the shop is, where, and how it
+          sells. Every claim is one the shop keeps: no delivery-price promise,
+          because the courier sets and collects that (services/pricing.js). */}
+      <section className="shell pt-5 sm:pt-7">
+        <HeroCarousel
+          slides={[
+            {
+              key: "welcome",
+              tone: "coffee",
+              kicker: "Buy books online in Nepal",
+              kickerIsH1: true,
+              title: "Books worth reading, delivered across Nepal",
+              text: (
+                <>
+                  Books Temple Nepal is an online bookstore delivering to all seven provinces. Prices in NPR, cash on
+                  delivery, 1&ndash;2 days inside the{" "}
+                  <Link href="/kathmandu" className="underline underline-offset-4 hover:text-espresso">
+                    Kathmandu Valley
+                  </Link>{" "}
+                  and 3&ndash;5 days elsewhere.
+                </>
+              ),
+              cta: { label: "Browse 5,000+ books", href: "/books" },
+              books: data?.bestsellers ?? [],
+            },
+            {
+              key: "new",
+              tone: "brand",
+              kicker: "Just arrived",
+              title: "New on our shelves",
+              text: "Genuine new copies, sourced in Kathmandu and added to the shop as they come in.",
+              cta: { label: "See new arrivals", href: "/books?sort=newest" },
+              books: data?.newArrivals ?? [],
+            },
+            {
+              key: "cod",
+              tone: "tint",
+              kicker: "Cash on delivery · Tracked parcels",
+              title: "Pay when your books arrive",
+              text: "Order online and pay the rider in cash. Your parcel travels with Nepal Can Move, and you can follow it all the way to your door.",
+              cta: { label: "Track your order", href: "/track" },
+              books: data?.featured ?? [],
+            },
+          ]}
+        />
       </section>
 
       {/* Quick browse — one tinted circle per genre. Browsing is the point of

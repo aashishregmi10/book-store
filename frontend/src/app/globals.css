@@ -31,6 +31,15 @@
   --color-star: #ffc402;         /* pm --gold */
   --color-star-empty: #dcdcdc;   /* soft grey — empty rating stars */
 
+  /* The homepage welcome slide — a light coffee field, not the blue system.
+     Pairs checked against WCAG AA on latte: espresso ~9:1, coffee-muted
+     ~4.8:1; white on coffee ~7.4:1. */
+  --color-latte: #e6d3bb;        /* light coffee field */
+  --color-espresso: #3d2b1f;     /* headings + text on latte */
+  --color-coffee-muted: #6b5444; /* secondary text on latte */
+  --color-coffee: #6f4e37;       /* CTA fill on latte */
+  --color-coffee-hover: #5a3e2b;
+
   --font-display: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
   --font-body: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;

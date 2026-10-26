@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { Header } from "./Header";
+import { AnnouncementBar } from "./AnnouncementBar";
 import { Footer } from "./Footer";
 import { BottomNav } from "./BottomNav";
 import { CartBar } from "./CartBar";
@@ -31,6 +32,7 @@ export function ChromeGate({ children, genres = [] }: { children: React.ReactNod
   return (
     <>
       <JsonLd data={[organizationLd(), websiteLd()]} />
+      <AnnouncementBar />
       <Header genres={genres} />
       <main className="flex-1">{children}</main>
       <div className={loadingMore ? "hidden md:block" : ""}>
