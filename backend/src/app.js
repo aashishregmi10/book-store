@@ -129,6 +129,9 @@ app.use('/api/feed', require('./routes/feed.route'));
 // Mounted before the /api/admin catch-all so its own routes resolve first.
 app.use('/api/admin/supplier-sync', require('./routes/supplierSync.route'));
 app.use('/api/admin/merchandising', require('./routes/merchandising.route'));
+app.use('/api/admin/ncm', require('./routes/ncmAdmin.route'));
+// Nepal Can Move calls this when a parcel moves (secret-token protected).
+app.use('/api/webhooks/ncm', require('./routes/ncmWebhook.route'));
 app.use('/api/admin', require('./routes/admin.route'));
 
 // ── 404 + central error handler (must be last) ───────────

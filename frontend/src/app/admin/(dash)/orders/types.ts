@@ -74,8 +74,33 @@ export interface OrderItem {
   quantity: number;
 }
 
+/** The order's parcel booking with Nepal Can Move (absent until booked). */
+export interface NcmInfo {
+  orderId?: number;
+  fromBranch?: string;
+  branch?: string;
+  deliveryType?: string;
+  goodsAmount?: number;
+  deliveryCharge?: number;
+  codCharge?: number;
+  weightKg?: number;
+  packageName?: string;
+  bookedAt?: string;
+  trackId?: string;
+  paymentStatus?: string;
+  destinationPhone?: string;
+  booking?: boolean;
+  lastStatus?: string;
+  lastStatusAt?: string;
+  returning?: boolean;
+  refund?: { initiatedAt?: string; customerOrderId?: number; refundOrderId?: number; amount?: number };
+  events?: { status: string; event?: string; at: string; source: string }[];
+  lastSyncedAt?: string;
+}
+
 export interface AdminOrderDetail extends AdminOrder {
   items: OrderItem[];
+  ncm?: NcmInfo;
   statusHistory?: StatusEntry[];
   subtotal: number;
   deliveryFee: number;

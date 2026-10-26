@@ -63,6 +63,55 @@ const orderSchema = new mongoose.Schema(
     ],
 
     trackingNumber: { type: String },
+
+    // The parcel's booking with Nepal Can Move, our courier (see
+    // services/ncm/). Absent until an admin books the order with NCM.
+    ncm: {
+      orderId: { type: Number }, // NCM's own order id — unique, indexed below
+      fromBranch: { type: String }, // where we drop the parcel
+      branch: { type: String }, // NCM branch that delivers to the customer
+      deliveryType: { type: String },
+      // What NCM collects at the door = books (order total) + NCM's delivery
+      // charge, which NCM keeps. The shop never prices delivery itself.
+      goodsAmount: { type: Number },
+      deliveryCharge: { type: Number },
+      codCharge: { type: Number },
+      weightKg: { type: Number },
+      packageName: { type: String },
+      bookedAt: { type: Date },
+      bookedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      // From NCM's order details: its tracking id, whether it has paid the
+      // collected cash over to us, and the delivering branch's phone.
+      trackId: { type: String },
+      paymentStatus: { type: String },
+      destinationPhone: { type: String },
+      // Set while a booking request is in flight, so two clicks (or two admins)
+      // can never create the same parcel twice — NCM has no idempotency key.
+      booking: { type: Boolean },
+      bookingStartedAt: { type: Date },
+      lastStatus: { type: String }, // NCM's label, e.g. "Sent for Delivery"
+      lastStatusAt: { type: Date },
+      // NCM shows a returned parcel as "Delivered" once it is back with us, so
+      // a return has to be remembered to read that label correctly.
+      returning: { type: Boolean },
+      refund: {
+        initiatedAt: { type: Date },
+        customerOrderId: { type: Number },
+        refundOrderId: { type: Number },
+        amount: { type: Number },
+      },
+      events: [
+        {
+          _id: false,
+          status: { type: String }, // NCM's label
+          event: { type: String }, // webhook event name, when it came from one
+          at: { type: Date },
+          source: { type: String, enum: ['webhook', 'sync', 'history', 'booking'] },
+        },
+      ],
+      lastSyncedAt: { type: Date },
+    },
+
     estimatedDelivery: { type: Date },
     deliveredAt: { type: Date },
 
@@ -87,6 +136,9 @@ const orderSchema = new mongoose.Schema(
 // "My orders" lists a user's orders newest-first — index the exact shape so it
 // uses an IXSCAN instead of a collection scan + in-memory sort.
 orderSchema.index({ user: 1, createdAt: -1 });
+// Webhooks and the status sync look orders up by NCM's id. Unique so the same
+// NCM parcel can never be attached to two of our orders.
+orderSchema.index({ 'ncm.orderId': 1 }, { unique: true, partialFilterExpression: { 'ncm.orderId': { $type: 'number' } } });
 
 // Generate PT-YYYYMMDD-XXXXX from an atomic per-day counter (collision-free).
 // Async hook: Mongoose 9 resolves via the returned promise — no `next`.

@@ -9,6 +9,7 @@ import { ArrowLeft } from "lucide-react";
 import { clientApi } from "@/lib/client-api";
 import { npr } from "@/lib/format";
 import { OrderTimeline } from "../_components/OrderTimeline";
+import { NcmPanel } from "../_components/NcmPanel";
 import { FLOW, askReason, type AdminOrderDetail } from "../types";
 
 /**
@@ -212,6 +213,17 @@ export default function AdminOrderDetailPage() {
             <Row label="Total" value={npr(order.total)} strong />
             <Row label="Payment" value={`${order.paymentMethod.toUpperCase()} · ${order.paymentStatus}`} />
           </dl>
+
+          {/* The courier booking. Once booked, NCM moves the status along on its
+              own (webhooks + a periodic check), so the buttons above become an
+              override rather than the usual way through. */}
+          <NcmPanel
+            order={order}
+            onChanged={() => {
+              setLoading(true);
+              load();
+            }}
+          />
 
           {order.customerNote && (
             <p className="border-t border-border pt-4 font-body text-sm text-muted">

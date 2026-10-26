@@ -163,9 +163,13 @@ router.post(
 );
 
 // ── GET /api/orders/my-orders ────────────────────────────
+// What a customer may see of their own order. The admin's internal note and
+// the courier-booking bookkeeping (who booked it, in-flight locks) stay behind.
+const CUSTOMER_FIELDS = '-adminNote -ncm.bookedBy -ncm.booking -ncm.bookingStartedAt -ncm.lastSyncedAt -statusHistory.updatedBy';
+
 router.get('/my-orders', authenticate, async (req, res, next) => {
   try {
-    const orders = await Order.find({ user: req.userId }).sort({ createdAt: -1 }).lean();
+    const orders = await Order.find({ user: req.userId }).select(CUSTOMER_FIELDS).sort({ createdAt: -1 }).lean();
     return ok(res, orders, 'Your orders');
   } catch (err) {
     return next(err);
@@ -197,7 +201,7 @@ const digitsOf = (v) => String(v || '').replace(/\D/g, '');
 
 router.post('/lookup', lookupLimiter, validate({ body: lookupBody }), async (req, res, next) => {
   try {
-    const order = await Order.findOne({ orderNumber: req.body.orderNumber.toUpperCase() }).lean();
+    const order = await Order.findOne({ orderNumber: req.body.orderNumber.toUpperCase() }).select(CUSTOMER_FIELDS).lean();
 
     // One message for "no such order" and "wrong phone" alike. Distinguishing
     // them would turn this into an oracle for which order numbers exist.
@@ -221,7 +225,7 @@ router.post('/lookup', lookupLimiter, validate({ body: lookupBody }), async (req
 // ── GET /api/orders/:orderNumber (own order) ─────────────
 router.get('/:orderNumber', authenticate, validate({ params: orderNumberParams }), async (req, res, next) => {
   try {
-    const order = await Order.findOne({ orderNumber: req.params.orderNumber, user: req.userId }).lean();
+    const order = await Order.findOne({ orderNumber: req.params.orderNumber, user: req.userId }).select(CUSTOMER_FIELDS).lean();
     if (!order) return fail(res, 'Order not found', 404, [{ code: 'NOT_FOUND' }]);
     return ok(res, order, 'Order');
   } catch (err) {

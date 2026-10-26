@@ -19,6 +19,7 @@ const app = require('./app');
 const logger = require('./config/logger');
 const { connectMongo, disconnectMongo } = require('./config/database');
 const { initRedis, closeRedis } = require('./config/redis');
+const { startNcmSync } = require('./services/ncm/sync');
 
 const PORT = process.env.PORT || 5000;
 
@@ -47,6 +48,10 @@ async function start() {
   }
 
   server.listen(PORT, () => logger.info(`Books Temple API listening on :${PORT}`));
+
+  // Safety net for missed NCM webhooks (they are never resent). Off when
+  // NCM_API_TOKEN is unset or NCM_SYNC_MINUTES=0.
+  startNcmSync({ io });
 }
 
 // ── Graceful shutdown ────────────────────────────────────

@@ -4,8 +4,9 @@ const mongoose = require('mongoose');
 
 /**
  * Small site-wide settings that an admin changes from the dashboard and the
- * API reads back, keyed by name. One document per key — currently only the
- * homepage rails' shuffle seed (see services/homepageRails.js).
+ * API reads back, keyed by name. One document per key: the homepage rails'
+ * shuffle seed (services/homepageRails.js) and the NCM drop-off branch and
+ * delivery type (routes/ncmAdmin.route.js).
  */
 const settingSchema = new mongoose.Schema(
   {

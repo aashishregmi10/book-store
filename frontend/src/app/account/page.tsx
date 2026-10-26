@@ -182,9 +182,17 @@ export default function AccountPage() {
                       <p className="font-data text-sm text-text">{o.orderNumber}</p>
                       <p className="font-body text-xs text-muted">{shortDate(o.createdAt)}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="font-data text-sm text-text">{npr(o.total)}</p>
-                      <p className="font-data text-xs uppercase tracking-wide text-accent">{o.status}</p>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="font-data text-sm text-text">{npr(o.total)}</p>
+                        <p className="font-data text-xs uppercase tracking-wide text-accent">{o.status}</p>
+                      </div>
+                      <Link
+                        href={`/track?order=${encodeURIComponent(o.orderNumber)}`}
+                        className="inline-flex min-h-11 items-center font-data text-xs uppercase tracking-wide text-link underline-offset-4 hover:underline"
+                      >
+                        Track
+                      </Link>
                     </div>
                   </li>
                 ))}

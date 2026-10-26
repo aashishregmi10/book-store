@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { Package, Search } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Package, Search, Truck } from "lucide-react";
 import { clientApi, ClientApiError } from "@/lib/client-api";
 import { npr } from "@/lib/format";
 import { Spinner } from "@/components/ui/Spinner";
@@ -25,6 +26,17 @@ interface TrackedOrder {
   items: { title: string; author: string; quantity: number; price: number; format?: string }[];
   deliveryAddress: { fullName: string; city: string; province: string };
   statusHistory?: { status: string; note?: string; timestamp: string }[];
+  ncm?: {
+    orderId?: number;
+    trackId?: string;
+    branch?: string;
+    destinationPhone?: string;
+    goodsAmount?: number;
+    deliveryCharge?: number;
+    codCharge?: number;
+    returning?: boolean;
+    events?: { status: string; at: string }[];
+  };
 }
 
 // Reads better than the raw enum, and keeps the courier hand-off explicit.
@@ -36,10 +48,45 @@ const STATUS_COPY: Record<string, string> = {
   delivered: "Delivered",
   cancelled: "Cancelled",
   refunded: "Refunded",
+  returned: "Returned to the shop",
 };
 
+const place = (s: string) => s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+
+/** Nepal Can Move's status labels, in words a customer reads at a glance. */
+function courierStep(label: string, returning?: boolean): string {
+  const s = label.trim();
+  const l = s.toLowerCase();
+  if (/order created/.test(l)) return "Booked with Nepal Can Move";
+  if (/pickup complete|collected/.test(l)) return "Handed to Nepal Can Move";
+  const to = s.match(/^dispatched to (.+)$/i);
+  if (to) return `Left for ${place(to[1])}`;
+  const at = s.match(/^arrived at (.+)$/i);
+  if (at) return `Reached ${place(at[1])}`;
+  if (l === "dispatched") return "On the way";
+  if (l === "arrived") return "Reached the delivery branch";
+  if (/sent for delivery/.test(l)) return "Out for delivery";
+  if (/rtv delivered/.test(l)) return "Returned to the shop";
+  if (/return|vendor/.test(l)) return "Being returned to the shop";
+  if (l === "delivered") return returning ? "Returned to the shop" : "Delivered";
+  return s;
+}
+
+const when = (iso: string) =>
+  new Date(iso).toLocaleString("en-GB", { timeZone: "Asia/Kathmandu", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+
+// useSearchParams needs a Suspense boundary to keep the page statically rendered.
 export default function TrackOrderPage() {
-  const [orderNumber, setOrderNumber] = useState("");
+  return (
+    <Suspense>
+      <TrackOrder />
+    </Suspense>
+  );
+}
+
+function TrackOrder() {
+  // /track?order=PT-… — the account page links here with the number filled in.
+  const [orderNumber, setOrderNumber] = useState(useSearchParams().get("order") ?? "");
   const [phone, setPhone] = useState("");
   const [order, setOrder] = useState<TrackedOrder | null>(null);
   const [loading, setLoading] = useState(false);
@@ -143,13 +190,51 @@ export default function TrackOrderPage() {
             ))}
           </ul>
 
-          <div className="mt-4 flex justify-between border-t border-border pt-4">
-            <span className="font-display text-base text-text">Total</span>
-            <span className="font-data text-lg font-semibold text-accent">{npr(order.total)}</span>
-          </div>
-          <p className="mt-3 font-body text-xs leading-relaxed text-muted">
-            Books only. The courier charges delivery separately when it hands the parcel over.
+          {order.ncm?.codCharge !== undefined && order.ncm.deliveryCharge !== undefined ? (
+            // Booked with the courier: the delivery charge is now known, so say
+            // exactly what to have ready instead of "charged separately".
+            <dl className="mt-4 space-y-2 border-t border-border pt-4 font-body text-sm">
+              <Row label="Books" value={npr(order.ncm.goodsAmount ?? order.total)} />
+              <Row label="Nepal Can Move delivery" value={npr(order.ncm.deliveryCharge)} />
+              <div className="flex justify-between gap-4 border-t border-border pt-3">
+                <dt className="font-display text-base text-text">{order.ncm.codCharge > 0 ? "Pay at the door" : "Total"}</dt>
+                <dd className="font-data text-lg font-semibold text-accent">{npr(order.ncm.codCharge)}</dd>
+              </div>
+            </dl>
+          ) : (
+            <>
+              <div className="mt-4 flex justify-between border-t border-border pt-4">
+                <span className="font-display text-base text-text">Total</span>
+                <span className="font-data text-lg font-semibold text-accent">{npr(order.total)}</span>
+              </div>
+              <p className="mt-3 font-body text-xs leading-relaxed text-muted">
+                Books only. The courier charges delivery separately when it hands the parcel over.
+              </p>
+            </>
+          )}
+        </section>
+      )}
+
+      {order?.ncm?.orderId && (
+        <section className="mt-6 border border-border bg-surface p-6">
+          <p className="inline-flex items-center gap-2 font-data text-xs uppercase tracking-wide text-muted">
+            <Truck className="size-4 text-accent" /> Courier · Nepal Can Move
           </p>
+          <dl className="mt-3 space-y-2 font-body text-sm">
+            {order.ncm.branch && <Row label="Delivering branch" value={place(order.ncm.branch)} />}
+            {order.ncm.destinationPhone && <Row label="Branch phone" value={order.ncm.destinationPhone} />}
+            <Row label="NCM tracking" value={order.ncm.trackId || `#${order.ncm.orderId}`} />
+          </dl>
+          {(order.ncm.events?.length ?? 0) > 0 && (
+            <ol className="mt-5 space-y-3 border-t border-border pt-4">
+              {[...(order.ncm.events ?? [])].reverse().map((e, i) => (
+                <li key={`${e.status}-${e.at}`} className="flex items-start justify-between gap-4 font-body text-sm">
+                  <span className={i === 0 ? "font-medium text-text" : "text-muted"}>{courierStep(e.status, order.ncm?.returning)}</span>
+                  <span className="shrink-0 font-data text-xs text-muted">{when(e.at)}</span>
+                </li>
+              ))}
+            </ol>
+          )}
         </section>
       )}
 
