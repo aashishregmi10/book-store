@@ -77,6 +77,7 @@ entry must exactly match a deployed frontend origin (no trailing slash).
 Set these on the **frontend** project:
 
 - `NEXT_PUBLIC_SITE_URL=https://<your-frontend-domain>`
+- `NEXT_PUBLIC_IMAGE_HOST=https://images.bookstemple.com` (Production; used for R2 cover URLs in the Google Merchant feed)
 - `API_URL=https://<your-backend-domain>/api`            (server-side SSR fetches)
 - `NEXT_PUBLIC_API_URL=https://<your-backend-domain>/api` (browser fetches)
 - `NEXT_PUBLIC_GOOGLE_CLIENT_ID=…` (public Google Web client ID — must match the backend's `GOOGLE_CLIENT_ID`)
@@ -102,6 +103,10 @@ Set these on the **frontend** project:
 
 > Both API vars must include the trailing `/api` — the API client appends paths
 > like `/books` directly to this base.
+>
+> Set `NEXT_PUBLIC_IMAGE_HOST` in the frontend project's **Production**
+> environment and redeploy. It only changes the host for R2 `/covers/*.webp`
+> links in the Merchant feed; Cloudinary and other image hosts are unchanged.
 
 ## 4. Wire the two together, then redeploy
 
